@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Polygon EVM development
+
+For Polygon-related work, consult the current official Polygon documentation and the project skills under `.devin/skills/` before implementing wallet, payment, or contract code.
+
+Use wagmi, viem, and RainbowKit for frontend wallet/RPC flows. Use Hardhat, Solidity, and OpenZeppelin Contracts for contract development. Keep photos, personal data, private keys, and deployer credentials off-chain and out of public environment variables.

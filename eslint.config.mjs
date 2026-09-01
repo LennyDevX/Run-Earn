@@ -12,7 +12,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "artifacts/**",
+    "cache/**",
+    "node_modules - copia/**",
+    "run-earn/**",
   ]),
+  {
+    // Hardhat test files use `any` for viem/hardhat dynamic types
+    files: ["test/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

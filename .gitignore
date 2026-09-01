@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Devin project-local secrets
+.devin/*.local.json
+
+# Hardhat/Solidity generated artifacts
+artifacts/
+cache/
+typechain-types/
+ignition/deployments/
+deployments/
