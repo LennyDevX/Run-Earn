@@ -14,8 +14,9 @@ describe("SneakerStaking (TypeScript integration)", () => {
   let publicClient: any;
   let testClient: any;
 
-  const tierBonusBps = [0n, 50n, 100n, 150n, 200n, 250n, 300n, 350n];
-  const minLockSeconds = 7n * SECONDS_PER_DAY;
+  // Rarity-based boost: [50, 80, 150, 180] bps for Common, Rare, Epic, Mythic
+  const tierBonusBps = [50n, 80n, 150n, 180n];
+  const minLockSeconds = 30n * SECONDS_PER_DAY;
 
   before(async () => {
     const connection = await hre.network.create();
@@ -33,8 +34,8 @@ describe("SneakerStaking (TypeScript integration)", () => {
       nft.address,
       rune.address,
       1000n * 10n ** 18n,
-      400n,
-      50n,
+      280n,
+      0n, // perNftBonusBps = 0 (boost is rarity-based)
       800n,
       tierBonusBps,
       minLockSeconds,
@@ -53,7 +54,7 @@ describe("SneakerStaking (TypeScript integration)", () => {
     const { nft, rune, staking } = await deployStack();
     assert.equal((await staking.read.nft()).toLowerCase(), nft.address.toLowerCase());
     assert.equal((await staking.read.rewardToken()).toLowerCase(), rune.address.toLowerCase());
-    assert.equal(await staking.read.baseApyBps(), 400n);
+    assert.equal(await staking.read.baseApyBps(), 280n);
     assert.equal(await staking.read.maxApyBps(), 800n);
     assert.equal(await staking.read.minLockSeconds(), minLockSeconds);
   });
@@ -112,7 +113,7 @@ describe("SneakerStaking (TypeScript integration)", () => {
     await nft.write.approve([staking.address, 1n], { account: alice.account });
     await staking.write.stake([1n], { account: alice.account });
 
-    await testClient.increaseTime({ seconds: 86_400 });
+    await testClient.increaseTime({ seconds: 86_400 * 5 }); // only 5 days, lock is 30 days
     await testClient.mine({ blocks: 1 });
 
     await assert.rejects(
@@ -130,7 +131,7 @@ describe("SneakerStaking (TypeScript integration)", () => {
 
     await staking.write.claimRewards({ account: alice.account });
     const balance = await rune.read.balanceOf([alice.account.address]);
-    assert.ok(balance > 0n, "should have earned RUNE");
+    assert.ok(balance > 0n, "should have earned REN");
   });
 
   it("reverts on claim with nothing staked", async () => {
@@ -159,23 +160,25 @@ describe("SneakerStaking (TypeScript integration)", () => {
     const { nft, staking } = await deployStack();
     await nft.write.approve([staking.address, 1n], { account: alice.account });
     await staking.write.stake([1n], { account: alice.account });
-    // base 400 + 1*50 + tierBonus[2]=100 = 550
-    assert.equal(await staking.read.effectiveApyBps([alice.account.address]), 550n);
+    // base 280 + 0 (no flat bonus) + tierBonus[2]=150 (Epic) = 430
+    assert.equal(await staking.read.effectiveApyBps([alice.account.address]), 430n);
   });
 
   it("caps APY at maxApyBps", async () => {
     const { nft, staking } = await deployStack();
-    for (let i = 2; i <= 7; i++) {
+    // Mint 4 Mythic NFTs (tier 3, +1.8% each) — 5 total with the setUp NFT
+    for (let i = 2; i <= 5; i++) {
       const proof = "0x" + i.toString(16).padStart(2, "0").repeat(32);
       await nft.write.mintAuthorized(
-        [alice.account.address, URI, proof, 50n, 7n],
+        [alice.account.address, URI, proof, 90n, 3n],
         { account: admin.account },
       );
     }
-    for (let i = 1n; i <= 7n; i++) {
+    for (let i = 1n; i <= 5n; i++) {
       await nft.write.approve([staking.address, i], { account: alice.account });
       await staking.write.stake([i], { account: alice.account });
     }
+    // base 280 + 5*180 = 1180, capped at 800
     assert.equal(await staking.read.effectiveApyBps([alice.account.address]), 800n);
   });
 
@@ -242,8 +245,9 @@ describe("SneakerStaking (TypeScript integration)", () => {
     await staking.write.stake([1n], { account: alice.account });
     const boostedApy = await staking.read.effectiveApyBps([alice.account.address]);
 
-    assert.equal(baseApy, 400n);
-    assert.equal(boostedApy, 550n);
+    assert.equal(baseApy, 280n);
+    // base 280 + 0 + tierBonus[2]=150 (Epic) = 430
+    assert.equal(boostedApy, 430n);
   });
 
   it("claims funded POL rewards", async () => {

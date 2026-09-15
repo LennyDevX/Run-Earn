@@ -17,7 +17,7 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     uint8 public constant MAX_RARITY = 100;
-    uint8 public constant MAX_TIER = 8;
+    uint8 public constant MAX_TIER = 4; // Common, Rare, Epic, Mythic
 
     struct SneakerTraits {
         uint8 rarity;

@@ -8,9 +8,13 @@
 
 | Retired name | Current name | File | Purpose |
 | --- | --- | --- | --- |
-| `SneakerCollection` | `SneakerMint` | `contracts/SneakerMint.sol` | ERC-721 minting for AI-generated sneaker artwork |
-| `SneakerRewards` / `LaceToken` / `RuneToken` | `RUNEToken` | `contracts/RUNEToken.sol` | ERC-20 RUNE reward token |
-| `SneakerStaking` | `SneakerStaking` | `contracts/SneakerStaking.sol` | Native POL vault with NFT APY boosts |
+| `SneakerCollection` | `SneakerMint` | `contracts/SneakerMint.sol` | ERC-721 minting for AI-generated sneaker artwork (tiers 0–3) |
+| `SneakerRewards` / `LaceToken` / `RuneToken` | `RUNEToken` | `contracts/RUNEToken.sol` | ERC-20 REN reward token (symbol `REN`) |
+| `SneakerStaking` | `SneakerStaking` | `contracts/SneakerStaking.sol` | Native POL vault with rarity-based NFT APY boosts |
+| — | `SneakerAppraiser` | `contracts/SneakerAppraiser.sol` | Read-only NFT valuation contract (POL estimates) |
+| — | `SneakerMarketplace` | `contracts/SneakerMarketplace.sol` | Fixed-price sales, English auctions, and escrowed POL offers |
+| — | `SneakerGame` | `contracts/SneakerGame.sol` | Daily-activation gamification with virtual veRUNE points redeemable for REN |
+| — | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
 
 ## Current Phase 1 foundation
 
@@ -19,14 +23,14 @@
 - `mintAuthorized` is the production verifier path.
 - `mintWithProof` is the explicitly gated Amoy/beta path.
 - Proof hashes are nonzero and single-use.
-- Rarity is bounded `0..100`; tier is bounded `< 8`.
+- Rarity is bounded `0..100`; tier is bounded `< 4` (Common, Rare, Epic, Mythic).
 - The frontend uses `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`.
 - Raw photos and personal data remain off-chain.
 
 ### `RUNEToken.sol`
 
-- ERC-20 name `Run and Earn Rune`, symbol `RUNE`, decimals `18`.
-- `MAX_SUPPLY` is 100M RUNE.
+- ERC-20 name `Run and Earn Rune`, symbol `REN`, decimals `18`.
+- `MAX_SUPPLY` is 100M REN.
 - `MINTER_ROLE` controls minting.
 - Transfers and minting are pausable.
 - This token remains available for the legacy NFT reward path.
@@ -36,16 +40,24 @@
 The vault supports two accounting paths:
 
 1. **Native POL path:** users call `depositPOL()`, receive passive POL rewards, and call `withdrawPOL()` after the lock period.
-2. **NFT boost path:** users call `stake(tokenId)`. The vault reads `SneakerMint.traitsOf(tokenId)`, stores the exact receipt, and increases the effective APY for the user's POL position.
+2. **NFT boost path:** users call `stake(tokenId)` — a **manual action**. The vault reads `SneakerMint.traitsOf(tokenId)`, stores the exact receipt, and increases the effective APY for the user's POL position. The NFT is custodied by the vault until `unstake(tokenId)` is called after the lock period.
 
-Current default economics are 4% base APY, 0.5% per-NFT bonus, 8% maximum APY, and a 7-day lock. The admin must fund the POL reward reserve with `fundPOLRewards()`. Claims can never consume `totalPOLPrincipal`.
+Current default economics are 2.80% base APY (reduced by 30% for sustainability), rarity-based tier boosts `[50, 80, 150, 180]` bps (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%), 0% flat per-NFT bonus, 8% maximum APY, and a 30-day minimum lock cycle. The admin must fund the POL reward reserve with `fundPOLRewards()`. Claims can never consume `totalPOLPrincipal`.
+
+### `SneakerAppraiser.sol`
+
+- Read-only contract that estimates the POL value of a SneakerMint NFT.
+- Formula: `(baseValue + tierValues[tier] + rarity * rarityWeight) * globalMultiplierBps / 10_000`.
+- All parameters are admin-configurable via `updateParams()`.
+- `appraise(tokenId)` reads traits from `SneakerMint` and returns `(estimatedValue, rarity, tier)`.
+- `appraiseRaw(rarity, tier)` returns an estimate without requiring an existing NFT.
+- The contract does not execute trades or transfers — it is purely informational.
 
 The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but it is separate from POL rewards.
 
 **POL formula:**
 
 ```text
-weight_bps = locked_count * 10_000 + sum(tier_bonus_bps)
 effective_apy_bps = min(
   base_apy_bps + locked_count * per_nft_bonus_bps + sum(tier_bonus_bps),
   max_apy_bps
@@ -101,8 +113,9 @@ The adapter introspects the configured schema and normalizes address-indexed dep
 1. Deploy `RUNEToken`.
 2. Deploy `SneakerMint`.
 3. Deploy `SneakerStaking` with NFT and RUNE addresses.
-4. Fund the POL reward reserve.
-5. Configure frontend contract addresses and server-only Graph query settings.
+4. Deploy `SneakerAppraiser` with the NFT address.
+5. Fund the POL reward reserve.
+6. Configure frontend contract addresses and server-only Graph query settings.
 6. Test `/staking` on Polygon Amoy with a disposable wallet.
 7. Verify subgraph activity after indexing.
 8. Use multisig administration and deterministic artifacts before mainnet.

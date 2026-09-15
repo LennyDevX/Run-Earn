@@ -6,13 +6,14 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title RUNEToken — RUN&EARN ERC-20 reward token.
-/// @notice RUNE is the reward token distributed by the SneakerStaking vault.
+/// @notice REN is the reward token distributed by the SneakerStaking vault.
+///      Virtual veRUNE points earned in SneakerGame can later be redeemed for REN.
 /// @dev Minting is limited to the MINTER_ROLE (staking vault or treasury).
 ///      Supply is capped by MAX_SUPPLY for economic sustainability.
 contract RUNEToken is ERC20, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    /// @notice Hard cap on total minted supply (100M RUNE with 18 decimals).
+    /// @notice Hard cap on total minted supply (100M REN with 18 decimals).
     uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 18;
 
     uint256 public totalMinted;
@@ -23,7 +24,7 @@ contract RUNEToken is ERC20, Pausable, AccessControl {
     constructor(
         address admin,
         address minter
-    ) ERC20("Run and Earn Rune", "RUNE") {
+    ) ERC20("Run and Earn Rune", "REN") {
         require(admin != address(0), "RUNEToken: zero admin");
         require(minter != address(0), "RUNEToken: zero minter");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -38,7 +39,7 @@ contract RUNEToken is ERC20, Pausable, AccessControl {
         _unpause();
     }
 
-    /// @notice Mint RUNE rewards to a recipient. Only MINTER_ROLE.
+    /// @notice Mint REN rewards to a recipient. Only MINTER_ROLE.
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused {
         require(to != address(0), "RUNEToken: zero recipient");
         require(totalMinted + amount <= MAX_SUPPLY, "RUNEToken: cap exceeded");
@@ -47,7 +48,7 @@ contract RUNEToken is ERC20, Pausable, AccessControl {
         emit Minted(to, amount);
     }
 
-    /// @notice Burn RUNE from the caller's own balance.
+    /// @notice Burn REN from the caller's own balance.
     function burn(uint256 amount) external {
         _burn(msg.sender, amount);
         emit Burned(msg.sender, amount);

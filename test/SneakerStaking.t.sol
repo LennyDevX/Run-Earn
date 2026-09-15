@@ -20,13 +20,13 @@ contract SneakerStakingTest is Test {
     bytes32 constant PROOF2 = keccak256("proof-2");
     string constant URI = "data:application/json;base64,eyJuYW1lIjoiVGVzdCJ9";
 
-    // Default params: 4% base APY, 0.5% per NFT, 8% max, 7-day lock
+    // Default params: 2.8% base APY, rarity-based boost [50,80,150,180] bps, 8% max, 30-day lock
     uint256 rewardTokensPerNftYear = 1000 * 10 ** 18;
-    uint256 baseApyBps = 400;
-    uint256 perNftBonusBps = 50;
+    uint256 baseApyBps = 280;
+    uint256 perNftBonusBps = 0; // boost is purely rarity-based
     uint256 maxApyBps = 800;
-    uint64[8] tierBonusBps = [uint64(0), 50, 100, 150, 200, 250, 300, 350];
-    uint256 minLockSeconds = 7 days;
+    uint64[4] tierBonusBps = [uint64(50), 80, 150, 180]; // Common, Rare, Epic, Mythic
+    uint256 minLockSeconds = 30 days;
 
     function setUp() public {
         nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
@@ -47,7 +47,7 @@ contract SneakerStakingTest is Test {
         vm.prank(admin);
         rune.mint(address(staking), 1_000_000 * 10 ** 18);
 
-        // Mint an NFT for alice
+        // Mint an NFT for alice (tier 2 = Epic, +1.5% boost)
         vm.prank(admin);
         nft.mintAuthorized(alice, URI, PROOF1, 50, 2);
     }
@@ -159,7 +159,7 @@ contract SneakerStakingTest is Test {
         vm.startPrank(alice);
         nft.approve(address(staking), 1);
         staking.stake(1);
-        vm.warp(block.timestamp + 1 days); // only 1 day, lock is 7 days
+        vm.warp(block.timestamp + 10 days); // only 10 days, lock is 30 days
         vm.expectRevert("SneakerStaking: lock period active");
         staking.unstake(1);
         vm.stopPrank();
@@ -248,25 +248,25 @@ contract SneakerStakingTest is Test {
         nft.approve(address(staking), 1);
         staking.stake(1);
         vm.stopPrank();
-        // base 400 + 1 * 50 + tierBonus[2]=100 = 550 bps = 5.5%
-        assertEq(staking.effectiveApyBps(alice), 550);
+        // base 280 + 0 (no flat bonus) + tierBonus[2]=150 (Epic) = 430 bps = 4.3%
+        assertEq(staking.effectiveApyBps(alice), 430);
     }
 
     function test_EffectiveApy_CappedAtMax() public {
-        // Mint several NFTs for alice
-        for (uint8 i = 0; i < 6; i++) {
+        // Mint several Mythic NFTs (tier 3, +1.8% each) for alice
+        for (uint8 i = 0; i < 4; i++) {
             vm.prank(admin);
-            nft.mintAuthorized(alice, URI, keccak256(abi.encodePacked("proof", i)), 50, 7);
+            nft.mintAuthorized(alice, URI, keccak256(abi.encodePacked("proof", i)), 90, 3);
         }
 
         vm.startPrank(alice);
-        for (uint8 i = 1; i <= 7; i++) {
+        for (uint8 i = 1; i <= 5; i++) {
             nft.approve(address(staking), i);
             staking.stake(i);
         }
         vm.stopPrank();
 
-        // Should be capped at maxApyBps = 800
+        // base 280 + 5 * 180 = 1180, but capped at maxApyBps = 800
         assertEq(staking.effectiveApyBps(alice), maxApyBps);
     }
 
@@ -373,7 +373,8 @@ contract SneakerStakingTest is Test {
 
         uint256 boostedPending = staking.pendingPOLRewards(alice);
         assertGt(boostedPending, basePending);
-        assertEq(staking.effectiveApyBps(alice), 550);
+        // base 280 + 0 + tierBonus[2]=150 (Epic) = 430
+        assertEq(staking.effectiveApyBps(alice), 430);
     }
 
     function test_WithdrawPOL_ReturnsPrincipalAfterLock() public {

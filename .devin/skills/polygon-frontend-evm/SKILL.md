@@ -9,12 +9,70 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 
 ## Current routes and contracts
 
+| Route | Main component | Hook |
+| --- | --- | --- |
+| `/` | `SneakerCarousel`, `PolygonTransferCard` | — |
+| `/mint` | `SneakerMintStudio` | `useMintedSneakers` |
+| `/my-nfts` | `MyNftsGallery` | `useMintedSneakers` |
+| `/collection` | `VeSneakerStorefront` (veSneakers store) | `useVeSneakerStore` |
+| `/marketplace` | `MarketplaceDashboard` | `useMarketplace` |
+| `/game` | `SneakerGameDashboard` | `useSneakerGame` |
+| `/staking` | `StakingVaultDashboard` | `useStakingVault`, `useNftAppraisal` |
+| `/defi` | `StakingVaultDashboard`, `PolygonTransferCard` | same as `/staking` |
+| `/roadmap` | static milestones | — |
+
+Full route documentation: `docs/app-routes.md`.
+
 - NFT: `SneakerMint` at `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`.
-- RUNE token: `RUNEToken` at `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS`.
+- REN token: `RUNEToken` at `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` (symbol `REN`).
 - Staking vault: `SneakerStaking` at `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`.
-- Staking UI: `/staking`.
-- Subgraph proxy: `/api/subgraph?address=0x...`.
+- NFT appraiser: `SneakerAppraiser` at `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`.
+- Marketplace: `SneakerMarketplace` at `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS` — UI at `/marketplace`.
+- Game: `SneakerGame` at `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS` — UI at `/game`.
+- veSneaker store: `VeSneakerStore` at `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS` — UI at `/collection`.
+- Subgraph proxy: `/api/subgraph?address=0x...` (see the `runearn-subgraph-activity` skill).
+- AI mint route: `/api/generate-sneaker` (see the `runearn-mint-studio` skill).
 - Subgraph server config: `THE_GRAPH_QUERY_URL`, `THE_GRAPH_QUERY_API_KEY`, `THE_GRAPH_SUBGRAPH_SLUG=nuxgraph`, `THE_GRAPH_SUBGRAPH_VERSION=0.1.0`.
+
+## Hooks inventory and conventions
+
+`src/hooks/`: `useContractTransaction`, `useOwnedSneakers`, `useMintedSneakers`,
+`useWalletOverview`, `useNftAppraisal`, `useStakingVault`, `useMarketplace`,
+`useSneakerGame`, `useVeSneakerStore`, `useSubgraphActivity`. Wallet state lives in
+`Providers.tsx` via `usePolygonWallet`.
+
+Every hook must:
+
+1. Start with `"use client"`.
+2. Expose `configured` (all required `NEXT_PUBLIC_*` addresses present and valid via
+   `isAddress`); pages render a demo-mode notice when false instead of crashing.
+3. Run reads in `useEffect` wrapped in `requestAnimationFrame` — a direct `setState`
+   inside the effect body trips the `react-hooks/set-state-in-effect` lint error.
+4. Compute `isLoading = isReading || transaction.isPending` and merge read/tx/dependency
+   errors into one `error`.
+5. Expose `refresh()` and call it after every confirmed transaction.
+
+Transactions go through `useContractTransaction().execute({ to, data, value })`, which
+encodes with viem, waits for the receipt, and surfaces the hash. `Providers.getActiveProvider()`
+re-verifies `eth_chainId` before every signature — never send a raw `eth_sendTransaction`
+that skips it.
+
+## Adding a route
+
+1. `src/app/<route>/page.tsx` — `metadata` + `Navbar` → `main` → `Footer`.
+2. Interactive logic in a `"use client"` component under `src/components/`.
+3. Contract reads/writes in a hook under `src/hooks/` (conventions above).
+4. New ABIs in `src/lib/contracts.ts` (note: `uint16` outputs infer as `number`; wrap with `BigInt(...)`).
+5. Add the link to `LINKS` in `src/components/Navbar.tsx`.
+6. Document it in `docs/app-routes.md`.
+
+## Design system notes
+
+- `PixelSneaker` ships 7 designs; pick one with `Number(tokenId) % 7` so NFTs look distinct.
+- Shared shell: `Navbar`, `Footer`, `ThemeToggle`, `WalletButton`.
+- Reuse the existing card/tab/KPI patterns from the dashboards instead of inventing new ones.
+- Rarity copy must match the contracts: Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%;
+  base staking APY 2.80%.
 
 ## Wallet architecture
 
@@ -43,8 +101,30 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 3. Use `withdrawPOL(amount)` only after the contract lock period.
 4. Use `claimPOLRewards()` only when pending rewards are nonzero and the reserve is funded.
 5. Read owned SneakerMint IDs via ERC-721 enumerable functions.
-6. Lock NFTs through `stake(tokenId)` and unlock through `unstake(tokenId)`.
-7. Show confirmed local transaction activity immediately, then refresh `/api/subgraph` after indexing.
+6. Lock NFTs through `stake(tokenId)` — this is a **manual action** by the user. The NFT is transferred to the vault. Unlock through `unstake(tokenId)`.
+7. APY boost is rarity-based: Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%. No flat per-NFT bonus.
+8. Use `useNftAppraisal` hook to read on-chain POL value estimates from `SneakerAppraiser.appraise(tokenId)` for each owned NFT.
+9. Show confirmed local transaction activity immediately, then refresh `/api/subgraph` after indexing.
+
+## Marketplace UI flow (`/marketplace`, `useMarketplace` hook)
+
+1. Read owned NFTs via `useOwnedSneakers`; read `tokenSaleKind(tokenId)` (0 = free, 1 = listed, 2 = in auction) and `suggestedPrice(tokenId)` per token.
+2. Listing flow requires two transactions: `approve(marketplace, tokenId)` on SneakerMint, then `list(tokenId, price)` on the marketplace.
+3. Auction flow: `approve` then `createAuction(tokenId, startPrice, durationSeconds)` (1h–30d).
+4. Buying: `buy(listingId)` with `value == listing.price`. Bidding: `bid(auctionId)` with `value >= minBid`; the previous bidder is refunded automatically.
+5. Offers: `makeOffer(tokenId, duration)` with `value` escrows POL; the NFT stays with its owner until `acceptOffer(offerId)`.
+6. Staked NFTs cannot be listed or auctioned — surface the "unstake first" error clearly.
+7. `valueRecommendations(tokenId)` returns 4 on-chain tips; show them as guidance text.
+
+## Game UI flow (`/game`, `useSneakerGame` hook)
+
+1. Read `sneakers(tokenId)` state (streak, durability, pending, lifetime), `pendingPoints`, `canActivate`, `secondsUntilActivation`, and `veRuneBalance(owner)`.
+2. `activate(tokenId)` is the core retention loop — once per 24h per sneaker. Show a countdown when in cooldown and a "worn out" state at 0 durability.
+3. Durability bar: max from `maxDurability`, wear per activation from `wearPerActivation`. Repair costs `repairCostPoints` veRUNE.
+4. Streak multiplier: +1%/day capped at +50% — display the effective ×multiplier and boosted daily rate (`tierBasePointsPerDay[tier] × multiplier`).
+5. `claimPoints(tokenId)` moves pending points to the user's veRUNE balance.
+6. `redeem(points)` converts veRUNE to REN at `redemptionRate` — only when `redemptionEnabled` is true; disable the button otherwise.
+7. veRUNE is virtual (not an ERC-20) — never treat it as a transferable token in the UI.
 
 ## Subgraph integration
 
@@ -52,7 +132,8 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 - Use the Next Route Handler proxy and server-only environment variables.
 - The dynamic adapter introspects the schema and finds address-indexed activity entities.
 - If the schema does not expose new POL events, show RPC state and an empty indexed activity state rather than inventing history.
-- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, and `Unstaked`.
+- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace and game events.
+- Full detail lives in the `runearn-subgraph-activity` skill.
 
 ## Required approach
 
@@ -74,3 +155,5 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 - Verify OKX in-app browser and mobile app handoff.
 - Verify MetaMask extension, MetaMask Mobile deeplink, cancellation, and return flow.
 - Verify `/staking` deposit, withdrawal, claim, NFT lock/unlock, APY update, and activity refresh on Amoy.
+- Verify `/marketplace` list (approve + list), buy, auction bid/settle, offer make/accept/cancel, and suggested prices on Amoy.
+- Verify `/game` activate (24h cooldown), streak display, durability bar, repair, claim points, and redemption gating on Amoy.

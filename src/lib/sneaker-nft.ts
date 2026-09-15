@@ -4,12 +4,14 @@ export const RARITIES: readonly {
   id: RarityLevel;
   label: string;
   multiplier: string;
+  boostBps: bigint;
+  boostLabel: string;
   accent: string;
 }[] = [
-  { id: "comun", label: "Common", multiplier: "×1.0", accent: "bg-foreground/10 text-foreground/60" },
-  { id: "raro", label: "Rare", multiplier: "×1.5", accent: "bg-sky/15 text-sky" },
-  { id: "epico", label: "Epic", multiplier: "×2.25", accent: "bg-magma/15 text-magma" },
-  { id: "mitico", label: "Mythic", multiplier: "×3.4", accent: "bg-mint/15 text-mint" },
+  { id: "comun", label: "Common", multiplier: "×1.0", boostBps: 50n, boostLabel: "+0.5% APY", accent: "bg-foreground/10 text-foreground/60" },
+  { id: "raro", label: "Rare", multiplier: "×1.5", boostBps: 80n, boostLabel: "+0.8% APY", accent: "bg-sky/15 text-sky" },
+  { id: "epico", label: "Epic", multiplier: "×2.25", boostBps: 150n, boostLabel: "+1.5% APY", accent: "bg-magma/15 text-magma" },
+  { id: "mitico", label: "Mythic", multiplier: "×3.4", boostBps: 180n, boostLabel: "+1.8% APY", accent: "bg-mint/15 text-mint" },
 ] as const;
 
 export const PALETTES = [

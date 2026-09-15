@@ -30,7 +30,9 @@ The app uses:
 Desktop extensions and in-app wallet browsers use EIP-6963/EIP-1193. Mobile browsers use the official MetaMask Connect and OKX Universal Provider SDK handoff with deep-link support. The app defaults to Polygon mainnet; set `NEXT_PUBLIC_POLYGON_NETWORK=amoy` for testnet work. User actions are signed by the connected wallet.
 
 - `/mint` generates AI sneaker artwork and a SHA-256 proof locally; production minting still requires verifier authorization.
-- `/collection` showcases the sneaker NFT collection with on-chain rarity and tier data.
+- `/collection` is the **veSneakers** store: buy virtual sneakers with POL (no physical pair required), then boost staking APY, earn veRUNE, and trade them.
+- `/marketplace` lists, buys, auctions, and makes escrowed POL offers on SneakerMint NFTs with on-chain appraiser valuations.
+- `/game` runs the daily sneaker activation loop: 24h activations, streak bonuses, durability wear/repair, and veRUNE point redemption.
 - `/staking` accepts native POL deposits, tracks POL earnings, locks sneaker NFTs for APY boosts, and shows recent indexed activity.
 - `/defi` contains the broader DeFi overview and the staking dashboard.
 
@@ -78,20 +80,31 @@ DEPLOY_TARGET=all npx hardhat run scripts/deploy.ts --network amoy
 FUND_ASSET=POL FUND_AMOUNT=10 STAKING_VAULT_ADDRESS=0x... npx hardhat run scripts/fund-staking.ts --network amoy
 ```
 
-See [`docs/polygon-test-runbook.md`](docs/polygon-test-runbook.md) for single-contract deployments, verification, and legacy RUNE funding.
+See [`docs/polygon-test-runbook.md`](docs/polygon-test-runbook.md) for single-contract deployments, verification, and legacy REN funding.
+
+## Documentation
+
+Start with the documentation index at [`docs/README.md`](docs/README.md). Route-by-route
+developer docs live in [`docs/app-routes.md`](docs/app-routes.md).
 
 ## Agent tooling
 
-Project-specific Polygon/EVM skills live under `.devin/skills/` for frontend viem work, Solidity contracts, security review, testing, native POL staking, and subgraph activity integration.
+Project-specific skills live under `.devin/skills/`: `polygon-contracts`,
+`polygon-frontend-evm`, `polygon-testing`, `polygon-security`, `runearn-mint-studio`,
+and `runearn-subgraph-activity`.
 
 ## Contracts
 
 The current Solidity foundation is:
 
 - `contracts/SneakerMint.sol`
-- `contracts/RUNEToken.sol`
+- `contracts/RUNEToken.sol` (symbol `REN`, 100M hard cap)
 - `contracts/SneakerStaking.sol`
+- `contracts/SneakerAppraiser.sol`
+- `contracts/SneakerMarketplace.sol`
+- `contracts/SneakerGame.sol`
+- `contracts/VeSneakerStore.sol`
 
-`SneakerStaking` separates user POL principal from a funded POL reward reserve. SneakerMint NFTs can be locked to increase APY. Contract boundaries, economics, and deployment order are documented in [`docs/contract-architecture-plan.md`](docs/contract-architecture-plan.md) and [`docs/polygon-staking-model.md`](docs/polygon-staking-model.md).
+`SneakerStaking` separates user POL principal from a funded POL reward reserve. SneakerMint NFTs can be manually locked to increase APY with rarity-based boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%). `SneakerAppraiser` provides on-chain POL value estimates for each NFT based on rarity and tier. `SneakerMarketplace` supports fixed-price sales, English auctions, and POL offers — staked NFTs cannot be listed. `SneakerGame` adds a daily-activation gamification loop with virtual veRUNE points redeemable for REN. `VeSneakerStore` sells virtual sneakers (veSneakers) for POL on demand, no physical pair required. Tokenomics are documented in [`docs/veRune-tokenomics.md`](docs/veRune-tokenomics.md); contract boundaries, economics, and deployment order in [`docs/contract-architecture-plan.md`](docs/contract-architecture-plan.md) and [`docs/polygon-staking-model.md`](docs/polygon-staking-model.md).
 
 No staking or reward contract is treated as production-ready until it has tests, Polygon Amoy validation, economic review, multisig controls, reserve policy, and independent security review.

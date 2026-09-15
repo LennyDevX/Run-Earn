@@ -12,8 +12,11 @@ import {SneakerMint} from "./SneakerMint.sol";
 
 /// @title SneakerStaking — POL staking with sneaker NFT APY boosts.
 /// @notice Users deposit native POL and may lock SneakerMint NFTs to increase
-///      their APY. POL rewards are paid only from the explicitly funded reward
-///      reserve; deposited principal is always accounted for separately.
+///      their APY. The boost is rarity-based: Common +0.5%, Rare +0.8%,
+///      Epic +1.5%, Mythic +1.8%. POL rewards are paid only from the explicitly
+///      funded reward reserve; deposited principal is always accounted for
+///      separately. Locking an NFT is a manual action — the user must call
+///      stake(tokenId) to transfer the NFT into the vault and activate the boost.
 /// @dev The existing RUNE NFT reward path remains available for compatibility.
 ///      Production deployment requires a reviewed POL reserve, multisig admin,
 ///      and an economic/security review. This contract does not promise returns.
@@ -51,11 +54,11 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
 
     // ─── Reward parameters (low, stable, sustainable) ───────────
     uint256 public rewardTokensPerNftYear; // RUNE per NFT-year at 1x weight
-    uint256 public baseApyBps; // 400 = 4% base POL APY
-    uint256 public perNftBonusBps; // 50 = 0.5% per staked NFT
+    uint256 public baseApyBps; // 280 = 2.8% base POL APY (sustainable rate)
+    uint256 public perNftBonusBps; // flat per-NFT bonus (0 by default — boost is rarity-based)
     uint256 public maxApyBps; // 800 = 8% hard cap
-    uint256 public minLockSeconds; // 604_800 = 7 days
-    uint64[8] public tierBonusBps; // per-tier bonus
+    uint256 public minLockSeconds; // 2_592_000 = 30 days minimum lock
+    uint64[4] public tierBonusBps; // per-rarity-tier bonus: [50, 80, 150, 180] bps
 
     uint256 public totalLocked;
     uint256 public totalPOLPrincipal;
@@ -87,7 +90,7 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
         uint256 baseApyBps_,
         uint256 perNftBonusBps_,
         uint256 maxApyBps_,
-        uint64[8] memory tierBonusBps_,
+        uint64[4] memory tierBonusBps_,
         uint256 minLockSeconds_
     ) {
         require(admin != address(0), "SneakerStaking: zero admin");
@@ -144,7 +147,7 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
         uint256 baseApyBps_,
         uint256 perNftBonusBps_,
         uint256 maxApyBps_,
-        uint64[8] calldata tierBonusBps_,
+        uint64[4] calldata tierBonusBps_,
         uint256 minLockSeconds_
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(baseApyBps_ <= maxApyBps_, "SneakerStaking: invalid APY bounds");
@@ -238,9 +241,13 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
 
     // ─────────────────────────── NFT staking ─────────────────────
 
-    /// @notice Stake a SneakerMint NFT into the vault.
-    /// @dev Rarity and tier are read from the NFT contract — the client
-    ///      cannot supply fake values.
+    /// @notice Stake a SneakerMint NFT into the vault to activate its APY boost.
+    /// @dev This is a manual action — the user must call this function to lock
+    ///      their NFT. The NFT is transferred from the caller to the vault.
+    ///      Rarity and tier are read from the NFT contract — the client cannot
+    ///      supply fake values. The APY boost is based on the NFT's tier:
+    ///      Common (tier 0) = +0.5%, Rare (tier 1) = +0.8%,
+    ///      Epic (tier 2) = +1.5%, Mythic (tier 3) = +1.8%.
     function stake(uint256 tokenId) external whenNotPaused nonReentrant {
         require(!receipts[msg.sender][tokenId].active, "SneakerStaking: already staked");
         require(nft.ownerOf(tokenId) == msg.sender, "SneakerStaking: not owner");
@@ -341,6 +348,11 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
 
     function availablePOLRewards() external view returns (uint256) {
         return address(this).balance - totalPOLPrincipal;
+    }
+
+    /// @notice Returns the full tier bonus array for UI display.
+    function tierBonuses() external view returns (uint64[4] memory) {
+        return tierBonusBps;
     }
 
     // ─────────────────────────── Internal ────────────────────────

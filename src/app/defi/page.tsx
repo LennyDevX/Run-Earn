@@ -7,7 +7,7 @@ import StakingVaultDashboard from "@/components/StakingVaultDashboard";
 export const metadata: Metadata = {
   title: "DeFi — RUN&EARN",
   description:
-    "NFT sneaker staking, rarity-based yield, and $RUNE rewards on Polygon.",
+    "NFT sneaker staking, rarity-based yield, and REN rewards on Polygon.",
 };
 
 type Tier = {
@@ -22,32 +22,32 @@ type Tier = {
 const TIERS = [
   {
     name: "Common",
-    apy: "4.5%",
-    boost: "base + 0%",
+    apy: "3.30%",
+    boost: "+0.5% APY",
     accent: "text-foreground/60",
     bar: "bg-foreground/20",
     width: "w-1/4",
   },
   {
     name: "Rare",
-    apy: "5.5%",
-    boost: "base + 0.5%",
+    apy: "3.60%",
+    boost: "+0.8% APY",
     accent: "text-sky",
     bar: "bg-sky",
     width: "w-2/5",
   },
   {
     name: "Epic",
-    apy: "6.0%",
-    boost: "base + 1.0%",
+    apy: "4.30%",
+    boost: "+1.5% APY",
     accent: "text-magma",
     bar: "bg-magma",
     width: "w-3/5",
   },
   {
     name: "Mythic",
-    apy: "6.5%",
-    boost: "base + 1.5%",
+    apy: "4.60%",
+    boost: "+1.8% APY",
     accent: "text-mint",
     bar: "bg-mint",
     width: "w-4/5",
@@ -68,7 +68,7 @@ const STEPS = [
       "Deposit native POL, then lock your sneakers into the vault to increase your APY.",
   },
   {
-    title: "Accumulate $RUNE",
+    title: "Accumulate REN",
     description:
       "Earn passive POL rewards from a funded reserve, with a hard APY cap for sustainability.",
   },

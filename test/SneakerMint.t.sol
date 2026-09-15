@@ -82,7 +82,7 @@ contract SneakerMintTest is Test {
     function test_MintAuthorized_RevertInvalidTier() public {
         vm.prank(admin);
         vm.expectRevert("SneakerMint: invalid tier");
-        nft.mintAuthorized(alice, URI, PROOF, 50, 8);
+        nft.mintAuthorized(alice, URI, PROOF, 50, 4);
     }
 
     function test_MintAuthorized_RevertWhenPaused() public {

@@ -21,7 +21,7 @@ describe("RUNEToken (TypeScript integration)", () => {
   it("sets name, symbol, and decimals", async () => {
     const rune = await deployRune();
     assert.equal(await rune.read.name(), "Run and Earn Rune");
-    assert.equal(await rune.read.symbol(), "RUNE");
+    assert.equal(await rune.read.symbol(), "REN");
     assert.equal(await rune.read.decimals(), 18n);
   });
 

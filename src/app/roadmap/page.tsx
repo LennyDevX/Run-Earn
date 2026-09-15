@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 export const metadata: Metadata = {
   title: "Roadmap — RUN&EARN",
   description:
-    "The RUN&EARN roadmap: from contract foundation and AI-generated NFTs in Q3 2026 to the beta launch, online store, and benefits vault in Q4 2026.",
+    "The RUN&EARN roadmap: six audited-ready contracts, the AI mint studio, marketplace, and sneaker game shipped in Q3 2026 — beta launch, online store, and benefits vault next.",
 };
 
 type Status = "done" | "active" | "next" | "planned";
@@ -49,7 +49,7 @@ const QUARTERS = [
     accent: "text-sky",
     highlight: "bg-sky/10",
     summary:
-      "Project foundation. We lay the contract base for mint and staking, ship the AI engine that generates unique NFT artwork, and stand up the basic web sections.",
+      "Foundation shipped. Six contracts drafted and tested (mint, REN token, POL staking, appraiser, marketplace, game), the AI mint studio live, and the full web app — including the marketplace and the daily sneaker game — built on top.",
     milestones: [
       {
         month: "Jul",
@@ -62,22 +62,22 @@ const QUARTERS = [
         month: "Aug",
         title: "Contract foundation",
         description:
-          "ERC-721 SneakerMint and ERC-20 RUNEToken are drafted on Hardhat + OpenZeppelin, with mint and staking interfaces sketched out.",
-        status: "active",
+          "Six contracts on Hardhat 3 + OpenZeppelin: SneakerMint (ERC-721), RUNEToken (REN, 100M cap), SneakerStaking (native POL, rarity-based APY boosts), SneakerAppraiser, SneakerMarketplace, and SneakerGame — covered by 221 Solidity + TypeScript tests.",
+        status: "done",
       },
       {
         month: "Aug",
         title: "AI-generated NFT artwork",
         description:
-          "The Gemini-powered agent turns a photo of a physical sneaker into a unique retro-futuristic collectible, ready to mint on Polygon.",
-        status: "active",
+          "The Gemini-powered agent turns a photo of a physical sneaker into a unique retro-futuristic collectible, ready to mint on Polygon with on-chain rarity and tier.",
+        status: "done",
       },
       {
         month: "Sep",
-        title: "Basic web sections",
+        title: "Full web app",
         description:
-          "Home, Collection, Mint, DeFi, and My NFTs go live with wallet connection, POL transfers, and the mint studio.",
-        status: "next",
+          "Home, Mint, Collection, Marketplace, Game, DeFi, Staking, and My NFTs go live with EIP-6963 wallet discovery (MetaMask + OKX), POL transfers, subgraph activity feeds, and the staking dashboard.",
+        status: "done",
       },
     ],
   },
@@ -88,34 +88,62 @@ const QUARTERS = [
     accent: "text-mint",
     highlight: "bg-mint/10",
     summary:
-      "Beta launch. The online store opens so the first sneakers can be bought, staking ships its first version, and the benefits vault contract is developed.",
+      "Beta launch and economy activation. Contracts deploy to Polygon Amoy, the veRUNE redemption pool opens, the online store bridges physical sneakers, and the benefits vault contract is developed.",
     milestones: [
+      {
+        month: "Oct",
+        title: "Amoy testnet deployment",
+        description:
+          "All six contracts deploy to Polygon Amoy with verified source, the POL reward reserve is funded, and the subgraph indexes marketplace and game events.",
+        status: "next",
+      },
       {
         month: "Oct",
         title: "Beta launch",
         description:
-          "Public beta of RUN&EARN. The mint studio, collection, and wallet flows are open to early users on Polygon Amoy and mainnet.",
-        status: "next",
-      },
-      {
-        month: "Oct",
-        title: "Online store ready",
-        description:
-          "The online store goes live to buy the first sneakers, bridging physical product and on-chain NFT provenance.",
+          "Public beta of RUN&EARN. Mint studio, marketplace, sneaker game, and staking open to early users on Polygon Amoy.",
         status: "next",
       },
       {
         month: "Nov",
-        title: "Staking v1",
+        title: "veRUNE redemption pool opens",
         description:
-          "Staking service improvements land and the first version of $RUNE staking is released, with tier-based yield and epoch rewards.",
+          "The play-to-earn pool is funded with REN and redemption is enabled: virtual points earned by daily sneaker activation become real, tradable tokens.",
+        status: "planned",
+      },
+      {
+        month: "Nov",
+        title: "Online store ready",
+        description:
+          "The online store goes live to buy the first physical sneakers, bridging real product and on-chain NFT provenance.",
         status: "planned",
       },
       {
         month: "Dec",
         title: "Benefits vault contract",
         description:
-          "A dedicated vault contract lets users lock their NFTs for extra benefits: discounts, special offers, and gifts. The vault becomes a benefits boveda for everyone who wants to participate.",
+          "A dedicated vault contract lets users lock their NFTs for extra benefits: discounts, special offers, and gifts. The vault becomes a benefits bóveda for everyone who wants to participate.",
+        status: "planned",
+      },
+      {
+        month: "Dec",
+        title: "Sneaker upgrades with veRUNE",
+        description:
+          "Burn veRUNE points to level up an existing sneaker: raise its rarity score and tier, increasing its appraiser valuation, staking APY boost, and marketplace price.",
+        status: "planned",
+      },
+      {
+        month: "Q1 2027",
+        title: "Physical redemption bridge",
+        description:
+          "Redeem veRUNE or REN for real sneakers from the store, with a one-time verifier registry linking on-chain claims to physical fulfillment.",
+        status: "planned",
+      },
+      {
+        month: "Q1 2027",
+        title: "DAO governance and mainnet",
+        description:
+          "Timelock + multisig governance for APY, tier, fee, and treasury parameters — with REN-weighted voting — before the Polygon mainnet launch.",
         status: "planned",
       },
     ],
@@ -137,14 +165,15 @@ export default function RoadmapPage() {
             className="animate-fade-up max-w-2xl text-4xl font-bold tracking-tight text-balance md:text-5xl"
             style={{ animationDelay: "120ms" }}
           >
-            From contract foundation to the benefits vault
+            From contract foundation to the physical bridge
           </h1>
           <p
             className="animate-fade-up max-w-lg leading-relaxed text-foreground/60"
             style={{ animationDelay: "240ms" }}
           >
             A quarter-by-quarter view of where RUN&EARN is today and where it is
-            heading on Polygon. We are currently in Q3 2026.
+            heading on Polygon. We are closing Q3 2026 with the full contract
+            suite and web app shipped.
           </p>
         </section>
 

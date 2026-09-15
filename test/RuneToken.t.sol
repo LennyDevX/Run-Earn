@@ -34,7 +34,7 @@ contract RUNETokenTest is Test {
 
     function test_NameAndSymbol() public view {
         assertEq(token.name(), "Run and Earn Rune");
-        assertEq(token.symbol(), "RUNE");
+        assertEq(token.symbol(), "REN");
         assertEq(token.decimals(), 18);
     }
 

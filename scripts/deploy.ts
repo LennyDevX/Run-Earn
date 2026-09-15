@@ -3,9 +3,12 @@ import { verifyContract } from "@nomicfoundation/hardhat-verify/verify";
 import { getAddress, type Address } from "viem";
 import {
   addressEnv,
+  appraiserParameters,
   assertNetwork,
   assertSignerBalance,
   bigintEnv,
+  gameParameters,
+  marketplaceParameters,
   optionalEnv,
   saveDeployment,
   shouldVerify,
@@ -14,9 +17,25 @@ import {
   type DeploymentRecord,
 } from "./deployment-config.js";
 
-const TARGETS = new Set(["all", "RUNEToken", "SneakerMint", "SneakerStaking"]);
+const TARGETS = new Set([
+  "all",
+  "RUNEToken",
+  "SneakerMint",
+  "SneakerStaking",
+  "SneakerAppraiser",
+  "SneakerMarketplace",
+  "SneakerGame",
+  "VeSneakerStore",
+]);
 
-type ContractName = "RUNEToken" | "SneakerMint" | "SneakerStaking";
+type ContractName =
+  | "RUNEToken"
+  | "SneakerMint"
+  | "SneakerStaking"
+  | "SneakerAppraiser"
+  | "SneakerMarketplace"
+  | "SneakerGame"
+  | "VeSneakerStore";
 
 type Deployment = {
   name: ContractName;
@@ -116,6 +135,96 @@ async function main() {
       params.tierBonusBps,
       params.minLockSeconds,
     ]));
+  }
+
+  if (target === "all" || target === "SneakerAppraiser") {
+    const sneakerDeployment = deployments.find((item) => item.name === "SneakerMint");
+    const sneakerAddress = sneakerDeployment?.address ?? addressEnv("SNEAKER_MINT_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    if (sneakerAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error("SneakerAppraiser requires SNEAKER_MINT_ADDRESS when deployed separately.");
+    }
+    const ap = appraiserParameters();
+    deployments.push(await deployContract(viem, "SneakerAppraiser", [
+      addressEnv("APPRAISER_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      ap.baseValue,
+      ap.tierValues,
+      ap.rarityWeight,
+      ap.globalMultiplierBps,
+    ]));
+  }
+
+  if (target === "all" || target === "SneakerMarketplace") {
+    const sneakerDeployment = deployments.find((item) => item.name === "SneakerMint");
+    const appraiserDeployment = deployments.find((item) => item.name === "SneakerAppraiser");
+    const stakingDeployment = deployments.find((item) => item.name === "SneakerStaking");
+    const sneakerAddress = sneakerDeployment?.address ?? addressEnv("SNEAKER_MINT_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    const appraiserAddress = appraiserDeployment?.address ?? addressEnv("SNEAKER_APPRAISER_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    const stakingAddress = stakingDeployment?.address ?? addressEnv("STAKING_VAULT_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    if (
+      sneakerAddress === "0x0000000000000000000000000000000000000000" ||
+      appraiserAddress === "0x0000000000000000000000000000000000000000" ||
+      stakingAddress === "0x0000000000000000000000000000000000000000"
+    ) {
+      throw new Error("SneakerMarketplace requires SNEAKER_MINT_ADDRESS, SNEAKER_APPRAISER_ADDRESS, and STAKING_VAULT_ADDRESS when deployed separately.");
+    }
+    const mp = marketplaceParameters();
+    deployments.push(await deployContract(viem, "SneakerMarketplace", [
+      addressEnv("MARKETPLACE_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      appraiserAddress,
+      stakingAddress,
+      mp.feeBps,
+      mp.appraiserPremiumBps,
+      addressEnv("MARKETPLACE_FEE_COLLECTOR_ADDRESS", admin),
+    ]));
+  }
+
+  if (target === "all" || target === "SneakerGame") {
+    const sneakerDeployment = deployments.find((item) => item.name === "SneakerMint");
+    const runeDeployment = deployments.find((item) => item.name === "RUNEToken");
+    const sneakerAddress = sneakerDeployment?.address ?? addressEnv("SNEAKER_MINT_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    const runeAddress = runeDeployment?.address ?? addressEnv("RUNE_TOKEN_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    if (sneakerAddress === "0x0000000000000000000000000000000000000000" || runeAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error("SneakerGame requires SNEAKER_MINT_ADDRESS and RUNE_TOKEN_ADDRESS when deployed separately.");
+    }
+    const gp = gameParameters();
+    deployments.push(await deployContract(viem, "SneakerGame", [
+      addressEnv("GAME_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      runeAddress,
+      gp.tierBasePointsPerDay,
+      gp.streakBonusStepBps,
+      gp.maxDurability,
+      gp.wearPerActivation,
+      gp.repairCostPoints,
+      gp.redemptionRate,
+    ]));
+  }
+
+  if (target === "all" || target === "VeSneakerStore") {
+    const sneakerDeployment = deployments.find((item) => item.name === "SneakerMint");
+    const sneakerAddress = sneakerDeployment?.address ?? addressEnv("SNEAKER_MINT_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+    if (sneakerAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error("VeSneakerStore requires SNEAKER_MINT_ADDRESS when deployed separately.");
+    }
+    const storeDeployment = await deployContract(viem, "VeSneakerStore", [
+      addressEnv("VE_STORE_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      addressEnv("VE_STORE_TREASURY_ADDRESS", admin),
+    ]);
+    deployments.push(storeDeployment);
+
+    // The store mints on demand, so it needs MINTER_ROLE on SneakerMint.
+    const nft = await viem.getContractAt("SneakerMint", sneakerAddress);
+    const minterRole = await nft.read.MINTER_ROLE();
+    const hasRole = await nft.read.hasRole([minterRole, storeDeployment.address]);
+    if (!hasRole) {
+      const hash = await nft.write.grantRole([minterRole, storeDeployment.address], { account: wallet.account });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error(`Granting MINTER_ROLE to VeSneakerStore failed (${hash}).`);
+      console.log(`Granted MINTER_ROLE on SneakerMint to VeSneakerStore (${storeDeployment.address})`);
+    }
   }
 
   const record: DeploymentRecord = {

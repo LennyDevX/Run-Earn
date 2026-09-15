@@ -16,6 +16,8 @@ export type StakingStats = {
   apyBps: bigint;
   lockedCount: bigint;
   reserve: bigint;
+  depositedAt: bigint;
+  minLockSeconds: bigint;
   stakedTokenIds: bigint[];
   ownedSneakers: OwnedSneaker[];
 };
@@ -23,9 +25,11 @@ export type StakingStats = {
 const EMPTY_STATS: StakingStats = {
   principal: 0n,
   pendingRewards: 0n,
-  apyBps: 0n,
+  apyBps: 280n, // Default 2.8% base APY
   lockedCount: 0n,
   reserve: 0n,
+  depositedAt: 0n,
+  minLockSeconds: 2592000n, // 30 days
   stakedTokenIds: [],
   ownedSneakers: [],
 };
@@ -67,20 +71,24 @@ export function useStakingVault() {
     setReadError(null);
     try {
       const owner = wallet.address;
-      const [polPosition, position, pendingRewards, apyBps, reserve, stakedTokenIds] = await Promise.all([
+      const [polPosition, position, pendingRewards, apyBps, reserve, stakedTokenIds, minLock] = await Promise.all([
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "polPositions", args: [owner] }),
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "positions", args: [owner] }),
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "pendingPOLRewards", args: [owner] }),
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "effectiveApyBps", args: [owner] }),
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "availablePOLRewards" }),
         wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "stakedTokenIds", args: [owner] }),
+        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "minLockSeconds" }).catch(() => 2592000n),
       ]);
+      const polPosTuple = polPosition as readonly [bigint, bigint, bigint, bigint];
       setStats({
-        principal: (polPosition as readonly [bigint, bigint, bigint, bigint])[0],
+        principal: polPosTuple[0],
         pendingRewards: pendingRewards as bigint,
         apyBps: apyBps as bigint,
         lockedCount: (position as readonly [bigint, bigint, bigint, bigint, bigint])[0],
         reserve: reserve as bigint,
+        depositedAt: polPosTuple[2],
+        minLockSeconds: (minLock as bigint) || 2592000n,
         stakedTokenIds: stakedTokenIds as bigint[],
         ownedSneakers: owned.sneakers,
       });

@@ -77,11 +77,11 @@ describe("SneakerMint (TypeScript integration)", () => {
     );
   });
 
-  it("reverts on invalid tier >= 8", async () => {
+  it("reverts on invalid tier >= 4", async () => {
     const nft = await deployNft();
     await assert.rejects(
       nft.write.mintAuthorized(
-        [alice.account.address, URI, PROOF1, 50n, 8n],
+        [alice.account.address, URI, PROOF1, 50n, 4n],
         { account: admin.account },
       ),
     );

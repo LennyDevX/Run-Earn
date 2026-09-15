@@ -105,6 +105,9 @@ DEPLOY_TARGET=SneakerStaking \
   RUNE_TOKEN_ADDRESS=0x... \
   SNEAKER_MINT_ADDRESS=0x... \
   npx hardhat run scripts/deploy.ts --network amoy
+DEPLOY_TARGET=SneakerAppraiser \
+  SNEAKER_MINT_ADDRESS=0x... \
+  npx hardhat run scripts/deploy.ts --network amoy
 ```
 
 Use `SKIP_VERIFY=true` only for local or intentionally unverified deployments. The deployment manifest is saved under `deployments/<network>.json` and is ignored by git.
