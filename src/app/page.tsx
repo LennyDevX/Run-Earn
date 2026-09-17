@@ -78,9 +78,9 @@ const POLYGON_FEATURES = [
 type Stat = { value: string; label: string };
 
 const DEFI_STATS = [
-  { value: "12.4%", label: "Average staking APY" },
-  { value: "10,000", label: "Pairs in the genesis collection" },
-  { value: "5", label: "Rarity tiers with yield boost" },
+  { value: "2.80%", label: "Base staking APY on POL" },
+  { value: "4", label: "Rarity tiers with yield boost" },
+  { value: "9,000", label: "veSneakers in the virtual store" },
 ] as const satisfies readonly Stat[];
 
 export default function Home() {
@@ -90,8 +90,8 @@ export default function Home() {
 
       {/* Hero */}
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
-        <section className="grid flex-1 items-center gap-16 py-16 md:grid-cols-2 md:py-24">
-          <div className="flex flex-col items-start gap-8">
+        <section className="grid flex-1 items-center gap-10 py-12 sm:py-16 md:grid-cols-2 md:gap-16 md:py-24">
+          <div className="flex flex-col items-start gap-6 sm:gap-8">
             <span
               className="animate-fade-up rounded-full border border-foreground/10 bg-surface px-4 py-1.5 text-xs font-semibold tracking-widest text-foreground/70 uppercase"
               style={{ animationDelay: "0ms" }}
@@ -99,7 +99,7 @@ export default function Home() {
               Genesis Collection · Polygon
             </span>
             <h1
-              className="animate-fade-up text-5xl leading-[1.05] font-bold tracking-tight text-balance md:text-6xl"
+              className="animate-fade-up text-4xl leading-[1.05] font-bold tracking-tight text-balance sm:text-5xl md:text-6xl"
               style={{ animationDelay: "120ms" }}
             >
               Walk.
@@ -109,7 +109,7 @@ export default function Home() {
               <span className="text-mint">Earn.</span>
             </h1>
             <p
-              className="animate-fade-up max-w-md text-lg leading-relaxed text-foreground/60"
+              className="animate-fade-up max-w-md text-base leading-relaxed text-foreground/60 sm:text-lg"
               style={{ animationDelay: "240ms" }}
             >
               NFT sneakers with retro-futuristic style and real utility: each
@@ -117,18 +117,18 @@ export default function Home() {
               and a voice in ecosystem governance.
             </p>
             <div
-              className="animate-fade-up flex flex-wrap items-center gap-4"
+              className="animate-fade-up flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4"
               style={{ animationDelay: "360ms" }}
             >
               <Link
                 href="/collection"
-                className="rounded-full bg-magma px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-magma/30"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-magma px-7 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-magma/30 sm:flex-none sm:py-3.5"
               >
                 Explore collection
               </Link>
               <Link
                 href="/defi"
-                className="rounded-full border border-foreground/15 px-7 py-3.5 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-foreground/30 hover:bg-foreground/5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-foreground/15 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-foreground/30 hover:bg-foreground/5 sm:flex-none sm:py-3.5"
               >
                 How it works
               </Link>
@@ -144,13 +144,13 @@ export default function Home() {
 
           {/* Sneaker visual */}
           <div className="relative flex items-center justify-center">
-            <div className="animate-glow absolute size-72 rounded-full bg-sky/25 blur-3xl" />
+            <div className="animate-glow absolute size-52 rounded-full bg-sky/25 blur-3xl sm:size-72" />
             <div
-              className="animate-glow absolute size-56 translate-x-24 translate-y-16 rounded-full bg-mint/25 blur-3xl"
+              className="animate-glow absolute size-44 translate-x-16 translate-y-12 rounded-full bg-mint/25 blur-3xl sm:size-56 sm:translate-x-24 sm:translate-y-16"
               style={{ animationDelay: "-3.5s" }}
             />
             <div
-              className="animate-glow absolute size-40 -translate-x-28 -translate-y-20 rounded-full bg-magma/20 blur-3xl"
+              className="animate-glow absolute size-32 -translate-x-20 -translate-y-14 rounded-full bg-magma/20 blur-3xl sm:size-40 sm:-translate-x-28 sm:-translate-y-20"
               style={{ animationDelay: "-1.8s" }}
             />
             <div className="animate-float relative">
@@ -185,12 +185,12 @@ export default function Home() {
       </div>
 
       {/* Features */}
-      <section className="mx-auto w-full max-w-6xl px-6 py-24">
-        <div className="mb-14 flex flex-col gap-4">
+      <section className="mx-auto w-full max-w-6xl px-6 py-16 md:py-24">
+        <div className="mb-10 flex flex-col gap-4 md:mb-14">
           <span className="font-pixel text-[10px] text-magma">
             THE COLLECTION
           </span>
-          <h2 className="max-w-xl text-4xl font-bold tracking-tight text-balance">
+          <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             More than a collectible, an asset
           </h2>
         </div>
@@ -198,7 +198,7 @@ export default function Home() {
           {FEATURES.map((feature) => (
             <article
               key={feature.title}
-              className="group flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-8 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
+              className="group flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
               <span
                 className={`size-3 rounded-full ${feature.accent} transition-transform duration-500 group-hover:scale-150`}
@@ -218,21 +218,21 @@ export default function Home() {
       </section>
 
       {/* DeFi band */}
-      <section className="mx-auto w-full max-w-6xl px-6 pb-24">
-        <div className="rounded-[2.5rem] bg-linear-to-b from-ink to-ink-soft px-8 py-16 text-paper ring-1 ring-transparent md:px-16 dark:ring-paper/10">
+      <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
+        <div className="rounded-[2.5rem] bg-linear-to-b from-ink to-ink-soft px-6 py-12 text-paper ring-1 ring-transparent sm:px-8 sm:py-16 md:px-16 dark:ring-paper/10">
           <div className="flex flex-col gap-4">
             <span className="font-pixel text-[10px] text-mint">
               MOTOR DEFI
             </span>
-            <h2 className="max-w-xl text-4xl font-bold tracking-tight text-balance">
+            <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
               Your sneakers work while you walk
             </h2>
             <p className="max-w-lg leading-relaxed text-paper/60">
-              Lock your pairs in the vault, accumulate $RUNE based on rarity
+              Lock your pairs in the vault, accumulate REN based on rarity
               tier, and participate in protocol decisions.
             </p>
           </div>
-          <div className="mt-12 grid gap-8 sm:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-3 md:mt-12 md:gap-8">
             {DEFI_STATS.map((stat) => (
               <div
                 key={stat.label}
@@ -249,13 +249,13 @@ export default function Home() {
       </section>
 
       {/* Polygon */}
-      <section className="mx-auto w-full max-w-6xl px-6 pb-24">
+      <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
         <div className="flex flex-col items-center gap-6 text-center">
-          <PolygonLogo className="animate-float-slow w-24" />
+          <PolygonLogo className="animate-float-slow w-20 sm:w-24" />
           <span className="font-pixel text-[10px] text-polygon-purple">
             POWERED BY POLYGON
           </span>
-          <h2 className="max-w-2xl text-4xl font-bold tracking-tight text-balance">
+          <h2 className="max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             The EVM network that makes frictionless collecting possible
           </h2>
           <p className="max-w-xl leading-relaxed text-foreground/60">
@@ -263,11 +263,11 @@ export default function Home() {
             mint with Solidity, use wallets like MetaMask, and access OpenSea liquidity.
           </p>
         </div>
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
+        <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-3">
           {POLYGON_FEATURES.map((feature) => (
             <article
               key={feature.title}
-              className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-8 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
+              className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
               <span className="bg-linear-to-r from-polygon-purple to-mint bg-clip-text text-3xl font-bold tracking-tight text-transparent">
                 {feature.stat}

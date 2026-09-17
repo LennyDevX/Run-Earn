@@ -6,6 +6,7 @@ import { formatEther, parseEther } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { useVeSneakerStore } from "@/hooks/useVeSneakerStore";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { usePolPrice } from "@/hooks/usePolPrice";
 import PixelSneaker from "@/components/PixelSneaker";
 import {
   VE_FALLBACK_PRICE_POL,
@@ -29,6 +30,7 @@ export default function VeSneakerStorefront() {
   const wallet = usePolygonWallet();
   const store = useVeSneakerStore();
   const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const polPrice = usePolPrice();
   const [filter, setFilter] = useState<Filter>("All");
   const [quantityByDesign, setQuantityByDesign] = useState<Record<number, number>>({});
   const [actionError, setActionError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export default function VeSneakerStorefront() {
         const onChain = store.designs[index];
         const tier = Number(onChain?.tier ?? entry.tier);
         const rarity = Number(onChain?.rarity ?? entry.rarity);
-        const price = onChain?.price ?? parseEther(VE_FALLBACK_PRICE_POL[tier] ?? "1.4");
+        const price = onChain?.price ?? parseEther(VE_FALLBACK_PRICE_POL[tier] ?? "421");
         const maxSupply = onChain?.maxSupply ?? VE_MAX_SUPPLY_FALLBACK;
         const minted = onChain?.minted ?? 0n;
         return {
@@ -125,6 +127,16 @@ export default function VeSneakerStorefront() {
           <span className="rounded-full border border-foreground/10 bg-background px-3 py-1 text-xs font-semibold text-foreground/60">
             {VE_MAX_SUPPLY_FALLBACK.toString()} max / design
           </span>
+          <button
+            type="button"
+            onClick={() => void polPrice.refresh(true)}
+            title={polPrice.error ?? "POL/USD via Uniswap Trading API"}
+            className="min-h-9 cursor-pointer rounded-full border border-sky/20 bg-sky/10 px-3 py-2 font-pixel text-[9px] text-sky transition-colors active:scale-95 hover:bg-sky/20"
+          >
+            {polPrice.isLoading
+              ? "POL PRICE…"
+              : `POL $${polPrice.price.usd.toFixed(4)}${polPrice.price.source === "uniswap" ? "" : " (fallback)"}`}
+          </button>
         </div>
       </div>
 
@@ -160,14 +172,14 @@ export default function VeSneakerStorefront() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filters — horizontal scroll keeps them on one row on narrow screens */}
+      <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1">
         {FILTERS.map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => setFilter(item)}
-            className={`cursor-pointer rounded-full px-4 py-2 text-xs font-semibold transition-all duration-300 ${
+            className={`min-h-11 shrink-0 cursor-pointer rounded-full px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
               filter === item
                 ? "bg-foreground text-background"
                 : "border border-foreground/10 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
@@ -210,7 +222,7 @@ export default function VeSneakerStorefront() {
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-sm font-bold text-mint">{formatPol(row.price)} POL</div>
-                  <div className="text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.price)) * 0.1).toFixed(2)}</div>
+                  <div className="text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.price)) * polPrice.price.usd).toFixed(2)}</div>
                 </div>
               </div>
 
@@ -237,17 +249,17 @@ export default function VeSneakerStorefront() {
                     type="button"
                     onClick={() => setQuantity(row.index, quantity - 1)}
                     disabled={quantity <= 1}
-                    className="cursor-pointer px-3 py-2 text-xs font-bold text-foreground/60 hover:text-foreground disabled:opacity-30"
+                    className="flex size-11 cursor-pointer items-center justify-center text-base font-bold text-foreground/60 transition-colors active:scale-95 hover:text-foreground disabled:opacity-30"
                     aria-label="Decrease quantity"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center font-mono text-xs font-bold">{quantity}</span>
+                  <span className="w-7 text-center font-mono text-xs font-bold tabular-nums">{quantity}</span>
                   <button
                     type="button"
                     onClick={() => setQuantity(row.index, quantity + 1)}
                     disabled={quantity >= 20}
-                    className="cursor-pointer px-3 py-2 text-xs font-bold text-foreground/60 hover:text-foreground disabled:opacity-30"
+                    className="flex size-11 cursor-pointer items-center justify-center text-base font-bold text-foreground/60 transition-colors active:scale-95 hover:text-foreground disabled:opacity-30"
                     aria-label="Increase quantity"
                   >
                     +
@@ -257,7 +269,7 @@ export default function VeSneakerStorefront() {
                   type="button"
                   disabled={disabled}
                   onClick={() => void handleBuy(row.index, row.price, row.remaining)}
-                  className="flex-1 cursor-pointer rounded-full bg-mint px-4 py-2.5 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-11 flex-1 cursor-pointer rounded-full bg-mint px-4 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {soldOut ? "Sold out" : store.isLoading ? "Confirming..." : `Buy for ${formatPol(row.price * BigInt(quantity))} POL`}
                 </button>

@@ -125,15 +125,16 @@ export function gameParameters() {
   };
 }
 
-/// veSneaker primary-sale pricing. Defaults are 2x the SneakerAppraiser value
-/// at the default rarity scores, which keeps the store coherent with the
-/// on-chain valuation while leaving the protocol a primary-sale margin:
+/// veSneaker primary-sale pricing.
 ///
-///   appraiser = 0.5 + tierValues[tier] + rarity * 0.01
-///   Common (20): 0.70 POL -> 1.4 POL     Rare (45): 1.95 POL -> 3.9 POL
-///   Epic   (65): 4.15 POL -> 8.3 POL     Mythic (85): 9.35 POL -> 18.7 POL
+/// Prices are defined in USD and converted to POL with `POL_USD_PRICE`, so a POL
+/// move only needs a single env change. The USD targets follow a geometric
+/// progression from $40 (Common) to $150 (Mythic):
 ///
-/// `POL_USD_PRICE` is only used for logging the USD equivalent at deploy time.
+///   Common $40 -> 410 POL     Rare $62  -> 635 POL
+///   Epic   $97 -> 993 POL    Mythic $150 -> 1536 POL   (at POL = $0.09764)
+///
+/// Set `VE_PRICE_*_POL` to override an individual design price in POL directly.
 export type VeSneakerDesignConfig = {
   name: string;
   design: number; // PixelSneaker design index (0..6)
@@ -144,20 +145,30 @@ export type VeSneakerDesignConfig = {
 };
 
 export function polUsdPrice() {
-  const raw = optionalEnv("POL_USD_PRICE", "0.10");
+  const raw = optionalEnv("POL_USD_PRICE", "0.09764");
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) throw new Error("POL_USD_PRICE must be a positive number.");
   return value;
 }
 
+/// Converts a USD target into whole POL at the configured POL price.
+function usdToPolWhole(usd: number) {
+  const pol = usd / polUsdPrice();
+  return BigInt(Math.max(1, Math.round(pol))) * 10n ** 18n;
+}
+
+export function veSneakerPricesPol() {
+  return {
+    common: bigintEnv("VE_PRICE_COMMON_POL", usdToPolWhole(numberEnv("VE_PRICE_COMMON_USD", 40))),
+    rare: bigintEnv("VE_PRICE_RARE_POL", usdToPolWhole(numberEnv("VE_PRICE_RARE_USD", 62))),
+    epic: bigintEnv("VE_PRICE_EPIC_POL", usdToPolWhole(numberEnv("VE_PRICE_EPIC_USD", 97))),
+    mythic: bigintEnv("VE_PRICE_MYTHIC_POL", usdToPolWhole(numberEnv("VE_PRICE_MYTHIC_USD", 150))),
+  };
+}
+
 export function veSneakerDesigns(): VeSneakerDesignConfig[] {
   const maxSupply = Number(bigintEnv("VE_MAX_SUPPLY", 1000n));
-  const prices = {
-    common: bigintEnv("VE_PRICE_COMMON_POL", 14n * 10n ** 17n), // 1.4 POL
-    rare: bigintEnv("VE_PRICE_RARE_POL", 39n * 10n ** 17n), // 3.9 POL
-    epic: bigintEnv("VE_PRICE_EPIC_POL", 83n * 10n ** 17n), // 8.3 POL
-    mythic: bigintEnv("VE_PRICE_MYTHIC_POL", 187n * 10n ** 17n), // 18.7 POL
-  };
+  const prices = veSneakerPricesPol();
   return [
     { name: "Neon Runner", design: 0, rarity: 85, tier: 3, pricePol: prices.mythic, maxSupply },
     { name: "Sky Drift", design: 1, rarity: 45, tier: 1, pricePol: prices.rare, maxSupply },

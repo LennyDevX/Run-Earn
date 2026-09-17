@@ -36,11 +36,19 @@ export default function SneakerGameDashboard() {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setNowSeconds(Math.floor(Date.now() / 1000)));
-    const interval = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 30_000);
+    const sync = () => setNowSeconds(Math.floor(Date.now() / 1000));
+    const frame = window.requestAnimationFrame(sync);
+    const interval = setInterval(sync, 30_000);
+    // Refresh immediately when the user returns to the tab so the activation
+    // countdowns are never stale.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.cancelAnimationFrame(frame);
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -256,15 +264,17 @@ export default function SneakerGameDashboard() {
                         type="button"
                         disabled={!isConfigured || game.isLoading || wornOut || !canActivateNow}
                         onClick={() => void runAction(() => game.activate(sneaker.tokenId), `Sneaker #${sneaker.tokenId} activated`)}
-                        className="cursor-pointer rounded-full bg-mint py-2.5 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="min-h-11 cursor-pointer rounded-full bg-mint px-2 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {wornOut ? "Worn out" : canActivateNow ? "Activate (24h)" : formatCountdown(readyIn)}
+                        <span className="block truncate tabular-nums">
+                          {wornOut ? "Worn out" : canActivateNow ? "Activate (24h)" : formatCountdown(readyIn)}
+                        </span>
                       </button>
                       <button
                         type="button"
                         disabled={!isConfigured || game.isLoading || sneaker.pending === 0n}
                         onClick={() => void runAction(() => game.claimPoints(sneaker.tokenId), `Points claimed from #${sneaker.tokenId}`)}
-                        className="cursor-pointer rounded-full border border-sky/30 bg-sky/10 py-2.5 text-xs font-bold text-sky transition-colors hover:bg-sky/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="min-h-11 cursor-pointer rounded-full border border-sky/30 bg-sky/10 px-2 text-xs font-bold text-sky transition-colors active:scale-[0.98] hover:bg-sky/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Claim points
                       </button>
@@ -273,7 +283,7 @@ export default function SneakerGameDashboard() {
                           type="button"
                           disabled={!isConfigured || game.isLoading || game.veRune < game.params.repairCostPoints}
                           onClick={() => void runAction(() => game.repair(sneaker.tokenId), `Sneaker #${sneaker.tokenId} repaired`)}
-                          className="col-span-2 cursor-pointer rounded-full border border-magma/30 bg-magma/10 py-2.5 text-xs font-bold text-magma transition-colors hover:bg-magma/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="col-span-2 min-h-11 cursor-pointer rounded-full border border-magma/30 bg-magma/10 px-2 text-xs font-bold text-magma transition-colors active:scale-[0.98] hover:bg-magma/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Repair ({formatPoints(game.params.repairCostPoints)} veRUNE)
                         </button>

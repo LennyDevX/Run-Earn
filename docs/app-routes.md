@@ -31,9 +31,12 @@ Deep-dive companions:
 | `/roadmap` | `src/app/roadmap/page.tsx` | static milestones | — | — |
 | `/api/generate-sneaker` | `src/app/api/generate-sneaker/route.ts` | — | — | — |
 | `/api/subgraph` | `src/app/api/subgraph/route.ts` | — | The Graph Studio | — |
+| `/api/pol-price` | `src/app/api/pol-price/route.ts` | — | Uniswap Trading API | `usePolPrice` |
 
 Every page follows the same shell: `Navbar` → `<main>` → `Footer`, wrapped by
-`Providers` in `src/app/layout.tsx`.
+`Providers` in `src/app/layout.tsx`. The root layout also mounts `MobileNav`, the
+fixed bottom bar that carries the five primary destinations on phones — see
+[`mobile-experience.md`](mobile-experience.md).
 
 ## Shared building blocks
 
@@ -84,7 +87,22 @@ exposed to the browser only through `/api/subgraph`. See
 
 7 hand-authored pixel designs (`design={0..6}`), each with its own default palette.
 Props: `design`, `palette` (per-cell color overrides), `className`, `style`. Dashboards
-pick a design with `Number(tokenId) % 7` so every sneaker looks distinct.
+pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
+`PIXEL_SNEAKER_DESIGNS` for the count instead of hardcoding it.
+
+### Mobile shell — `MobileNav`, `MoreSheet`, `Navbar`
+
+- `MobileNav` (`fixed`, `md:hidden`) is mounted once in `src/app/layout.tsx` and holds the
+  five primary destinations: Home, Mint, veSneakers, Game, Market. It hides on scroll
+  down and returns on scroll up, and always reappears on route change.
+- `MoreSheet` is the reusable bottom sheet (portal, scroll lock, focus trap, Escape,
+  backdrop tap, safe-area padding). Used by the "More" menu and by the wallet dialogs on
+  mobile.
+- `Navbar` keeps the desktop links at `md+`, is `sticky` with a translucent backdrop, and
+  exposes a 44px menu button below `md` that opens `MoreSheet` with Staking, My NFTs,
+  DeFi, Roadmap and the theme toggle.
+- `body` reserves the bar height plus the bottom safe-area inset, so pages do not need
+  their own bottom padding. Details and conventions: [`mobile-experience.md`](mobile-experience.md).
 
 ### Hooks inventory — `src/hooks/`
 
@@ -100,6 +118,7 @@ pick a design with `Number(tokenId) % 7` so every sneaker looks distinct.
 | `useMarketplace` | Marketplace reads + list/buy/auction/offer txs + `approveNft` |
 | `useSneakerGame` | Game reads + `activate`/`claimPoints`/`repair`/`redeem` |
 | `useVeSneakerStore` | veSneaker catalog reads + `buy(designIndex, price, quantity)` |
+| `usePolPrice` | Live POL/USD from `/api/pol-price` (Uniswap proxy) for USD hints |
 | `useSubgraphActivity` | `/api/subgraph` feed + `addLocalActivity` optimistic entries |
 
 Conventions every hook follows:
@@ -161,7 +180,7 @@ Conventions every hook follows:
   marketplace.
 - **Contracts:** `VeSneakerStore` (`NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`) mints on demand
   through `SneakerMint.mintAuthorized`, so the store holds `MINTER_ROLE`.
-- **Hooks:** `useVeSneakerStore`, `useSubgraphActivity`.
+- **Hooks:** `useVeSneakerStore`, `useSubgraphActivity`, `usePolPrice`.
 - **Catalog:** `VE_SNEAKER_CATALOG` in `src/lib/ve-sneakers.ts` is the display source of
   truth (name, pixel design, palette, rarity, tier). **Its order must match
   `veSneakerDesigns()` in `scripts/deployment-config.ts`**, because the array position is
@@ -169,9 +188,10 @@ Conventions every hook follows:
 - **Buy flow:** pick a quantity (1–20) → `buy(designIndex)` for one or
   `buyBatch(designIndex, quantity)` for many, sending exactly `price × quantity` POL.
   Proceeds go straight to the store treasury.
-- **Pricing:** defaults are **2× the `SneakerAppraiser` value** at the default rarity
-  scores — Common 1.4, Rare 3.9, Epic 8.3, Mythic 18.7 POL. Overridable with
-  `VE_PRICE_*_POL`. Supply: `VE_MAX_SUPPLY` (default 1000) per design.
+- **Pricing:** USD targets converted at `POL_USD_PRICE` — **$40 (Common) → $150 (Mythic)**,
+  geometric progression, i.e. **410 / 635 / 993 / 1536 POL** at POL = $0.09764. Tune with
+  `VE_PRICE_*_USD` (targets) or `VE_PRICE_*_POL` (exact POL). Supply: `VE_MAX_SUPPLY`
+  (default 1000) per design.
 - **Fallbacks:** when the store is not configured, the page renders the full catalog with
   the fallback prices and shows a demo-mode notice instead of crashing.
 - **Dev notes:** the on-chain design list wins over the static catalog for name, rarity,
@@ -269,6 +289,18 @@ Conventions every hook follows:
   not a query key. Endpoint comes from `THE_GRAPH_QUERY_URL` or
   `THE_GRAPH_QUERY_API_KEY` + slug + version.
 
+### `/api/pol-price` — POL/USD feed
+
+- **File:** `src/app/api/pol-price/route.ts`, helper in `src/lib/uniswap.ts`.
+- **Input:** `?refresh=1` to bypass the cache.
+- **Output:** `{ usd, source: "uniswap" | "fallback", updatedAt, note? }`.
+- **Purpose:** keeps the veSneaker USD hints current. Quotes 1,000 WPOL → USDC through
+  the Uniswap Trading API and derives USD-per-POL.
+- **Dev notes:** server-only — the Trading API has no CORS and requires `x-api-key`, so
+  the browser must never call it directly. Cached for `POL_PRICE_CACHE_SECONDS`; failures
+  fall back to `POL_USD_PRICE` and are never cached. See
+  [`uniswap-price-feed.md`](uniswap-price-feed.md).
+
 ## Environment variables used by the app
 
 | Variable | Used by |
@@ -285,6 +317,8 @@ Conventions every hook follows:
 | `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` | REN reads/redemption |
 | `GEMINI_API_KEY` | `/api/generate-sneaker` (server-only) |
 | `THE_GRAPH_QUERY_URL` / `_API_KEY` / `_SLUG` / `_VERSION` | `/api/subgraph` (server-only) |
+| `UNISWAP_API_KEY` / `UNISWAP_TRADING_API_URL` / `UNISWAP_QUOTE_SWAPPER` / `POL_PRICE_CACHE_SECONDS` | `/api/pol-price` (server-only) |
+| `POL_USD_PRICE` | Price fallback + deploy-time USD→POL conversion |
 
 ## Adding a new route
 
@@ -293,9 +327,14 @@ Conventions every hook follows:
 2. Add the interactive logic in a `"use client"` component under `src/components/`.
 3. Put contract reads/writes in a hook under `src/hooks/` following the conventions above.
 4. Add any new function signatures to `src/lib/contracts.ts`.
-5. Add the link to `LINKS` in `src/components/Navbar.tsx`.
-6. Document the route in this file and update the route map table.
-7. Verify: `npm run lint`, `npm run typecheck`, `npm run build`.
+5. Decide where it belongs in navigation: a primary destination goes in
+   `MOBILE_NAV_ITEMS` (`MobileNav.tsx`, max five) and `LINKS` (`Navbar.tsx`); anything
+   else goes in `SECONDARY_LINKS` (`Navbar.tsx`) so it stays reachable on phones.
+6. Keep it mobile-safe: ≥ 44px tap targets, no fixed widths that exceed the viewport,
+   horizontal rows via the `.scroll-x` class, and no bottom padding (the layout reserves
+   it for the bottom bar). See [`mobile-experience.md`](mobile-experience.md).
+7. Document the route in this file and update the route map table.
+8. Verify: `npm run lint`, `npm run typecheck`, `npm run build`.
 
 ## Verification
 

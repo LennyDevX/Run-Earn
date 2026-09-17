@@ -54,7 +54,7 @@ Default economics are 2.80% base APY (sustainable rate), rarity-based tier boost
 
 - veSneakers are virtual sneakers anyone can buy with POL, with or without a physical pair.
 - `buy(designIndex)` / `buyBatch(designIndex, quantity)` mint on demand through `SneakerMint.mintAuthorized`; the store holds `MINTER_ROLE`.
-- Default prices are 2× the appraiser value: Common 1.4, Rare 3.9, Epic 8.3, Mythic 18.7 POL. Supply default 1000 per design.
+- Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design.
 - `reserveMint` allocates copies to the treasury without payment, counting against supply.
 - Configure the 9 genesis designs with `VE_MINT_MODE=configure|premint|both npx hardhat run scripts/mint-veSneakers.ts --network amoy`.
 

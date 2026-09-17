@@ -59,11 +59,11 @@ export default function PolygonTransferCard() {
       <div className="mt-8 grid gap-5 md:grid-cols-[1fr_180px_auto] md:items-end">
         <label className="flex flex-col gap-2 text-sm font-semibold">
           Destination address
-          <input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="0x..." inputMode="text" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-xs font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
+          <input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="0x..." inputMode="text" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-xs font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold">
           Amount (POL)
-          <input value={amount} onChange={(event) => setAmount(event.target.value)} type="text" inputMode="decimal" placeholder="0.001" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-sm font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
+          <input value={amount} onChange={(event) => setAmount(event.target.value)} type="text" inputMode="decimal" placeholder="0.001" autoComplete="off" spellCheck={false} enterKeyHint="done" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-sm font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
         </label>
         <button type="button" onClick={() => void sendPolygon()} disabled={!wallet.isConnected || isSending} className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-ink transition-all hover:scale-105 hover:shadow-lg hover:shadow-sky/20 disabled:cursor-not-allowed disabled:opacity-50">
           {isSending ? "Signing..." : "Send POL"}

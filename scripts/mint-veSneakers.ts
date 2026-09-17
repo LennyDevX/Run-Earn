@@ -27,6 +27,18 @@ import {
 const MODES = new Set(["configure", "premint", "both"]);
 const MAX_BATCH = 20; // matches VeSneakerStore.MAX_BATCH
 
+/// Polygon token addresses used for the POL/USD probe (same pair as
+/// `src/lib/uniswap.ts`).
+const WPOL_ADDRESS = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
+const USDC_ADDRESS = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
+const PROBE_AMOUNT_POL = 1_000n;
+
+const AGENT_INFO = JSON.stringify({
+  integration_name: "swap-integration",
+  decision_origin: "human_mediated",
+  version: "1.5.0",
+});
+
 function modeFromEnvironment() {
   const mode = optionalEnv("VE_MINT_MODE", "configure") as string;
   if (!MODES.has(mode)) {
@@ -37,6 +49,75 @@ function modeFromEnvironment() {
 
 function formatPol(value: bigint) {
   return (Number(value) / 1e18).toFixed(4);
+}
+
+/// Reads the live POL/USD price from the Uniswap Trading API so on-chain prices
+/// are computed against the current market instead of a stale constant.
+/// Returns null when the key is missing or the quote fails.
+async function livePolUsdPrice(): Promise<number | null> {
+  const apiKey = optionalEnv("UNISWAP_API_KEY");
+  if (!apiKey) return null;
+
+  const base = optionalEnv("UNISWAP_TRADING_API_URL", "https://trade-api.gateway.uniswap.org/v1");
+  const swapper =
+    optionalEnv("UNISWAP_QUOTE_SWAPPER") ??
+    optionalEnv("DEPLOY_ADMIN_ADDRESS") ??
+    "0x0000000000000000000000000000000000000000";
+  if (!/^0x[a-fA-F0-9]{40}$/.test(swapper)) return null;
+
+  try {
+    const response = await fetch(`${base}/quote`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "x-api-key": apiKey,
+        "x-universal-router-version": "2.0",
+        "x-agent-info": AGENT_INFO,
+      },
+      body: JSON.stringify({
+        swapper,
+        tokenIn: WPOL_ADDRESS,
+        tokenOut: USDC_ADDRESS,
+        tokenInChainId: "137",
+        tokenOutChainId: "137",
+        amount: (PROBE_AMOUNT_POL * 10n ** 18n).toString(),
+        type: "EXACT_INPUT",
+        slippageTolerance: 0.5,
+        protocols: ["V2", "V3"],
+      }),
+    });
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as {
+      quote?: { output?: { amount?: string }; orderInfo?: { outputs?: { startAmount?: string }[] } };
+    };
+    const raw = payload.quote?.output?.amount ?? payload.quote?.orderInfo?.outputs?.[0]?.startAmount;
+    if (!raw) return null;
+
+    const usdcOut = BigInt(raw);
+    if (usdcOut <= 0n) return null;
+    const usd = Number(usdcOut) / 1e6 / Number(PROBE_AMOUNT_POL);
+    return Number.isFinite(usd) && usd > 0 ? usd : null;
+  } catch {
+    return null;
+  }
+}
+
+/// Resolves the POL/USD rate used for USD→POL conversion. Prefers the live
+/// Uniswap quote; set `VE_USE_LIVE_POL_PRICE=false` to pin `POL_USD_PRICE`.
+async function resolvePolUsdPrice(): Promise<void> {
+  if (optionalEnv("VE_USE_LIVE_POL_PRICE", "true") === "false") {
+    console.log(`POL/USD: $${polUsdPrice()} (pinned via POL_USD_PRICE)`);
+    return;
+  }
+  const live = await livePolUsdPrice();
+  if (live === null) {
+    console.log(`POL/USD: $${polUsdPrice()} (live quote unavailable, using POL_USD_PRICE)`);
+    return;
+  }
+  process.env.POL_USD_PRICE = String(live);
+  console.log(`POL/USD: $${live.toFixed(5)} (live from Uniswap)`);
 }
 
 async function main() {
@@ -60,6 +141,7 @@ async function main() {
   const store = await viem.getContractAt("VeSneakerStore", storeAddress);
 
   const mode = modeFromEnvironment();
+  await resolvePolUsdPrice();
   const designs = veSneakerDesigns();
   const polUsd = polUsdPrice();
 

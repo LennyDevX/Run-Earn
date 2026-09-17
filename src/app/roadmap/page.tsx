@@ -152,12 +152,12 @@ const QUARTERS = [
 
 export default function RoadmapPage() {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col overflow-x-clip">
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
         {/* Header */}
-        <section className="flex flex-col gap-4 py-16">
+        <section className="flex flex-col gap-4 py-12 md:py-16">
           <span className="animate-fade-up font-pixel text-[10px] text-magma">
             THE ROADMAP
           </span>
@@ -194,7 +194,7 @@ export default function RoadmapPage() {
           {QUARTERS.map((quarter, qIndex) => (
             <section
               key={quarter.id}
-              className="animate-fade-up flex flex-col gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface p-8"
+              className="animate-fade-up flex flex-col gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface p-5 sm:p-8"
               style={{ animationDelay: `${qIndex * 120}ms` }}
             >
               <div className={`flex flex-col gap-3 rounded-3xl ${quarter.highlight} p-6`}>

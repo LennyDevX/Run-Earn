@@ -123,8 +123,10 @@ export function useMarketplace() {
 
       // Scan recent listing IDs for active listings owned by this wallet.
       // The contract does not expose an enumerable listing index, so we scan
-      // the last 64 listing slots and keep the ones that match.
-      const listingIds = Array.from({ length: 64 }, (_, i) => BigInt(i + 1));
+      // the last N listing slots and keep the ones that match. Mobile scans a
+      // shorter window to keep the RPC fan-out cheap on cellular.
+      const scanLimit = wallet.isMobile ? 24 : 64;
+      const listingIds = Array.from({ length: scanLimit }, (_, i) => BigInt(i + 1));
       const listings = await Promise.all(
         listingIds.map((listingId) =>
           wallet.publicClient
@@ -160,7 +162,7 @@ export function useMarketplace() {
     } finally {
       setIsReading(false);
     }
-  }, [marketplaceAddress, owned.sneakers, wallet.address, wallet.publicClient]);
+  }, [marketplaceAddress, owned.sneakers, wallet.address, wallet.isMobile, wallet.publicClient]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());

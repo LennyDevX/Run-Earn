@@ -76,12 +76,12 @@ const STEPS = [
 
 export default function DefiPage() {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col overflow-x-clip">
       <Navbar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
         {/* Header */}
-        <section className="flex flex-col gap-4 py-16">
+        <section className="flex flex-col gap-4 py-12 md:py-16">
           <span className="animate-fade-up font-pixel text-[10px] text-mint">
             DEFI ENGINE
           </span>
@@ -101,8 +101,8 @@ export default function DefiPage() {
         </section>
 
         {/* Tiers */}
-        <section className="mb-24 grid gap-6 md:grid-cols-2">
-          <div className="flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-8">
+        <section className="mb-16 grid gap-6 md:mb-24 md:grid-cols-2">
+          <div className="flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
             <h2 className="text-xl font-bold tracking-tight">
               Tier multipliers
             </h2>
@@ -125,7 +125,7 @@ export default function DefiPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-6 rounded-3xl bg-linear-to-br from-ink to-ink-soft p-8 text-paper ring-1 ring-transparent dark:ring-paper/10">
+          <div className="flex flex-col gap-6 rounded-3xl bg-linear-to-br from-ink to-ink-soft p-6 text-paper ring-1 ring-transparent sm:p-8 dark:ring-paper/10">
             <span className="font-pixel text-[9px] text-mint">
               HOW IT WORKS
             </span>

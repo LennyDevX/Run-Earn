@@ -147,3 +147,91 @@ body {
   background: var(--color-mint);
   color: var(--color-ink);
 }
+
+/* ─────────────────────────── Mobile foundations ───────────────────────────
+   Safe-area tokens require `viewportFit: "cover"` (see src/app/layout.tsx).
+   `--mobile-nav-height` must match the MobileNav bar height. */
+
+:root {
+  --mobile-nav-height: 3.75rem; /* 60px */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html {
+  /* Keep text at the author's size when the device rotates. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Avoid the accidental pull-to-refresh gesture while scrolling the app. */
+  overscroll-behavior-y: none;
+  /* Anchor jumps (#hash) must clear the fixed bottom nav. */
+  scroll-padding-bottom: calc(var(--mobile-nav-height) + var(--safe-bottom) + 1rem);
+}
+
+/* Reserve room for the fixed bottom navigation (mobile only). */
+body {
+  padding-bottom: calc(var(--mobile-nav-height) + var(--safe-bottom));
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-bottom: 0;
+  }
+}
+
+/* Tappable elements: no grey flash, no 300ms delay, no double-tap zoom. */
+button,
+a,
+[role="button"],
+label[for],
+summary {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* iOS zooms the viewport when a focused field is under 16px. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Honour the user's motion preference (marquee, float, glow, fade-up, blink). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utilities for the few places that need an explicit inset. */
+.pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+/* Horizontal scrollers that bleed to the viewport edge on mobile. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+.scroll-x > * {
+  scroll-snap-align: start;
+}

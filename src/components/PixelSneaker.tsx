@@ -174,6 +174,10 @@ const DESIGNS: Design[] = [
   },
 ];
 
+/// Number of pixel-art designs available. Consumers that cycle designs (e.g.
+/// SneakerCarousel, dashboards) should use this instead of hardcoding a count.
+export const PIXEL_SNEAKER_DESIGNS = DESIGNS.length;
+
 function PixelSneaker({
   className,
   design = 0,

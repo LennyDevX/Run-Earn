@@ -38,8 +38,9 @@ The deployed `nuxgraph` Studio subgraph is consumed through the server-only `/ap
 anyone, with or without a physical pair. It mints on demand through
 `SneakerMint.mintAuthorized` (the store holds `MINTER_ROLE`), so no copies need to be
 pre-minted. Each design carries its own name, token URI, rarity, tier, POL price, and
-supply cap (default 1000). Default prices are 2× the appraiser value: Common 1.4, Rare
-3.9, Epic 8.3, Mythic 18.7 POL. Proceeds go to the store treasury. `reserveMint` lets the
+supply cap (default 1000). Prices are USD targets converted at `POL_USD_PRICE` — $40
+(Common) to $150 (Mythic), geometric progression, i.e. 410 / 635 / 993 / 1536 POL at POL
+= $0.09764. Proceeds go to the store treasury. `reserveMint` lets the
 admin allocate copies to the treasury for airdrops or marketplace listings without
 payment. The 9 genesis designs are configured and optionally pre-minted by
 `scripts/mint-veSneakers.ts`.

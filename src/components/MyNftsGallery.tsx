@@ -59,6 +59,8 @@ export default function MyNftsGallery() {
               <img
                 src={sneaker.imageDataUrl}
                 alt={sneaker.name}
+                loading="lazy"
+                decoding="async"
                 className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <span className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase ${rarity?.accent ?? ""}`}>

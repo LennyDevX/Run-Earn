@@ -151,27 +151,29 @@ export default function MarketplaceDashboard() {
 
       {/* Tabs */}
       <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
-        <div className="mb-8 flex flex-wrap items-center gap-2 border-b border-foreground/10 pb-6">
-          {(
-            [
-              { id: "list" as Tab, label: "Sell / Auction" },
-              { id: "auction" as Tab, label: "My Listings" },
-              { id: "offers" as Tab, label: "Make an Offer" },
-            ]
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
-                activeTab === tab.id
-                  ? "bg-foreground text-background shadow-md"
-                  : "border border-foreground/10 text-foreground/60 hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="mb-8 flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
+          <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1 md:mx-0 md:px-0 md:pb-0">
+            {(
+              [
+                { id: "list" as Tab, label: "Sell / Auction" },
+                { id: "auction" as Tab, label: "My Listings" },
+                { id: "offers" as Tab, label: "Make an Offer" },
+              ]
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+                  activeTab === tab.id
+                    ? "bg-foreground text-background shadow-md"
+                    : "border border-foreground/10 text-foreground/60 hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab 1: Sell / Auction your sneakers */}
@@ -193,7 +195,7 @@ export default function MarketplaceDashboard() {
                 <div className="relative">
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                     placeholder="0.00"
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
@@ -214,7 +216,7 @@ export default function MarketplaceDashboard() {
                 <div className="relative">
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                     placeholder="0.00"
                     value={auctionStartInput}
                     onChange={(e) => setAuctionStartInput(e.target.value)}
@@ -282,7 +284,7 @@ export default function MarketplaceDashboard() {
                           type="button"
                           disabled={market.isLoading || saleKind > 0n || !priceInput || parseAmount(priceInput) <= 0n}
                           onClick={() => handleList(sneaker.tokenId)}
-                          className="cursor-pointer rounded-full bg-mint py-2.5 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-11 cursor-pointer rounded-full bg-mint px-2 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           List for sale
                         </button>
@@ -290,7 +292,7 @@ export default function MarketplaceDashboard() {
                           type="button"
                           disabled={market.isLoading || saleKind > 0n || !auctionStartInput || parseAmount(auctionStartInput) <= 0n}
                           onClick={() => handleCreateAuction(sneaker.tokenId)}
-                          className="cursor-pointer rounded-full border border-magma/40 bg-magma/10 py-2.5 text-xs font-bold text-magma transition-colors hover:bg-magma/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="min-h-11 cursor-pointer rounded-full border border-magma/40 bg-magma/10 px-2 text-xs font-bold text-magma transition-colors active:scale-[0.98] hover:bg-magma/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Start auction
                         </button>
@@ -373,7 +375,7 @@ export default function MarketplaceDashboard() {
               <label className="text-xs font-bold text-foreground">Token ID</label>
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode="numeric" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                 placeholder="e.g. 12"
                 value={offerTokenId}
                 onChange={(e) => setOfferTokenId(e.target.value.replace(/[^\d]/g, ""))}
@@ -383,7 +385,7 @@ export default function MarketplaceDashboard() {
               <div className="relative">
                 <input
                   type="text"
-                  inputMode="decimal"
+                  inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                   placeholder="0.00"
                   value={offerAmountInput}
                   onChange={(e) => setOfferAmountInput(e.target.value)}

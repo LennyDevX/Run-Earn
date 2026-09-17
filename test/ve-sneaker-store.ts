@@ -11,11 +11,11 @@ describe("VeSneakerStore (TypeScript integration)", () => {
   let treasury: any;
   let publicClient: any;
 
-  // Premium 2x appraiser pricing
-  const COMMON_PRICE = 1_400_000_000_000_000_000n; // 1.4 POL
-  const RARE_PRICE = 3_900_000_000_000_000_000n; // 3.9 POL
-  const EPIC_PRICE = 8_300_000_000_000_000_000n; // 8.3 POL
-  const MYTHIC_PRICE = 18_700_000_000_000_000_000n; // 18.7 POL
+  // USD targets $40/$62/$97/$150 converted at POL = $0.09764
+  const COMMON_PRICE = 410_000_000_000_000_000_000n; // 410 POL
+  const RARE_PRICE = 635_000_000_000_000_000_000n; // 635 POL
+  const EPIC_PRICE = 993_000_000_000_000_000_000n; // 993 POL
+  const MYTHIC_PRICE = 1_536_000_000_000_000_000_000n; // 1536 POL
 
   before(async () => {
     const connection = await hre.network.create();

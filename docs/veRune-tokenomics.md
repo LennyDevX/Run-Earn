@@ -80,20 +80,29 @@ The admin can tune `tierBasePointsPerDay`, `streakBonusStepBps`, and `redemption
 **veSneakers** are the virtual version of the sneakers. Anyone can buy them with POL —
 no physical pair required — and they behave exactly like minted NFTs afterwards.
 
-### Pricing (2× the appraiser value)
+### Pricing (USD targets, geometric progression)
 
-| Tier | Rarity score | Appraiser value | Sale price | ≈ USD @ POL $0.10 |
-| --- | --- | --- | --- | --- |
-| Common | 20 | 0.70 POL | **1.4 POL** | $0.14 |
-| Rare | 45 | 1.95 POL | **3.9 POL** | $0.39 |
-| Epic | 65 | 4.15 POL | **8.3 POL** | $0.83 |
-| Mythic | 85 | 9.35 POL | **18.7 POL** | $1.87 |
+Prices are defined in **USD** and converted to POL with `POL_USD_PRICE`, so a POL move is
+a single env change. The targets run geometrically from **$40 (Common) to $150 (Mythic)**:
 
-The 2× multiple is a primary-sale margin over the on-chain valuation. Because the
-marketplace suggests resale prices at 1.2× the appraiser value, a veSneaker bought at
-the primary price trades below its purchase cost until its rarity or tier increases —
-which is exactly the gap that the planned **sneaker upgrade** contract (burn veRUNE to
-raise rarity/tier) is meant to close.
+| Tier | Rarity score | USD target | Sale price @ POL $0.09764 | Appraiser value | Multiple |
+| --- | --- | --- | --- | --- | --- |
+| Common | 20 | $40 | **410 POL** | 0.70 POL | 586× |
+| Rare | 45 | $62 | **635 POL** | 1.95 POL | 326× |
+| Epic | 65 | $97 | **993 POL** | 4.15 POL | 239× |
+| Mythic | 85 | $150 | **1536 POL** | 9.35 POL | 164× |
+
+Overrides: `VE_PRICE_COMMON_USD` / `_RARE_` / `_EPIC_` / `_MYTHIC_` for the USD targets,
+or `VE_PRICE_*_POL` to pin an exact POL price. The live POL/USD rate is served by
+`/api/pol-price` (Uniswap Trading API); see
+[`uniswap-price-feed.md`](uniswap-price-feed.md).
+
+> **Note on the appraiser gap.** The primary price is far above the on-chain
+> `SneakerAppraiser` valuation, so a veSneaker does **not** resell at cost on the
+> marketplace (which suggests 1.2× the appraiser value). The primary price should be read
+> as an entry ticket to the staking/game loops — the APY boost, veRUNE emissions, and
+> future rarity upgrades are what the buyer is paying for. If secondary liquidity is a
+> goal, either raise `appraiserPremiumBps` or lower the USD targets.
 
 ### Supply
 

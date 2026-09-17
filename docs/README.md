@@ -11,7 +11,9 @@ Solidity.
 | --- | --- |
 | [`app-routes.md`](app-routes.md) | Every route (`/mint`, `/collection` (veSneakers store), `/marketplace`, `/game`, `/staking`, `/defi`, `/roadmap`, APIs): files, contracts, hooks, flows, edge cases, and how to add a route |
 | [`wallet-connectivity.md`](wallet-connectivity.md) | EIP-6963 discovery, MetaMask Connect, OKX Universal Provider, chain guard, mobile handoff |
+| [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, and the future mobile/UI/UX/performance roadmap |
 | [`subgraph-integration.md`](subgraph-integration.md) | The Graph Studio `nuxgraph` deployment, the `/api/subgraph` proxy, dynamic schema introspection |
+| [`uniswap-price-feed.md`](uniswap-price-feed.md) | Live POL/USD via the Uniswap Trading API, the `/api/pol-price` proxy, caching, and fallback behavior |
 
 ## Contracts
 
@@ -36,6 +38,11 @@ matches a task.
 | `polygon-security` | Custody, arithmetic, escrow, and deployment risk review |
 | `runearn-mint-studio` | The AI photo → artwork → mint pipeline and local collection storage |
 | `runearn-subgraph-activity` | Activity indexing, schema introspection, the subgraph proxy |
+| `swap-integration` (Uniswap) | Official Uniswap Trading API / Universal Router reference — quotes, swaps, Permit2, UniswapX, error codes |
+| `viem-integration` (Uniswap) | Official EVM/viem integration patterns |
+
+The two Uniswap skills are installed from `Uniswap/uniswap-ai` into `.agents/skills/`
+(`npx skills add Uniswap/uniswap-ai --skill swap-integration viem-integration`).
 
 ## Verification commands
 
@@ -44,8 +51,15 @@ npm run lint
 npm run typecheck
 npm run build
 npx hardhat compile
-npx hardhat test          # 221 tests (146 Solidity + 75 TypeScript)
+npx hardhat test          # 266 tests (177 Solidity + 89 TypeScript)
 ```
+
+## Mobile
+
+The app ships a bottom navigation bar, safe-area aware layout, 44px tap targets, a
+reduced-motion mode, and an installable PWA shell. Conventions for adding routes or
+interactive components — plus the roadmap for haptics, Web Share, and more — live in
+[`mobile-experience.md`](mobile-experience.md).
 
 ## Conventions
 

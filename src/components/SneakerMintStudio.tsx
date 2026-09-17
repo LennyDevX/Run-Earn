@@ -137,14 +137,15 @@ export default function SneakerMintStudio() {
   const totalOwned = wallet.address ? getMintedSneakers(wallet.address).length : 0;
 
   return (
-    <section className="rounded-[2.5rem] border border-foreground/8 bg-surface p-8 md:p-10">
-      <div className="mb-8 flex flex-wrap items-center gap-2">
+    <section className="rounded-[2.5rem] border border-foreground/8 bg-surface p-5 sm:p-8 md:p-10">
+      <div className="scroll-x -mx-5 mb-8 flex gap-2 px-5 pb-1 sm:-mx-8 sm:px-8 md:mx-0 md:px-0">
         {STEPS.map((label, index) => (
           <button
             key={label}
             type="button"
             onClick={() => index <= step && setStep(index)}
-            className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 font-pixel text-[9px] transition-colors ${
+            aria-current={index === step ? "step" : undefined}
+            className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 font-pixel text-[9px] transition-colors active:scale-95 ${
               index === step
                 ? "bg-foreground text-background"
                 : index < step
@@ -184,7 +185,7 @@ export default function SneakerMintStudio() {
             <span className="mb-3 block font-pixel text-[9px] text-foreground/40">YOUR SNEAKER</span>
             {photoPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoPreview} alt="Original sneaker photo" className="w-full rounded-2xl" />
+              <img src={photoPreview} alt="Original sneaker photo" loading="lazy" decoding="async" className="w-full rounded-2xl" />
             ) : null}
           </div>
           <div className="flex flex-col gap-5">
@@ -215,7 +216,7 @@ export default function SneakerMintStudio() {
           <div className="overflow-hidden rounded-3xl bg-background p-4">
             <span className="mb-3 block font-pixel text-[9px] text-mint">GENERATED ARTWORK</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={generated.dataUrl} alt="AI-generated NFT artwork" className="w-full rounded-2xl" />
+            <img src={generated.dataUrl} alt="AI-generated NFT artwork" loading="lazy" decoding="async" className="w-full rounded-2xl" />
             <button type="button" onClick={() => void generateArtwork()} disabled={isGenerating} className="mt-4 w-full cursor-pointer rounded-full border border-foreground/15 px-5 py-3 text-xs font-semibold transition-colors hover:border-foreground/30 disabled:opacity-60">
               {isGenerating ? "Regenerating..." : "Regenerate variant"}
             </button>
@@ -227,7 +228,7 @@ export default function SneakerMintStudio() {
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold">
               Description
-              <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder={DEFAULT_SNEAKER_DESCRIPTION} className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky" />
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} enterKeyHint="done" autoComplete="off" placeholder={DEFAULT_SNEAKER_DESCRIPTION} className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky" />
             </label>
             <button type="button" onClick={() => setDescription(DEFAULT_SNEAKER_DESCRIPTION)} className="cursor-pointer self-start rounded-full bg-mint/15 px-4 py-2 text-xs font-semibold text-mint transition-colors hover:bg-mint/25">
               Use default description

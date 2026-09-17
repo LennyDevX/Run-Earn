@@ -66,7 +66,7 @@ Current defaults are 2.80% base APY (sustainable rate), rarity-based tier boosts
 - `buy(designIndex)` / `buyBatch(designIndex, quantity)` (1–20) require `msg.value == price × quantity`; proceeds go to `treasury`.
 - `reserveMint(designIndex, to, quantity)` allocates copies to the treasury without payment, counting against the design supply.
 - Unique proof per copy: `keccak256(abi.encodePacked("vesneaker", designIndex, serial))`.
-- Default prices are 2× the appraiser value: Common 1.4, Rare 3.9, Epic 8.3, Mythic 18.7 POL. Supply default 1000 per design.
+- Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design. Tune with `VE_PRICE_*_USD` or pin `VE_PRICE_*_POL`.
 - The 9 genesis designs live in `veSneakerDesigns()` (`scripts/deployment-config.ts`) and are registered by `scripts/mint-veSneakers.ts` (`VE_MINT_MODE=configure|premint|both`).
 - The frontend catalog `VE_SNEAKER_CATALOG` (`src/lib/ve-sneakers.ts`) must stay in the **same index order** as `veSneakerDesigns()`.
 

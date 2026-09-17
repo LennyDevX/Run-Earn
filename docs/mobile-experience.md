@@ -1,0 +1,204 @@
+# Mobile experience
+
+How RUN&EARN behaves on phones: the bottom navigation, safe-area handling, touch
+ergonomics, and the PWA shell. Read this before adding a route or a new interactive
+component.
+
+Related: [`app-routes.md`](app-routes.md) for per-route detail,
+[`wallet-connectivity.md`](wallet-connectivity.md) for the wallet handoff.
+
+## Architecture at a glance
+
+| Concern | Where |
+| --- | --- |
+| Bottom navigation (5 destinations) | `src/components/MobileNav.tsx` (mounted once in `src/app/layout.tsx`) |
+| Overflow routes + theme | "More" sheet in `src/components/Navbar.tsx` |
+| Reusable bottom sheet | `src/components/MoreSheet.tsx` |
+| Safe-area tokens, reduced motion, touch hygiene | `src/app/globals.css` |
+| `viewport-fit=cover`, theme color, `appleWebApp` | `src/app/layout.tsx` (`export const viewport`) |
+| Installable manifest | `src/app/manifest.ts` → `/manifest.webmanifest` |
+| Icons | `src/app/favicon.ico`, `src/app/apple-icon.png`, `src/app/icon.svg`, `public/icon-192.png`, `public/icon-512.png` |
+| Icon generator | `scripts/generate-icons.mjs` (`node scripts/generate-icons.mjs`) |
+
+## Bottom navigation
+
+`MobileNav` is rendered once in the root layout so it never remounts between routes.
+
+**Destinations:** Home `/` · Mint `/mint` · veSneakers `/collection` · Game `/game` ·
+Market `/marketplace`.
+
+Everything else (`/staking`, `/my-nfts`, `/defi`, `/roadmap`) lives in the header's
+"More" sheet, which also carries the theme toggle on mobile.
+
+Behaviour:
+
+- Hidden at `md` and up — desktop keeps the horizontal `Navbar` links.
+- Slides away while scrolling down past 120px and returns on scroll up, so it never eats
+  reading space. It always reappears on route change.
+- Active item uses `aria-current="page"` plus a mint label and underline.
+- `min-h-[3.75rem]` per item (≥ 60px) and `active:scale-95` for touch feedback.
+- `pb-safe` keeps it above the iOS home indicator.
+
+### Adding or moving a destination
+
+1. Edit `MOBILE_NAV_ITEMS` in `MobileNav.tsx` (keep it to five) and add an inline SVG
+   icon — no icon dependency is installed on purpose.
+2. If a route leaves the bar, add it to `SECONDARY_LINKS` in `Navbar.tsx`.
+3. Keep `MOBILE_NAV_ITEMS` and the desktop `LINKS` in `Navbar.tsx` in sync conceptually:
+   the same routes must be reachable on both.
+4. Update the table in [`app-routes.md`](app-routes.md).
+
+## Safe areas and the layout shell
+
+`viewportFit: "cover"` is what makes `env(safe-area-inset-*)` resolve. Without it the
+bottom bar sits under the home indicator on notched iPhones.
+
+`globals.css` exposes:
+
+| Token / class | Purpose |
+| --- | --- |
+| `--mobile-nav-height` | Bar height (60px). Must match `MobileNav`. |
+| `--safe-top` / `--safe-bottom` / `--safe-left` / `--safe-right` | `env()` insets with a `0px` fallback |
+| `.pb-safe` / `.pt-safe` | Explicit inset padding |
+| `.scroll-x` | Horizontal scroller: snap, hidden scrollbar, `overscroll-behavior-x: contain` |
+
+`body` reserves `calc(var(--mobile-nav-height) + var(--safe-bottom))` at the bottom and
+zeroes it at `md`. **This is why new pages do not need their own bottom padding.**
+
+## Touch ergonomics
+
+- **Tap targets:** primary controls are at least 44px (`min-h-11`, `size-11`). Secondary
+  chips may go to 36px (`min-h-9`). Do not go below that.
+- **Feedback:** every tappable control uses `active:scale-95`/`active:scale-[0.98]`.
+- **No 300ms delay / no grey flash:** `touch-action: manipulation` and
+  `-webkit-tap-highlight-color: transparent` are applied globally.
+- **No accidental pull-to-refresh:** `overscroll-behavior-y: none` on `html`.
+- **No iOS focus zoom:** fields are forced to `16px` below `md`.
+- **Keyboard hints:** inputs carry `inputMode`, `enterKeyHint="done"`,
+  `autoComplete="off"`, `autoCapitalize="none"`, `spellCheck={false}`.
+- **Horizontal rows** (filters, tabs, step bars) use `.scroll-x` with `-mx-6 px-6` so
+  they bleed to the edge and scroll instead of wrapping into multiple rows.
+
+## Motion
+
+`prefers-reduced-motion: reduce` collapses every animation and transition to `0.01ms`.
+Components that animate on a timer must also opt out in JS:
+
+- `SneakerCarousel` checks `matchMedia("(prefers-reduced-motion: reduce)")` and only
+  cycles while visible (`IntersectionObserver`, 120px root margin) — this also saves
+  battery when the hero is scrolled away.
+- Countdown intervals in `SneakerGameDashboard` and `StakingVaultDashboard` re-sync on
+  `visibilitychange` so returning to the tab never shows stale timers.
+
+## PWA shell
+
+- `src/app/manifest.ts` serves `/manifest.webmanifest` with `display: "standalone"`,
+  `orientation: "portrait"`, `theme_color` `#0a0a0c`, and 192/512 icons (512 also
+  maskable).
+- `metadata.appleWebApp` enables iOS full-screen mode with a translucent status bar.
+- Icons are generated from a 16×16 pixel-art pattern by
+  `scripts/generate-icons.mjs` using only Node built-ins (`zlib` + a hand-rolled PNG/ICO
+  encoder). Re-run it after changing the artwork.
+- Before `/manifest.ts` and `favicon.ico` existed, `/favicon.ico`, `/apple-icon.png` and
+  `/manifest.webmanifest` all returned 404.
+
+## Verification
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+node scripts/generate-icons.mjs   # only when the icon artwork changes
+```
+
+Manual pass (the checklist used for this work):
+
+1. **Viewports:** 320px (iPhone SE), 390px (iPhone 14), 430px (Pro Max), 768px (tablet),
+   plus landscape on the two smallest.
+2. **Bottom nav:** all five destinations reachable, active state correct on nested routes,
+   bar slides away on scroll down and returns on scroll up.
+3. **Safe area:** on a notched device (or DevTools device with insets) confirm the bar
+   clears the home indicator and the footer is not hidden behind it.
+4. **No content trapped:** scroll to the bottom of every route and confirm the last
+   element is fully visible above the bar.
+5. **Overflow:** no horizontal scrollbar on any route (home blobs are clipped).
+6. **Touch:** tap targets ≥ 44px on primary actions; visible press feedback.
+7. **Reduced motion:** enable it in DevTools → no marquee, float, glow, blink, or fade-up.
+8. **Keyboard:** Tab reaches the bottom nav, `aria-current` announced, sheets trap focus
+   and close on Escape.
+9. **Sheets:** wallet connect, wallet account, and "More" open as bottom sheets on mobile
+   and as popovers on desktop.
+10. **PWA:** `/manifest.webmanifest`, `/favicon.ico`, `/apple-icon.png`,
+    `/icon-192.png`, `/icon-512.png` all return 200; installability has no errors in the
+    Application panel.
+
+---
+
+# Future roadmap
+
+Planned mobile work, grouped by theme. Nothing here is implemented yet.
+
+## Native integrations
+
+| Feature | Why | Notes |
+| --- | --- | --- |
+| **Haptic feedback** | Confirms taps without looking | `navigator.vibrate()` is Android-only; iOS needs a hidden `<input switch>` trick or a native wrapper. Feature-detect, keep patterns ≤ 10ms, and skip when `prefers-reduced-motion` is set. Use it on nav taps, activation, and purchase confirmation. |
+| **Web Share API** | Sharing is the cheapest growth loop | `navigator.share()` for a sneaker, a listing, or a referral link, with a `navigator.clipboard` fallback. Requires a user gesture and HTTPS. |
+| **Install prompt** | Move users into standalone mode | Capture `beforeinstallprompt`, show a dismissible banner after the second visit, and remember the dismissal in `localStorage`. |
+| **App shortcuts** | Jump straight to a task | Add `shortcuts` to `manifest.ts`: "Activate sneakers" → `/game`, "Mint" → `/mint`. |
+| **Push notifications** | The game is a 24h retention loop | Web Push (service worker + VAPID) to remind users their sneaker is ready to activate. Needs opt-in UX and a backend scheduler. |
+| **Share target** | Receive sneaker photos | `share_target` in the manifest so a photo can be shared from the gallery straight into the mint studio. |
+| **QR scanner** | Remove the worst mobile typing | `BarcodeDetector` (with a JS fallback) to scan a recipient address in `/defi`. |
+| **Passkeys / WebAuthn** | Skip the extension entirely | Smart-account + passkey signing would remove the MetaMask handoff, the biggest mobile drop-off. |
+
+## UI/UX
+
+| Feature | Why |
+| --- | --- |
+| **Swipe actions on cards** | Swipe to list, unlock, or activate instead of hunting for a button. |
+| **Skeleton loaders** | Replace the `…` placeholders in the wallet popover and the dashboards; reduces perceived latency. |
+| **Optimistic UI + toasts** | Show the new state immediately and reconcile after the receipt, with a transaction toast stack instead of inline notices. |
+| **Bottom-sheet filters** | On mobile, move the rarity filters into a sheet with counts. |
+| **Long-press preview** | Long-press a sneaker for a quick-look card with rarity, boost, and valuation. |
+| **Bottom nav badges** | Surface "3 sneakers ready to activate" on the Game tab. |
+| **Tablet layout** | A dedicated `md`-to-`lg` pass: two-column dashboards, larger canvases. |
+| **Landscape pass** | Keep the bottom bar but shorten the hero; test the mint wizard. |
+| **Number keypad presets** | Add a MAX button and 25/50/75/100 presets to every amount field (currently only staking). |
+| **Copy-to-clipboard addresses** | Tap an address to copy, with a toast confirmation. |
+| **Dark/light/system sync** | Offer "System" alongside light and dark instead of a binary toggle. |
+| **Larger-text support** | Verify layouts at 200% text size (`font-size` overrides) and avoid fixed heights. |
+
+## Functionality
+
+| Feature | Why |
+| --- | --- |
+| **Offline shell** | A service worker caching the app shell so the catalog and game render offline; on-chain actions queue until reconnect. |
+| **Client-side image resize** | Downscale photos in the browser before uploading to `/api/generate-sneaker`: less mobile data, faster AI response, cheaper requests. |
+| **Draft persistence for the mint wizard** | Keep the photo, generated artwork, and form values in `localStorage` so a wallet handoff (which reloads the page) does not lose progress. |
+| **Background sync for pending transactions** | Do not lose a signed-but-unconfirmed transaction when the user switches apps. |
+| **In-app wallet browser detection** | Deep-link users into OKX/MetaMask in-app browsers instead of the SDK handoff when possible. |
+| **Deep links** | `runearn://`-style or `?utm` links from notifications straight to `/game`. |
+| **Referral links with share** | Combine Web Share with the planned referral contract. |
+
+## Performance
+
+| Feature | Why |
+| --- | --- |
+| **`viem` multicall for batch reads** | `useStakingVault`, `useMarketplace`, and `useSneakerGame` fan out one RPC call per token. Multicall collapses them into a single request — the single biggest mobile win. |
+| **Move the marketplace listing scan to the subgraph** | `useMarketplace` currently probes 24 listing slots on mobile (64 on desktop). An indexed query removes the fan-out entirely. |
+| **Stale-while-revalidate for the POL price** | Serve the cached price instantly and refresh in the background instead of blocking on `/api/pol-price`. |
+| **Virtualise long collections** | `/my-nfts` and `/collection` render every card; virtualise past ~50 items. |
+| **Route-level `loading.tsx` + prefetch** | Instant skeletons on navigation and prefetch on viewport entry for the bottom-nav targets. |
+| **Dynamic-import heavy dashboards** | Keep the initial bundle small; load each dashboard chunk on demand. |
+| **`next/image` for user artwork** | Serve AVIF/WebP with `sizes` and blur placeholders instead of raw base64 `<img>`. |
+| **Font strategy** | Keep `Press Start 2P` for labels only; ensure `display: swap` and no layout shift from font metrics. |
+| **Lighthouse mobile budget in CI** | Track performance, accessibility, and best-practices scores per route and fail on regression. |
+| **Bundle analysis** | Add `@next/bundle-analyzer` and watch the client bundle per route. |
+
+## Accessibility follow-ups
+
+- Visible `:focus-visible` ring on every interactive element (currently relies on the
+  browser default inside sheets).
+- Audit screen-reader announcements for the game countdown and the staking lock state.
+- Verify colour contrast for `text-foreground/45`-style hints against both themes.
+- Respect `prefers-contrast: more`.

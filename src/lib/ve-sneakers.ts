@@ -27,13 +27,19 @@ export const VE_TIER_LABEL: readonly VeSneakerRarity[] = ["Common", "Rare", "Epi
 export const VE_TIER_BOOST: readonly string[] = ["+0.5% APY", "+0.8% APY", "+1.5% APY", "+1.8% APY"];
 
 /// Fallback prices (POL) used when the store contract is not configured.
-/// These mirror the `VE_PRICE_*_POL` deploy defaults (2x the appraiser value).
+/// These mirror the `veSneakerPricesPol()` defaults: USD targets $40 / $62 / $97 /
+/// $150 converted at POL = $0.09764. Refresh them if the USD targets or POL price change.
 export const VE_FALLBACK_PRICE_POL: Record<number, string> = {
-  0: "1.4", // Common
-  1: "3.9", // Rare
-  2: "8.3", // Epic
-  3: "18.7", // Mythic
+  0: "410", // Common  (~$40)
+  1: "635", // Rare    (~$62)
+  2: "993", // Epic   (~$97)
+  3: "1536", // Mythic (~$150)
 };
+
+/// Display-only POL/USD reference used as the initial value before the live
+/// Uniswap price feed (`/api/pol-price`) resolves. Keep in sync with
+/// `POL_USD_PRICE` in `.env`.
+export const VE_POL_USD_PRICE = 0.09764;
 
 export const VE_MAX_SUPPLY_FALLBACK = 1000n;
 

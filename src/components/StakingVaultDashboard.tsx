@@ -65,15 +65,18 @@ export default function StakingVaultDashboard() {
   const [nowSeconds, setNowSeconds] = useState(0);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setNowSeconds(Math.floor(Date.now() / 1000));
-    });
-    const interval = setInterval(() => {
-      setNowSeconds(Math.floor(Date.now() / 1000));
-    }, 60000);
+    const sync = () => setNowSeconds(Math.floor(Date.now() / 1000));
+    const frame = window.requestAnimationFrame(sync);
+    const interval = setInterval(sync, 60_000);
+    // Re-sync on return so the lock countdown never shows stale data.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.cancelAnimationFrame(frame);
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
@@ -320,12 +323,12 @@ export default function StakingVaultDashboard() {
       {/* Main Interactive Terminal with Tabs */}
       <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         {/* Navigation Tabs */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-foreground/10 pb-6">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-8 flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
+          <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1 md:mx-0 md:px-0 md:pb-0">
             <button
               type="button"
               onClick={() => setActiveTab("deposit")}
-              className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "deposit"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -336,7 +339,7 @@ export default function StakingVaultDashboard() {
             <button
               type="button"
               onClick={() => setActiveTab("claim")}
-              className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "claim"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -347,7 +350,7 @@ export default function StakingVaultDashboard() {
             <button
               type="button"
               onClick={() => setActiveTab("withdraw")}
-              className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "withdraw"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -358,7 +361,7 @@ export default function StakingVaultDashboard() {
             <button
               type="button"
               onClick={() => setActiveTab("model")}
-              className={`cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "model"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -383,7 +386,7 @@ export default function StakingVaultDashboard() {
                 <div className="relative">
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                     placeholder="0.00"
                     value={depositInput}
                     onChange={(e) => setDepositInput(e.target.value)}
@@ -403,7 +406,7 @@ export default function StakingVaultDashboard() {
                     key={percent}
                     type="button"
                     onClick={() => applyPreset(percent)}
-                    className="cursor-pointer rounded-xl border border-foreground/10 bg-background px-3 py-1.5 text-xs font-semibold transition-colors hover:border-mint/50 hover:text-mint"
+                    className="min-h-10 cursor-pointer rounded-xl border border-foreground/10 bg-background px-3.5 py-2 text-xs font-semibold transition-colors active:scale-95 hover:border-mint/50 hover:text-mint"
                   >
                     {percent === 100 ? "MAX" : `${percent}%`}
                   </button>
@@ -562,7 +565,7 @@ export default function StakingVaultDashboard() {
                 <div className="relative">
                   <input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
                     placeholder="0.00"
                     disabled={isLockActive || staking.stats.principal <= 0n}
                     value={withdrawInput}

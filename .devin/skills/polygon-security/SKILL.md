@@ -18,6 +18,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - `VeSneakerStore.sol`: on-demand primary sale of virtual sneakers for POL, with per-design pricing, supply caps, and a treasury payout.
 - `/api/generate-sneaker`: server-only Gemini image generation for the mint studio.
 - `/api/subgraph`: server-only proxy for the `nuxgraph` Studio deployment.
+- `/api/pol-price`: server-only proxy for the Uniswap Trading API POL/USD quote.
 - Wallet layer: EIP-6963/EIP-1193 discovery, MetaMask Connect EVM, and OKX Universal Provider with mobile handoff.
 
 ## Review areas
@@ -83,6 +84,14 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Validate wallet addresses at `/api/subgraph` and never proxy arbitrary client-supplied GraphQL.
 - Do not use indexed activity as the source of truth for balances or ownership; use RPC contract reads.
 - Handle stale indexing, schema mismatch, endpoint errors, and query key rotation.
+
+### Uniswap price feed security
+
+- Keep `UNISWAP_API_KEY` server-only — the Trading API has no CORS support, so it must never be called from the browser.
+- Never cache a fallback price as if it were live; surface `source: "fallback"` to the UI.
+- Do not let the price feed drive on-chain state: contract prices are fixed in POL and only the USD display is derived.
+- Treat the quote as untrusted input: validate the output amount is a positive integer before dividing.
+- Do not use the feed for settlement, accounting, or oracle-style decisions without a dedicated, reviewed oracle.
 
 ### AI mint route security
 

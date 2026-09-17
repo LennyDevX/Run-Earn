@@ -16,11 +16,11 @@ contract VeSneakerStoreTest is Test {
 
     string constant URI = "data:application/json;base64,eyJuYW1lIjoiVmVTbmVha2VyIn0";
 
-    // Premium 2x appraiser: Common 1.4, Rare 3.9, Epic 8.3, Mythic 18.7 POL
-    uint256 constant COMMON_PRICE = 1.4 ether;
-    uint256 constant RARE_PRICE = 3.9 ether;
-    uint256 constant EPIC_PRICE = 8.3 ether;
-    uint256 constant MYTHIC_PRICE = 18.7 ether;
+    // USD targets $40/$62/$97/$150 converted at POL = $0.09764
+    uint256 constant COMMON_PRICE = 410 ether;
+    uint256 constant RARE_PRICE = 635 ether;
+    uint256 constant EPIC_PRICE = 993 ether;
+    uint256 constant MYTHIC_PRICE = 1536 ether;
 
     function setUp() public {
         nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
@@ -93,7 +93,7 @@ contract VeSneakerStoreTest is Test {
     // ─────────── Buy ───────────
 
     function test_Buy_MintsAndPaysTreasury() public {
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         uint256 treasuryBefore = treasury.balance;
 
         vm.prank(alice);
@@ -107,7 +107,7 @@ contract VeSneakerStoreTest is Test {
     }
 
     function test_Buy_ReadsRarityAndTierFromDesign() public {
-        vm.deal(alice, 100 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         store.buy{value: MYTHIC_PRICE}(3);
 
@@ -117,7 +117,7 @@ contract VeSneakerStoreTest is Test {
     }
 
     function test_Buy_UniqueProofPerCopy() public {
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.startPrank(alice);
         store.buy{value: COMMON_PRICE}(0);
         store.buy{value: COMMON_PRICE}(0);
@@ -129,7 +129,7 @@ contract VeSneakerStoreTest is Test {
     }
 
     function test_Buy_RevertWrongPayment() public {
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         vm.expectRevert("VeSneakerStore: wrong payment");
         store.buy{value: COMMON_PRICE - 1}(0);
@@ -139,14 +139,14 @@ contract VeSneakerStoreTest is Test {
         vm.prank(admin);
         store.updateDesign(0, COMMON_PRICE, 1000, false);
 
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         vm.expectRevert("VeSneakerStore: design inactive");
         store.buy{value: COMMON_PRICE}(0);
     }
 
     function test_Buy_RevertUnknownDesign() public {
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         vm.expectRevert("VeSneakerStore: unknown design");
         store.buy{value: 1 ether}(99);
@@ -155,7 +155,7 @@ contract VeSneakerStoreTest is Test {
     function test_Buy_RevertWhenPaused() public {
         vm.prank(admin);
         store.pause();
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         vm.expectRevert();
         store.buy{value: COMMON_PRICE}(0);
@@ -164,7 +164,7 @@ contract VeSneakerStoreTest is Test {
     // ─────────── Buy batch ───────────
 
     function test_BuyBatch_MintsMultipleCopies() public {
-        vm.deal(alice, 100 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         uint256 firstTokenId = store.buyBatch{value: COMMON_PRICE * 5}(0, 5);
 
@@ -175,14 +175,14 @@ contract VeSneakerStoreTest is Test {
     }
 
     function test_BuyBatch_RevertInvalidQuantity() public {
-        vm.deal(alice, 100 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         vm.expectRevert("VeSneakerStore: invalid quantity");
         store.buyBatch{value: COMMON_PRICE}(0, 1);
     }
 
     function test_BuyBatch_RevertOverBatchLimit() public {
-        vm.deal(alice, 1000 ether);
+        vm.deal(alice, 100_000 ether);
         vm.prank(alice);
         vm.expectRevert("VeSneakerStore: invalid quantity");
         store.buyBatch{value: COMMON_PRICE * 21}(0, 21);
@@ -194,7 +194,7 @@ contract VeSneakerStoreTest is Test {
         vm.prank(admin);
         store.updateDesign(0, COMMON_PRICE, 2, true);
 
-        vm.deal(alice, 100 ether);
+        vm.deal(alice, 10_000 ether);
         vm.startPrank(alice);
         store.buy{value: COMMON_PRICE}(0);
         store.buy{value: COMMON_PRICE}(0);
@@ -204,7 +204,7 @@ contract VeSneakerStoreTest is Test {
     }
 
     function test_UpdateDesign_RevertSupplyBelowMinted() public {
-        vm.deal(alice, 10 ether);
+        vm.deal(alice, 10_000 ether);
         vm.prank(alice);
         store.buyBatch{value: COMMON_PRICE * 5}(0, 5);
 
@@ -296,7 +296,7 @@ contract VeSneakerStoreTest is Test {
 
     function testFuzz_Buy_QuantityAndPayment(uint16 quantity) public {
         quantity = uint16(bound(quantity, 2, 20));
-        vm.deal(alice, 1000 ether);
+        vm.deal(alice, 100_000 ether);
         vm.prank(alice);
         store.buyBatch{value: COMMON_PRICE * quantity}(0, quantity);
         assertEq(nft.balanceOf(alice), quantity);
