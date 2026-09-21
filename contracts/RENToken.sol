@@ -5,12 +5,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/// @title RUNEToken — RUN&EARN ERC-20 reward token.
+/// @title RENToken — RUN&EARN ERC-20 reward token.
 /// @notice REN is the reward token distributed by the SneakerStaking vault.
 ///      Virtual veRUNE points earned in SneakerGame can later be redeemed for REN.
 /// @dev Minting is limited to the MINTER_ROLE (staking vault or treasury).
 ///      Supply is capped by MAX_SUPPLY for economic sustainability.
-contract RUNEToken is ERC20, Pausable, AccessControl {
+contract RENToken is ERC20, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     /// @notice Hard cap on total minted supply (100M REN with 18 decimals).
@@ -25,8 +25,8 @@ contract RUNEToken is ERC20, Pausable, AccessControl {
         address admin,
         address minter
     ) ERC20("Run and Earn Rune", "REN") {
-        require(admin != address(0), "RUNEToken: zero admin");
-        require(minter != address(0), "RUNEToken: zero minter");
+        require(admin != address(0), "RENToken: zero admin");
+        require(minter != address(0), "RENToken: zero minter");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MINTER_ROLE, minter);
     }
@@ -41,8 +41,8 @@ contract RUNEToken is ERC20, Pausable, AccessControl {
 
     /// @notice Mint REN rewards to a recipient. Only MINTER_ROLE.
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) whenNotPaused {
-        require(to != address(0), "RUNEToken: zero recipient");
-        require(totalMinted + amount <= MAX_SUPPLY, "RUNEToken: cap exceeded");
+        require(to != address(0), "RENToken: zero recipient");
+        require(totalMinted + amount <= MAX_SUPPLY, "RENToken: cap exceeded");
         totalMinted += amount;
         _mint(to, amount);
         emit Minted(to, amount);

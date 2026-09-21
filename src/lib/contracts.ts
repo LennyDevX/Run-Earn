@@ -181,24 +181,25 @@ export const erc721ApproveAbi = [
 ] as const;
 
 export const sneakerMarketplaceAbi = [
-  // Listings
-  { type: "function", name: "list", stateMutability: "nonpayable", inputs: [{ name: "tokenId", type: "uint256" }, { name: "price", type: "uint256" }], outputs: [] },
+  // Listings — collection-aware: every sale entity carries the NFT contract.
+  { type: "function", name: "list", stateMutability: "nonpayable", inputs: [{ name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "price", type: "uint256" }], outputs: [] },
   { type: "function", name: "buy", stateMutability: "payable", inputs: [{ name: "listingId", type: "uint256" }], outputs: [] },
   { type: "function", name: "cancelListing", stateMutability: "nonpayable", inputs: [{ name: "listingId", type: "uint256" }], outputs: [] },
-  { type: "function", name: "listings", stateMutability: "view", inputs: [{ name: "listingId", type: "uint256" }], outputs: [{ name: "seller", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "price", type: "uint256" }, { name: "listedAt", type: "uint64" }, { name: "active", type: "bool" }] },
+  { type: "function", name: "listings", stateMutability: "view", inputs: [{ name: "listingId", type: "uint256" }], outputs: [{ name: "seller", type: "address" }, { name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "price", type: "uint256" }, { name: "listedAt", type: "uint64" }, { name: "active", type: "bool" }] },
   // Auctions
-  { type: "function", name: "createAuction", stateMutability: "nonpayable", inputs: [{ name: "tokenId", type: "uint256" }, { name: "startPrice", type: "uint256" }, { name: "duration", type: "uint64" }], outputs: [] },
+  { type: "function", name: "createAuction", stateMutability: "nonpayable", inputs: [{ name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "startPrice", type: "uint256" }, { name: "duration", type: "uint64" }], outputs: [] },
   { type: "function", name: "bid", stateMutability: "payable", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [] },
   { type: "function", name: "settleAuction", stateMutability: "nonpayable", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [] },
   { type: "function", name: "cancelAuction", stateMutability: "nonpayable", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [] },
-  { type: "function", name: "auctions", stateMutability: "view", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [{ name: "seller", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "startPrice", type: "uint256" }, { name: "highestBidder", type: "address" }, { name: "highestBid", type: "uint256" }, { name: "endTime", type: "uint64" }, { name: "active", type: "bool" }, { name: "settled", type: "bool" }] },
+  { type: "function", name: "auctions", stateMutability: "view", inputs: [{ name: "auctionId", type: "uint256" }], outputs: [{ name: "seller", type: "address" }, { name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "startPrice", type: "uint256" }, { name: "highestBidder", type: "address" }, { name: "highestBid", type: "uint256" }, { name: "endTime", type: "uint64" }, { name: "active", type: "bool" }, { name: "settled", type: "bool" }] },
   // Offers
-  { type: "function", name: "makeOffer", stateMutability: "payable", inputs: [{ name: "tokenId", type: "uint256" }, { name: "duration", type: "uint64" }], outputs: [] },
+  { type: "function", name: "makeOffer", stateMutability: "payable", inputs: [{ name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "duration", type: "uint64" }], outputs: [] },
   { type: "function", name: "acceptOffer", stateMutability: "nonpayable", inputs: [{ name: "offerId", type: "uint256" }], outputs: [] },
   { type: "function", name: "cancelOffer", stateMutability: "nonpayable", inputs: [{ name: "offerId", type: "uint256" }], outputs: [] },
-  { type: "function", name: "offers", stateMutability: "view", inputs: [{ name: "offerId", type: "uint256" }], outputs: [{ name: "buyer", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "amount", type: "uint256" }, { name: "expiresAt", type: "uint64" }, { name: "active", type: "bool" }] },
+  { type: "function", name: "offers", stateMutability: "view", inputs: [{ name: "offerId", type: "uint256" }], outputs: [{ name: "buyer", type: "address" }, { name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }, { name: "amount", type: "uint256" }, { name: "expiresAt", type: "uint64" }, { name: "active", type: "bool" }] },
   // State
-  { type: "function", name: "tokenSaleKind", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
+  { type: "function", name: "tokenSaleKind", stateMutability: "view", inputs: [{ name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
+  { type: "function", name: "allowedCollections", stateMutability: "view", inputs: [{ name: "collection", type: "address" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "feeBps", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "accumulatedFees", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   // Views
@@ -213,12 +214,16 @@ export const sneakerGameAbi = [
   { type: "function", name: "repair", stateMutability: "nonpayable", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [] },
   { type: "function", name: "redeem", stateMutability: "nonpayable", inputs: [{ name: "points", type: "uint256" }], outputs: [] },
   // State
-  { type: "function", name: "sneakers", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "lastActivationAt", type: "uint64" }, { name: "lastAccrualAt", type: "uint64" }, { name: "streak", type: "uint32" }, { name: "durability", type: "uint16" }, { name: "pendingPoints", type: "uint256" }, { name: "lifetimePoints", type: "uint256" }] },
+  { type: "function", name: "sneakers", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "lastActivationAt", type: "uint64" }, { name: "lastAccrualAt", type: "uint64" }, { name: "streak", type: "uint32" }, { name: "durability", type: "uint16" }, { name: "pendingPoints", type: "uint256" }, { name: "lifetimePoints", type: "uint256" }, { name: "lastDecayAt", type: "uint64" }, { name: "energy", type: "uint16" }] },
   { type: "function", name: "veRuneBalance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "totalRedeemed", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   // Views
   { type: "function", name: "pendingPoints", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "earnRatePerSecond", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "powerOf", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "healthOf", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
+  { type: "function", name: "energyOf", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
+  { type: "function", name: "maxEnergyOf", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
   { type: "function", name: "canActivate", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "secondsUntilActivation", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "streakMultiplierBps", stateMutability: "view", inputs: [{ name: "streak", type: "uint32" }], outputs: [{ name: "", type: "uint256" }] },
@@ -312,3 +317,174 @@ export const veSneakerStoreAbi = [
 ] as const;
 
 export type VeSneakerStoreAbi = typeof veSneakerStoreAbi;
+
+// ─────────────────────────── Upgrade economy (v1.0) ──────────────────────────
+
+export const sneakerModsAbi = [
+  { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "tokenOfOwnerByIndex", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "index", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "ownerOf", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "address" }] },
+  {
+    type: "function",
+    name: "traitsOf",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      { name: "slot", type: "uint8" },
+      { name: "rarity", type: "uint8" },
+      { name: "tier", type: "uint8" },
+      { name: "effectBps", type: "uint16" },
+      { name: "aux", type: "uint8" },
+      { name: "consumable", type: "bool" },
+      { name: "proofHash", type: "bytes32" },
+    ],
+  },
+  { type: "function", name: "tokenURI", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "string" }] },
+  { type: "function", name: "totalMinted", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "achievementCount", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  {
+    type: "function",
+    name: "achievements",
+    stateMutability: "view",
+    inputs: [{ name: "achievementId", type: "uint256" }],
+    outputs: [
+      { name: "kind", type: "uint8" },
+      { name: "threshold", type: "uint256" },
+      { name: "slot", type: "uint8" },
+      { name: "rarity", type: "uint8" },
+      { name: "tier", type: "uint8" },
+      { name: "effectBps", type: "uint16" },
+      { name: "aux", type: "uint8" },
+      { name: "consumable", type: "bool" },
+      { name: "uri", type: "string" },
+      { name: "active", type: "bool" },
+    ],
+  },
+  { type: "function", name: "meetsRequirement", stateMutability: "view", inputs: [{ name: "achievementId", type: "uint256" }, { name: "user", type: "address" }, { name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "achievementClaimed", stateMutability: "view", inputs: [{ name: "achievementId", type: "uint256" }, { name: "user", type: "address" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{ name: "achievementId", type: "uint256" }, { name: "sneakerId", type: "uint256" }], outputs: [{ name: "tokenId", type: "uint256" }] },
+  { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }, { name: "tokenId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "setApprovalForAll", stateMutability: "nonpayable", inputs: [{ name: "operator", type: "address" }, { name: "approved", type: "bool" }], outputs: [] },
+  { type: "function", name: "isApprovedForAll", stateMutability: "view", inputs: [{ name: "owner", type: "address" }, { name: "operator", type: "address" }], outputs: [{ name: "", type: "bool" }] },
+] as const;
+
+export const sneakerWorkshopAbi = [
+  // Equipment
+  { type: "function", name: "equip", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "modId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "unequip", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "slot", type: "uint8" }], outputs: [] },
+  { type: "function", name: "useRepairKit", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "modId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "useAbility", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "modId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "forge", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [] },
+  // Equipped state
+  { type: "function", name: "equipped", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "slot", type: "uint8" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "equippedTo", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "equippedCount", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "custodian", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "address" }] },
+  { type: "function", name: "hasEquippedMods", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  // Effective bonuses (ISneakerBoosts)
+  { type: "function", name: "earnBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "wearReductionBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "maxDurabilityBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "repairDiscountBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "appraisalBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "stakingBoostBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "rarityBonus", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
+  { type: "function", name: "autoActive", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "skinOverride", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
+  // Consumable abilities
+  { type: "function", name: "tempBoostBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
+  { type: "function", name: "boostExpiresAt", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint64" }] },
+  // Forge
+  { type: "function", name: "forgeLevel", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
+  { type: "function", name: "nextForgeCost", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "forgeCostPoints", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "maxForgeLevel", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] },
+] as const;
+
+export const sneakerSwapAbi = [
+  { type: "function", name: "createSwap", stateMutability: "payable", inputs: [{ name: "taker", type: "address" }, { name: "offerCollection", type: "address" }, { name: "offerTokenId", type: "uint256" }, { name: "wantCollection", type: "address" }, { name: "wantTokenId", type: "uint256" }, { name: "duration", type: "uint64" }], outputs: [{ name: "swapId", type: "uint256" }] },
+  { type: "function", name: "accept", stateMutability: "nonpayable", inputs: [{ name: "swapId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "cancel", stateMutability: "nonpayable", inputs: [{ name: "swapId", type: "uint256" }], outputs: [] },
+  {
+    type: "function",
+    name: "swaps",
+    stateMutability: "view",
+    inputs: [{ name: "swapId", type: "uint256" }],
+    outputs: [
+      { name: "maker", type: "address" },
+      { name: "taker", type: "address" },
+      { name: "offerCollection", type: "address" },
+      { name: "offerTokenId", type: "uint256" },
+      { name: "wantCollection", type: "address" },
+      { name: "wantTokenId", type: "uint256" },
+      { name: "polTopUp", type: "uint256" },
+      { name: "expiresAt", type: "uint64" },
+      { name: "active", type: "bool" },
+    ],
+  },
+  { type: "function", name: "allowedCollections", stateMutability: "view", inputs: [{ name: "collection", type: "address" }], outputs: [{ name: "", type: "bool" }] },
+] as const;
+
+export const modRentalAbi = [
+  { type: "function", name: "list", stateMutability: "nonpayable", inputs: [{ name: "modId", type: "uint256" }, { name: "pricePerDay", type: "uint256" }, { name: "maxDuration", type: "uint64" }], outputs: [] },
+  { type: "function", name: "cancelListing", stateMutability: "nonpayable", inputs: [{ name: "rentalId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "rent", stateMutability: "payable", inputs: [{ name: "rentalId", type: "uint256" }, { name: "days_", type: "uint64" }], outputs: [] },
+  { type: "function", name: "extend", stateMutability: "payable", inputs: [{ name: "rentalId", type: "uint256" }, { name: "extraDays", type: "uint64" }], outputs: [] },
+  { type: "function", name: "equipRented", stateMutability: "nonpayable", inputs: [{ name: "rentalId", type: "uint256" }, { name: "sneakerId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "releaseEarly", stateMutability: "nonpayable", inputs: [{ name: "rentalId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "returnExpired", stateMutability: "nonpayable", inputs: [{ name: "rentalId", type: "uint256" }], outputs: [] },
+  {
+    type: "function",
+    name: "rentals",
+    stateMutability: "view",
+    inputs: [{ name: "rentalId", type: "uint256" }],
+    outputs: [
+      { name: "owner", type: "address" },
+      { name: "modId", type: "uint256" },
+      { name: "pricePerDay", type: "uint256" },
+      { name: "maxDuration", type: "uint64" },
+      { name: "renter", type: "address" },
+      { name: "rentedUntil", type: "uint64" },
+      { name: "listed", type: "bool" },
+    ],
+  },
+  { type: "function", name: "rentalOf", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "isActiveRental", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "activeRenter", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "address" }] },
+  { type: "function", name: "feeBps", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+] as const;
+
+export const modStoreAbi = [
+  { type: "function", name: "buy", stateMutability: "payable", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "tokenId", type: "uint256" }] },
+  { type: "function", name: "buyBatch", stateMutability: "payable", inputs: [{ name: "designIndex", type: "uint256" }, { name: "quantity", type: "uint16" }], outputs: [{ name: "firstTokenId", type: "uint256" }] },
+  {
+    type: "function",
+    name: "designs",
+    stateMutability: "view",
+    inputs: [{ name: "designIndex", type: "uint256" }],
+    outputs: [
+      { name: "name", type: "string" },
+      { name: "uri", type: "string" },
+      { name: "slot", type: "uint8" },
+      { name: "rarity", type: "uint8" },
+      { name: "tier", type: "uint8" },
+      { name: "effectBps", type: "uint16" },
+      { name: "aux", type: "uint8" },
+      { name: "consumable", type: "bool" },
+      { name: "price", type: "uint256" },
+      { name: "maxSupply", type: "uint16" },
+      { name: "minted", type: "uint16" },
+      { name: "active", type: "bool" },
+    ],
+  },
+  { type: "function", name: "designCount", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "remaining", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "isAvailable", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "quote", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }, { name: "quantity", type: "uint16" }], outputs: [{ name: "", type: "uint256" }] },
+] as const;
+
+export type SneakerModsAbi = typeof sneakerModsAbi;
+export type SneakerWorkshopAbi = typeof sneakerWorkshopAbi;
+export type SneakerSwapAbi = typeof sneakerSwapAbi;
+export type ModRentalAbi = typeof modRentalAbi;
+export type ModStoreAbi = typeof modStoreAbi;

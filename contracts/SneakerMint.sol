@@ -9,10 +9,11 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title SneakerMint — RUN&EARN sneaker NFT collection.
 /// @notice Mints ERC-721 tokens from AI-generated sneaker artwork.
-/// @dev Users create NFTs via the /mint route: they upload a photo of a physical
-///      sneaker, the AI agent generates a unique retro-futuristic image, and the
-///      result is minted on-chain. Each proof hash (SHA-256 of the generated
-///      artwork data URL) may be used only once to prevent duplicate mints.
+/// @dev Users create NFTs via the /mint route: they upload a photo of their
+///      sneaker, the AI agent generates a unique retro-futuristic virtual
+///      artwork, and the result is minted on-chain. Each proof hash (SHA-256 of
+///      the generated artwork data URL) may be used only once to prevent
+///      duplicate mints.
 contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 

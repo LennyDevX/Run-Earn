@@ -7,8 +7,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {SneakerMint} from "./SneakerMint.sol";
 
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
-/// @notice veSneakers are virtual versions of the RUN&EARN sneakers. Anyone can buy
-///      them with native POL, whether or not they own a physical sneaker. Once
+/// @notice veSneakers are the playable NFTs of the RUN&EARN virtual sneaker
+///      economy. Anyone can buy them with native POL — fully virtual assets. Once
 ///      owned, a veSneaker behaves exactly like a minted SneakerMint NFT: it can be
 ///      locked in SneakerStaking for a POL APY boost, activated in SneakerGame to
 ///      earn veRUNE points, and traded in SneakerMarketplace.

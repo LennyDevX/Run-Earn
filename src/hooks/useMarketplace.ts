@@ -94,7 +94,7 @@ export function useMarketplace() {
                 address: marketplaceAddress,
                 abi: sneakerMarketplaceAbi,
                 functionName: "tokenSaleKind",
-                args: [tokenId],
+                args: [sneakerAddress as Address, tokenId],
               })
               .catch(() => 0n),
           ),
@@ -142,7 +142,7 @@ export function useMarketplace() {
       const mine: MyListing[] = [];
       listings.forEach((raw, idx) => {
         if (!raw) return;
-        const [seller, tokenId, price, listedAt, active] = raw as readonly [Address, bigint, bigint, bigint, boolean];
+        const [seller, , tokenId, price, listedAt, active] = raw as readonly [Address, Address, bigint, bigint, bigint, boolean];
         if (!active || seller.toLowerCase() !== wallet.address?.toLowerCase()) return;
         const sneaker = owned.sneakers.find((s) => s.tokenId === tokenId);
         mine.push({
@@ -162,7 +162,7 @@ export function useMarketplace() {
     } finally {
       setIsReading(false);
     }
-  }, [marketplaceAddress, owned.sneakers, wallet.address, wallet.isMobile, wallet.publicClient]);
+  }, [marketplaceAddress, owned.sneakers, sneakerAddress, wallet.address, wallet.isMobile, wallet.publicClient]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());
@@ -220,20 +220,23 @@ export function useMarketplace() {
     [marketplaceAddress, sneakerAddress, transaction],
   );
 
-  const list = useCallback((tokenId: bigint, price: bigint) => send("list", [tokenId, price]), [send]);
+  const list = useCallback(
+    (collection: Address, tokenId: bigint, price: bigint) => send("list", [collection, tokenId, price]),
+    [send],
+  );
   const buy = useCallback((listingId: bigint, price: bigint) => send("buy", [listingId], price), [send]);
   const cancelListing = useCallback((listingId: bigint) => send("cancelListing", [listingId]), [send]);
   const createAuction = useCallback(
-    (tokenId: bigint, startPrice: bigint, durationSeconds: bigint) =>
-      send("createAuction", [tokenId, startPrice, durationSeconds]),
+    (collection: Address, tokenId: bigint, startPrice: bigint, durationSeconds: bigint) =>
+      send("createAuction", [collection, tokenId, startPrice, durationSeconds]),
     [send],
   );
   const bid = useCallback((auctionId: bigint, amount: bigint) => send("bid", [auctionId], amount), [send]);
   const settleAuction = useCallback((auctionId: bigint) => send("settleAuction", [auctionId]), [send]);
   const cancelAuction = useCallback((auctionId: bigint) => send("cancelAuction", [auctionId]), [send]);
   const makeOffer = useCallback(
-    (tokenId: bigint, durationSeconds: bigint, amount: bigint) =>
-      send("makeOffer", [tokenId, durationSeconds], amount),
+    (collection: Address, tokenId: bigint, durationSeconds: bigint, amount: bigint) =>
+      send("makeOffer", [collection, tokenId, durationSeconds], amount),
     [send],
   );
   const acceptOffer = useCallback((offerId: bigint) => send("acceptOffer", [offerId]), [send]);

@@ -3,6 +3,7 @@ pragma solidity 0.8.36;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {SneakerMint} from "./SneakerMint.sol";
+import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 
 /// @title SneakerAppraiser — On-chain NFT valuation estimator for SneakerMint NFTs.
 /// @notice Evaluates a SneakerMint NFT based on its rarity score (0-100) and
@@ -17,6 +18,10 @@ import {SneakerMint} from "./SneakerMint.sol";
 ///      (no state changes from external callers except admin configuration).
 contract SneakerAppraiser is AccessControl {
     SneakerMint public immutable nft;
+
+    /// @notice Optional boost provider (SneakerWorkshop). Forge levels raise the
+    ///      effective rarity and Skin mods add a percentage bonus to the value.
+    ISneakerBoosts public boosts;
 
     /// @notice Base POL value (in wei) applied to every NFT regardless of rarity.
     uint256 public baseValue;
@@ -41,6 +46,7 @@ contract SneakerAppraiser is AccessControl {
         uint256 rarityWeight,
         uint256 globalMultiplierBps
     );
+    event BoostsUpdated(address indexed boosts);
 
     constructor(
         address admin,
@@ -78,12 +84,21 @@ contract SneakerAppraiser is AccessControl {
         emit AppraisalParamsUpdated(baseValue_, tierValues_, rarityWeight_, globalMultiplierBps_);
     }
 
+    /// @notice Link the boost provider (SneakerWorkshop). Zero address disables boosts.
+    function setBoosts(address boosts_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        boosts = ISneakerBoosts(boosts_);
+        emit BoostsUpdated(boosts_);
+    }
+
     // ─────────────────────────── Views ───────────────────────────
 
     /// @notice Estimate the POL value of a SneakerMint NFT.
+    /// @dev Returns the EFFECTIVE rarity: base rarity plus forge levels gained
+    ///      in the workshop, capped at 100. Skin mods add a percentage bonus on
+    ///      top of the calculated value.
     /// @param tokenId The NFT token ID to appraise.
     /// @return estimatedValue The estimated POL value in wei.
-    /// @return rarity The NFT rarity score (0-100).
+    /// @return rarity The effective rarity score (0-100), including forge bonus.
     /// @return tier The NFT tier (0=Common, 1=Rare, 2=Epic, 3=Mythic).
     function appraise(uint256 tokenId)
         external
@@ -91,9 +106,22 @@ contract SneakerAppraiser is AccessControl {
         returns (uint256 estimatedValue, uint8 rarity, uint8 tier)
     {
         SneakerMint.SneakerTraits memory traits = nft.traitsOf(tokenId);
-        rarity = traits.rarity;
+        rarity = effectiveRarity(tokenId);
         tier = traits.tier;
         estimatedValue = _calculateValue(rarity, tier);
+        if (address(boosts) != address(0)) {
+            estimatedValue = (estimatedValue * (10_000 + boosts.appraisalBonusBps(tokenId))) / 10_000;
+        }
+    }
+
+    /// @notice Effective rarity score: base rarity + forge rarity bonus (max 100).
+    function effectiveRarity(uint256 tokenId) public view returns (uint8) {
+        SneakerMint.SneakerTraits memory traits = nft.traitsOf(tokenId);
+        uint256 effective = uint256(traits.rarity);
+        if (address(boosts) != address(0)) {
+            effective += boosts.rarityBonus(tokenId);
+        }
+        return effective > 100 ? 100 : uint8(effective);
     }
 
     /// @notice Estimate the POL value using raw rarity and tier values.

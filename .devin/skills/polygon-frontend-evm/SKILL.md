@@ -1,11 +1,11 @@
 ---
 name: polygon-frontend-evm
-description: Build Run-Earn's Polygon frontend with viem, EIP-1193/EIP-6963 wallet discovery, MetaMask Connect, OKX Universal Provider, native POL staking, SneakerMint NFT minting, RUNE reads, subgraph activity, and Amoy-first defaults.
+description: Build Run-Earn's Polygon frontend with viem, EIP-1193/EIP-6963 wallet discovery, MetaMask Connect, OKX Universal Provider, native POL staking, SneakerMint NFT minting, REN reads, the mod workshop economy, subgraph activity, and Amoy-first defaults.
 ---
 
 # Run-Earn Polygon Frontend
 
-Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT minting, RUNE reads, subgraph activity, and cross-platform EVM wallet integrations.
+Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT minting, REN reads, the mod/workshop upgrade economy, subgraph activity, and cross-platform EVM wallet integrations.
 
 ## Current routes and contracts
 
@@ -13,9 +13,11 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 | --- | --- | --- |
 | `/` | `SneakerCarousel`, `PolygonTransferCard` | — |
 | `/mint` | `SneakerMintStudio` | `useMintedSneakers` |
-| `/my-nfts` | `MyNftsGallery` | `useMintedSneakers` |
-| `/collection` | `VeSneakerStorefront` (veSneakers store) | `useVeSneakerStore` |
-| `/marketplace` | `MarketplaceDashboard` | `useMarketplace` |
+| `/my-nfts` | `MyNftsGallery`, `MyModsGallery` | `useMintedSneakers`, `useOwnedMods` |
+| `/collection` | `VeSneakerStorefront`, `ModStorefront` | `useVeSneakerStore`, `useModEconomy` |
+| `/marketplace` | `MarketplaceDashboard`, `ModMarketTabs` | `useMarketplace`, `useModEconomy` |
+| `/workshop` | `WorkshopDashboard` | `useWorkshop`, `useSneakerGame`, `useOwnedMods` |
+| `/badges` | `BadgesDashboard` | `useBadges` |
 | `/game` | `SneakerGameDashboard` | `useSneakerGame` |
 | `/staking` | `StakingVaultDashboard` | `useStakingVault`, `useNftAppraisal` |
 | `/defi` | `StakingVaultDashboard`, `PolygonTransferCard` | same as `/staking` |
@@ -24,12 +26,17 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 Full route documentation: `docs/app-routes.md`.
 
 - NFT: `SneakerMint` at `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`.
-- REN token: `RUNEToken` at `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` (symbol `REN`).
+- REN token: `RENToken` at `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` (symbol `REN`).
 - Staking vault: `SneakerStaking` at `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`.
 - NFT appraiser: `SneakerAppraiser` at `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`.
 - Marketplace: `SneakerMarketplace` at `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS` — UI at `/marketplace`.
 - Game: `SneakerGame` at `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS` — UI at `/game`.
 - veSneaker store: `VeSneakerStore` at `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS` — UI at `/collection`.
+- Mods: `SneakerMods` at `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`.
+- Workshop: `SneakerWorkshop` at `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS` — UI at `/workshop`.
+- Swap: `SneakerSwap` at `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS` — Trades tab at `/marketplace`.
+- Mod rental: `ModRental` at `NEXT_PUBLIC_MOD_RENTAL_ADDRESS` — Rentals tab at `/marketplace`.
+- Mod store: `ModStore` at `NEXT_PUBLIC_MOD_STORE_ADDRESS` — premium mods at `/collection`.
 - Subgraph proxy: `/api/subgraph?address=0x...` (see the `runearn-subgraph-activity` skill).
 - AI mint route: `/api/generate-sneaker` (see the `runearn-mint-studio` skill).
 - POL price feed: `/api/pol-price` (Uniswap Trading API proxy) — see
@@ -40,9 +47,10 @@ Full route documentation: `docs/app-routes.md`.
 
 ## Hooks inventory and conventions
 
-`src/hooks/`: `useContractTransaction`, `useOwnedSneakers`, `useMintedSneakers`,
-`useWalletOverview`, `useNftAppraisal`, `useStakingVault`, `useMarketplace`,
-`useSneakerGame`, `useVeSneakerStore`, `usePolPrice`, `useSubgraphActivity`. Wallet state
+`src/hooks/`: `useContractTransaction`, `useOwnedSneakers`, `useOwnedMods`,
+`useMintedSneakers`, `useWalletOverview`, `useNftAppraisal`, `useStakingVault`,
+`useMarketplace`, `useSneakerGame`, `useVeSneakerStore`, `useWorkshop`,
+`useBadges`, `useModEconomy`, `usePolPrice`, `useSubgraphActivity`. Wallet state
 lives in `Providers.tsx` via `usePolygonWallet`.
 
 Every hook must:
@@ -139,25 +147,37 @@ Full detail: `docs/mobile-experience.md`.
 8. Use `useNftAppraisal` hook to read on-chain POL value estimates from `SneakerAppraiser.appraise(tokenId)` for each owned NFT.
 9. Show confirmed local transaction activity immediately, then refresh `/api/subgraph` after indexing.
 
-## Marketplace UI flow (`/marketplace`, `useMarketplace` hook)
+## Marketplace UI flow (`/marketplace`, `useMarketplace` + `useModEconomy` hooks)
 
-1. Read owned NFTs via `useOwnedSneakers`; read `tokenSaleKind(tokenId)` (0 = free, 1 = listed, 2 = in auction) and `suggestedPrice(tokenId)` per token.
-2. Listing flow requires two transactions: `approve(marketplace, tokenId)` on SneakerMint, then `list(tokenId, price)` on the marketplace.
-3. Auction flow: `approve` then `createAuction(tokenId, startPrice, durationSeconds)` (1h–30d).
+The marketplace is multi-collection — every sale primitive takes the NFT
+contract address first, and locks are keyed by `(collection, tokenId)`.
+
+1. Read owned sneakers via `useOwnedSneakers` and owned mods via `useOwnedMods`; read `tokenSaleKind(collection, tokenId)` (0 = free, 1 = listed, 2 = in auction) and `suggestedPrice(tokenId)` (sneakers only).
+2. Listing flow requires two transactions: `approve(marketplace, tokenId)` on the NFT contract (SneakerMint **or** SneakerMods), then `list(collection, tokenId, price)`.
+3. Auction flow: `approve` then `createAuction(collection, tokenId, startPrice, durationSeconds)` (1h–30d).
 4. Buying: `buy(listingId)` with `value == listing.price`. Bidding: `bid(auctionId)` with `value >= minBid`; the previous bidder is refunded automatically.
-5. Offers: `makeOffer(tokenId, duration)` with `value` escrows POL; the NFT stays with its owner until `acceptOffer(offerId)`.
-6. Staked NFTs cannot be listed or auctioned — surface the "unstake first" error clearly.
+5. Offers: `makeOffer(collection, tokenId, duration)` with `value` escrows POL; the NFT stays with its owner until `acceptOffer(offerId)`.
+6. Staked NFTs cannot be listed or auctioned — surface the "unstake first" error. Sneakers with equipped workshop mods cannot be listed — surface the "unequip first" error.
 7. `valueRecommendations(tokenId)` returns 4 on-chain tips; show them as guidance text.
+8. Mod economy tabs (`ModMarketTabs` + `useModEconomy`): mod listings under Mods, `ModRental` list/rent/return under Rentals, `SneakerSwap` create/accept/cancel under Trades. See the `runearn-upgrade-economy` skill for the full flow map.
 
 ## Game UI flow (`/game`, `useSneakerGame` hook)
 
-1. Read `sneakers(tokenId)` state (streak, durability, pending, lifetime), `pendingPoints`, `canActivate`, `secondsUntilActivation`, and `veRuneBalance(owner)`.
-2. `activate(tokenId)` is the core retention loop — once per 24h per sneaker. Show a countdown when in cooldown and a "worn out" state at 0 durability.
-3. Durability bar: max from `maxDurability`, wear per activation from `wearPerActivation`. Repair costs `repairCostPoints` veRUNE.
-4. Streak multiplier: +1%/day capped at +50% — display the effective ×multiplier and boosted daily rate (`tierBasePointsPerDay[tier] × multiplier`).
+1. Read `sneakers(tokenId)` — the tuple has **8 fields**: `lastActivationAt`, `lastAccrualAt`, `streak`, `durability`, `pendingPoints`, `lifetimePoints`, `lastDecayAt`, `energy`. Also read `pendingPoints`, `canActivate`, `secondsUntilActivation`, `veRuneBalance(owner)`, and the live stat views `powerOf`, `healthOf`, `energyOf`, `maxEnergyOf`, `earnRatePerSecond`.
+2. `activate(tokenId)` is the core retention loop — once per 24h per sneaker, refills energy to max. Show a countdown when in cooldown and a "worn out" state when `healthOf` hits 0 (health decays 1/day of real time + wear per activation — display `healthOf`, not the stored `durability` field).
+3. Power: `powerOf(tokenId)` is the rarity-scaled earn multiplier (r50 ≈ 1.0x, r90 ≈ 1.4x, r100 ≈ 1.5x); `earnRatePerSecond` already includes power + streak + workshop bonuses.
+4. Repair costs `repairCostPoints` veRUNE (Lining mods discount it); burned repair kits also restore health via the workshop.
 5. `claimPoints(tokenId)` moves pending points to the user's veRUNE balance.
 6. `redeem(points)` converts veRUNE to REN at `redemptionRate` — only when `redemptionEnabled` is true; disable the button otherwise.
 7. veRUNE is virtual (not an ERC-20) — never treat it as a transferable token in the UI.
+
+## Workshop UI flow (`/workshop`, `useWorkshop` hook)
+
+1. Sneaker selector → six equip slots (Sole/Upper/Lining/Skin/Core/Boost), effective-stats panel, forge card, consumables section. Full mechanics: `runearn-upgrade-economy` skill.
+2. Equip is two transactions: `approve(workshop, modId)` on SneakerMods, then `equip(sneakerId, modId)` — the mod goes into workshop escrow. `unequip(sneakerId, slot)` returns it.
+3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), forge stone (2⚡).
+4. Forge burns `forgeCostPoints` veRUNE per level — show `forgeLevel` and the rarity/effective-earn bump.
+5. Blocked sneakers (staked, listed, rented out) must surface the contract revert as actionable copy.
 
 ## Subgraph integration
 
@@ -165,7 +185,7 @@ Full detail: `docs/mobile-experience.md`.
 - Use the Next Route Handler proxy and server-only environment variables.
 - The dynamic adapter introspects the schema and finds address-indexed activity entities.
 - If the schema does not expose new POL events, show RPC state and an empty indexed activity state rather than inventing history.
-- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace and game events.
+- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace (list/buy/auction/offer), game (activate/repair/redeem), and upgrade-economy events (mod mint/burn, equip/unequip, ability use, forge, swap, rental, mod purchases).
 - Full detail lives in the `runearn-subgraph-activity` skill.
 
 ## Required approach
@@ -188,6 +208,9 @@ Full detail: `docs/mobile-experience.md`.
 - Verify OKX in-app browser and mobile app handoff.
 - Verify MetaMask extension, MetaMask Mobile deeplink, cancellation, and return flow.
 - Verify `/staking` deposit, withdrawal, claim, NFT lock/unlock, APY update, and activity refresh on Amoy.
-- Verify `/marketplace` list (approve + list), buy, auction bid/settle, offer make/accept/cancel, and suggested prices on Amoy.
-- Verify `/game` activate (24h cooldown), streak display, durability bar, repair, claim points, and redemption gating on Amoy.
+- Verify `/marketplace` list (approve + list) for sneakers AND mods, buy, auction bid/settle, offer make/accept/cancel, suggested prices, and mod-equipped-sneaker listing rejection on Amoy.
+- Verify `/marketplace` Rentals (list/rent/return) and Trades (create/accept/cancel swap) tabs on Amoy.
+- Verify `/game` activate (24h cooldown + energy refill), streak display, live health bar (time decay), power/energy stats, repair, claim points, and redemption gating on Amoy.
+- Verify `/workshop` equip/unequip across all six slots, each `useAbility` consumable burn (repair/surge/boost/forge stone), forge levels, and equipped-mod custody on Amoy.
+- Verify `/badges` achievement claims and `/collection` ModStore premium purchases on Amoy.
 - **Mobile:** 320/390/430px + landscape + 768px tablet; bottom nav reachable on every route with correct `aria-current`; nothing hidden behind the bar; no horizontal overflow; reduced motion honoured; sheets trap focus and close on Escape; `/manifest.webmanifest`, `/favicon.ico`, `/apple-icon.png` return 200.

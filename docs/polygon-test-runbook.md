@@ -1,6 +1,6 @@
 # Polygon Amoy test runbook
 
-The frontend uses viem with an EIP-1193 injected wallet provider. The current contracts are `SneakerMint`, `RUNEToken`, and `SneakerStaking`. Amoy is the default test environment; this runbook is not a mainnet deployment approval.
+The frontend uses viem with an EIP-1193 injected wallet provider. The v1.0 contract set is `SneakerMint`, `RENToken`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `VeSneakerStore`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, and `ModStore`. Amoy is the default test environment; this runbook is not a mainnet deployment approval.
 
 ## 1. Configure the app
 
@@ -12,8 +12,17 @@ NEXT_PUBLIC_POLYGON_RPC_URL=https://rpc-amoy.polygon.technology
 NEXT_PUBLIC_POLYGON_EXPLORER=https://amoy.polygonscan.com
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_SNEAKER_MINT_ADDRESS=<sneaker-mint-address>
-NEXT_PUBLIC_REWARD_TOKEN_ADDRESS=<rune-token-address>
+NEXT_PUBLIC_REWARD_TOKEN_ADDRESS=<ren-token-address>
 NEXT_PUBLIC_STAKING_VAULT_ADDRESS=<staking-vault-address>
+NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS=<appraiser-address>
+NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS=<marketplace-address>
+NEXT_PUBLIC_SNEAKER_GAME_ADDRESS=<game-address>
+NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS=<vesneaker-store-address>
+NEXT_PUBLIC_SNEAKER_MODS_ADDRESS=<mods-address>
+NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS=<workshop-address>
+NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS=<swap-address>
+NEXT_PUBLIC_MOD_RENTAL_ADDRESS=<rental-address>
+NEXT_PUBLIC_MOD_STORE_ADDRESS=<mod-store-address>
 
 THE_GRAPH_QUERY_URL=https://api.studio.thegraph.com/query/<QUERY_API_KEY>/nuxgraph/0.1.0
 THE_GRAPH_QUERY_API_KEY=<QUERY_API_KEY>
@@ -48,15 +57,15 @@ Do not deploy if contract tests or application checks fail.
 
 ## 4. Deploy to Polygon Amoy
 
-Deploy from a disposable wallet outside the repository:
+Deploy from a disposable wallet outside the repository. `DEPLOY_TARGET=all` deploys
+the whole v1.0 set in dependency order and runs the post-deploy wiring:
 
-1. `RUNEToken(admin, minter)`.
-2. `SneakerMint(name, symbol, admin)`.
-3. `SneakerStaking(admin, sneakerMint, runeToken, rewardRate, baseApy, perNftBonus, maxApy, tierBonuses, minLock)`.
-4. Fund the POL reward reserve with `SneakerStaking.fundPOLRewards()`.
-5. Fund the legacy RUNE vault only if the NFT RUNE reward path is enabled.
-6. Keep public mint disabled unless deliberately testing the beta path.
-7. Record deployed addresses in `.env.local`.
+1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore`.
+2. The script then wires: `game.setBoosts/setWorkshop(workshop)`, `staking.setBoosts(workshop)`, `appraiser.setBoosts(workshop)`, `mods.setWorkshop(workshop)`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop(workshop)` + `setCollectionAllowed(mods, true)`, `swap.setCollectionAllowed(mods, true)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`.
+3. Fund the POL reward reserve with `SneakerStaking.fundPOLRewards()`.
+4. Fund the legacy RUNE vault only if the NFT RUNE reward path is enabled.
+5. Keep public mint disabled unless deliberately testing the beta path.
+6. Record deployed addresses in `.env.local` — every page degrades to demo mode when its address is missing.
 
 ## 5. Staking route demo
 
@@ -70,6 +79,22 @@ Deploy from a disposable wallet outside the repository:
 8. Withdraw POL after the minimum lock period.
 9. Unlock NFTs after their minimum lock period.
 10. Confirm recent activity appears through `/api/subgraph` after indexing.
+
+## 5b. Game and workshop demo
+
+1. Open `/game`, activate a sneaker, and confirm the streak, health bar, power, and
+   energy charges update; health decays 1/day and refills nothing — only repair restores it.
+2. Claim pending veRUNE and confirm `veRuneBalance` increases.
+3. Open `/workshop`, pick the sneaker, equip a mod into its slot (approve + equip),
+   and confirm the effective-stats panel changes.
+4. Burn a consumable (`useAbility`): repair kit → full health, surge → instant
+   activation, boost capsule → +earn for 24h, forge stone → +1 forge level. Confirm
+   the mod NFT is burned and the energy cost was deducted.
+5. Forge once veRUNE is claimed — verify `forgeLevel` and the rarity/earn bump.
+6. Open `/badges` and claim an achievement whose on-chain requirement is met.
+7. On `/marketplace`, list a mod (Mods tab), open a rental (Rentals tab), and
+   create/accept a swap (Trades tab). Confirm a sneaker with equipped mods cannot
+   be listed until unequipped.
 
 ## 6. Subgraph verification
 
@@ -90,25 +115,40 @@ If the activity panel is empty but RPC state works, inspect the subgraph schema 
 
 Set the terminal-only variables in `.env.local` or the deployment environment. `DEPLOYER_PRIVATE_KEY` is the signer used for gas; `DEPLOY_ADMIN_ADDRESS` can be a multisig or separate admin.
 
-Deploy all three contracts and verify them:
+Deploy all twelve contracts and verify them:
 
 ```bash
 DEPLOY_TARGET=all npx hardhat run scripts/deploy.ts --network amoy
 ```
 
-Deploy and verify one contract:
+Deploy and verify one contract (`DEPLOY_TARGET` accepts `all`, `RENToken`,
+`SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`,
+`SneakerGame`, `VeSneakerStore`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`,
+`ModRental`, `ModStore`):
 
 ```bash
-DEPLOY_TARGET=RUNEToken npx hardhat run scripts/deploy.ts --network amoy
+DEPLOY_TARGET=RENToken npx hardhat run scripts/deploy.ts --network amoy
 DEPLOY_TARGET=SneakerMint npx hardhat run scripts/deploy.ts --network amoy
 DEPLOY_TARGET=SneakerStaking \
   RUNE_TOKEN_ADDRESS=0x... \
   SNEAKER_MINT_ADDRESS=0x... \
   npx hardhat run scripts/deploy.ts --network amoy
-DEPLOY_TARGET=SneakerAppraiser \
+DEPLOY_TARGET=SneakerMods \
   SNEAKER_MINT_ADDRESS=0x... \
+  SNEAKER_GAME_ADDRESS=0x... \
+  STAKING_VAULT_ADDRESS=0x... \
+  npx hardhat run scripts/deploy.ts --network amoy
+DEPLOY_TARGET=SneakerWorkshop \
+  SNEAKER_MINT_ADDRESS=0x... \
+  SNEAKER_MODS_ADDRESS=0x... \
+  SNEAKER_GAME_ADDRESS=0x... \
+  STAKING_VAULT_ADDRESS=0x... \
   npx hardhat run scripts/deploy.ts --network amoy
 ```
+
+Single-target deploys read dependency addresses from the same `*_ADDRESS`
+environment variables the wiring step uses, so a partial redeploy can re-run the
+wiring against existing contracts.
 
 Use `SKIP_VERIFY=true` only for local or intentionally unverified deployments. The deployment manifest is saved under `deployments/<network>.json` and is ignored by git.
 
@@ -134,7 +174,7 @@ FUND_ASSET=RUNE FUND_AMOUNT=1000 \
 On Windows PowerShell, set variables for the command like this:
 
 ```powershell
-$env:DEPLOY_TARGET = "RUNEToken"
+$env:DEPLOY_TARGET = "RENToken"
 npx hardhat run scripts/deploy.ts --network amoy
 
 $env:FUND_ASSET = "POL"

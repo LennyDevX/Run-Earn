@@ -3,13 +3,13 @@ pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
 import {SneakerMint} from "../contracts/SneakerMint.sol";
-import {RUNEToken} from "../contracts/RUNEToken.sol";
+import {RENToken} from "../contracts/RENToken.sol";
 import {SneakerStaking} from "../contracts/SneakerStaking.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract SneakerStakingTest is Test {
     SneakerMint nft;
-    RUNEToken rune;
+    RENToken rune;
     SneakerStaking staking;
 
     address admin = address(0xA11CE);
@@ -30,7 +30,7 @@ contract SneakerStakingTest is Test {
 
     function setUp() public {
         nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
-        rune = new RUNEToken(admin, admin); // admin is minter for testing
+        rune = new RENToken(admin, admin); // admin is minter for testing
         staking = new SneakerStaking(
             admin,
             address(nft),

@@ -9,6 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SneakerMint} from "./SneakerMint.sol";
+import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 
 /// @title SneakerStaking — POL staking with sneaker NFT APY boosts.
 /// @notice Users deposit native POL and may lock SneakerMint NFTs to increase
@@ -52,6 +53,10 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     SneakerMint public immutable nft;
     IERC20 public immutable rewardToken;
 
+    /// @notice Optional boost provider (SneakerWorkshop). Boost-slot mods
+    ///      equipped on staked sneakers add APY at accrual time.
+    ISneakerBoosts public boosts;
+
     // ─── Reward parameters (low, stable, sustainable) ───────────
     uint256 public rewardTokensPerNftYear; // RUNE per NFT-year at 1x weight
     uint256 public baseApyBps; // 280 = 2.8% base POL APY (sustainable rate)
@@ -81,6 +86,7 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     event RewardParamsUpdated();
     event NFTRecovered(address indexed to, uint256 indexed tokenId);
     event ERC20Recovered(address indexed token, address indexed to, uint256 amount);
+    event BoostsUpdated(address indexed boosts);
 
     constructor(
         address admin,
@@ -119,6 +125,12 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
 
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
+    }
+
+    /// @notice Link the boost provider (SneakerWorkshop). Zero address disables boosts.
+    function setBoosts(address boosts_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        boosts = ISneakerBoosts(boosts_);
+        emit BoostsUpdated(boosts_);
     }
 
     /// @notice Add POL to the reward reserve. Principal deposits are separate.
@@ -318,7 +330,7 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     // ─────────────────────────── Views ───────────────────────────
 
     function effectiveApyBps(address owner) external view returns (uint256) {
-        return _effectiveApyBps(positions[owner]);
+        return _effectiveApyBps(owner);
     }
 
     function pendingRewards(address owner) external view returns (uint256) {
@@ -341,7 +353,7 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
         }
         uint256 elapsed = block.timestamp - polPosition.lastAccrualAt;
         uint256 incremental =
-            (polPosition.principal * _effectiveApyBps(positions[owner]) * elapsed) /
+            (polPosition.principal * _effectiveApyBps(owner) * elapsed) /
             (BASIS_POINTS * SECONDS_PER_YEAR);
         return polPosition.accruedRewards + incremental;
     }
@@ -405,16 +417,27 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
             return;
         }
         polPosition.accruedRewards +=
-            (polPosition.principal * _effectiveApyBps(positions[owner]) * elapsed) /
+            (polPosition.principal * _effectiveApyBps(owner) * elapsed) /
             (BASIS_POINTS * SECONDS_PER_YEAR);
         polPosition.lastAccrualAt = block.timestamp;
     }
 
-    function _effectiveApyBps(Position storage position) internal view returns (uint256) {
+    function _effectiveApyBps(address owner) internal view returns (uint256) {
+        Position storage position = positions[owner];
         uint256 requested = baseApyBps +
             position.lockedCount * perNftBonusBps +
-            position.tierBonusBps;
+            position.tierBonusBps +
+            _modBoostBps(owner);
         return requested > maxApyBps ? maxApyBps : requested;
+    }
+
+    /// @notice Sum of Boost-slot mod bonuses across the owner's staked sneakers.
+    function _modBoostBps(address owner) internal view returns (uint256 total) {
+        if (address(boosts) == address(0)) return 0;
+        uint256[] storage tokenIds = _stakedTokenIds[owner];
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            total += boosts.stakingBoostBps(tokenIds[i]);
+        }
     }
 
     function onERC721Received(

@@ -7,12 +7,18 @@ Current foundation: Solidity 0.8.36, Hardhat 3, OpenZeppelin Contracts 5.6.
 | Contract | File | Purpose |
 | --- | --- | --- |
 | `SneakerMint` | `SneakerMint.sol` | ERC-721 minting for AI-generated sneaker artwork (tiers 0–3: Common, Rare, Epic, Mythic) |
-| `RUNEToken` | `RUNEToken.sol` | ERC-20 reward token `REN` with 100M supply cap |
+| `RENToken` | `RENToken.sol` | ERC-20 reward token `REN` with 100M supply cap |
 | `SneakerStaking` | `SneakerStaking.sol` | Native POL staking with rarity-based sneaker NFT APY boosts |
 | `SneakerAppraiser` | `SneakerAppraiser.sol` | Read-only NFT valuation contract (POL value estimates) |
 | `SneakerMarketplace` | `SneakerMarketplace.sol` | Fixed-price sales, English auctions, and POL offers |
 | `SneakerGame` | `SneakerGame.sol` | Daily-activation gamification with virtual veRUNE points redeemable for REN |
 | `VeSneakerStore` | `VeSneakerStore.sol` | On-demand primary sale of virtual sneakers (veSneakers) for POL |
+| `ISneakerBoosts` | `ISneakerBoosts.sol` | Shared boost interface implemented by the workshop and read by game/staking/appraiser/marketplace |
+| `SneakerMods` | `SneakerMods.sol` | ERC-721 upgrade/badge collection with on-chain achievement claims |
+| `SneakerWorkshop` | `SneakerWorkshop.sol` | Six-slot mod equipment, consumable repair kits, and the veRUNE forge |
+| `SneakerSwap` | `SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across approved collections |
+| `ModRental` | `ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
+| `ModStore` | `ModStore.sol` | On-demand primary sale of premium mod designs for POL |
 
 ## Current staking behavior
 
@@ -44,19 +50,35 @@ Default economics are 2.80% base APY (sustainable rate), rarity-based tier boost
 
 ## Gamification (SneakerGame)
 
+Every veSneaker has three live stats:
+
+- **Power** — the daily veRUNE mining rate: `tierBasePointsPerDay[tier] × (50% + effectiveRarity%)`. Rarity 50 ≈ 1.0x; forge levels raise effective rarity (and therefore power) permanently.
+- **Health** — remaining "days of life". Health decays 1 point per `HEALTH_DECAY_PERIOD` (24h) of real time since `lastDecayAt`, plus wear on each activation. At 0 the sneaker is worn out: accrual stops (capped at the death timestamp) and it cannot activate until repaired — with veRUNE (`repair`, Lining discount applies) or a burned repair-kit NFT (`repairFromWorkshop`, workshop only).
+- **Energy** — charges spent on consumable abilities via `SneakerGame.spendEnergy` (workshop only). Capacity = `2 + effectiveRarity / 20`; every manual `activate` refills it to max.
+
 - `activate(tokenId)` every 24h starts an earning window; daily streaks add +1% per day (cap +50%).
-- Each activation wears 1 durability (max 10); at 0 the sneaker stops earning until repaired (50 veRUNE).
-- Points accrue per second by tier: Common 100, Rare 200, Epic 400, Mythic 800 veRUNE/day.
+- Points accrue per second by tier: Common 100, Rare 200, Epic 400, Mythic 800 veRUNE/day (before power).
+- Live views: `powerOf`, `healthOf`, `energyOf`, `maxEnergyOf`, `earnRatePerSecond`, `pendingPoints` (all decay-aware).
 - veRUNE is virtual (contract state, not an ERC-20). `redeem(points)` converts veRUNE to REN at `redemptionRate` once the admin funds the pool and enables redemption.
 - See [`docs/veRune-tokenomics.md`](../docs/veRune-tokenomics.md) for the full tokenomics design.
 
 ## veSneaker store (VeSneakerStore)
 
-- veSneakers are virtual sneakers anyone can buy with POL, with or without a physical pair.
+- veSneakers are the playable NFTs of the virtual sneaker economy — bought with POL.
 - `buy(designIndex)` / `buyBatch(designIndex, quantity)` mint on demand through `SneakerMint.mintAuthorized`; the store holds `MINTER_ROLE`.
 - Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design.
 - `reserveMint` allocates copies to the treasury without payment, counting against supply.
 - Configure the 9 genesis designs with `VE_MINT_MODE=configure|premint|both npx hardhat run scripts/mint-veSneakers.ts --network amoy`.
+
+## Upgrade economy (v1.0)
+
+- **SneakerMods** — ERC-721 mods/badges with `ModTraits { slot, rarity, tier, effectBps, aux, consumable, proofHash }`. Six slots: 0 Sole (−wear), 1 Upper (+earn rate), 2 Lining (−repair cost), 3 Skin (+appraisal, cosmetic), 4 Core (auto-activation), 5 Boost (+staking APY). Consumable mods (repair kits) burn on use. Achievements are claimed on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked) — one claim per wallet each.
+- **SneakerWorkshop** — implements `ISneakerBoosts`. `equip`/`unequip` escrow one mod per slot; `forge` burns claimed veRUNE (`game.spendPoints`) for permanent +rarity/+earn levels. `useAbility(sneakerId, modId)` burns any consumable mod and applies its ability by `aux`: `0`/`255` repair kit (free full restore), `1` surge (instant activation, bypasses cooldown — 2⚡), `2` boost capsule (+`effectBps` earn for 24h — 1⚡), `3` forge stone (free forge level — 2⚡). Energy costs are enforced through `SneakerGame.spendEnergy`. The game, staking, appraiser, marketplace, and swap read effects through the shared interface.
+- **SneakerMarketplace (V2)** — collection-aware: `list(collection, tokenId, price)`, `createAuction(collection, ...)`, `makeOffer(collection, ...)`, locks keyed by `(collection, tokenId)`. `allowedCollections` gates which NFT contracts trade; sneakers with equipped mods cannot be listed or auctioned.
+- **SneakerSwap** — `createSwap` escrows the maker's NFT (+ optional POL) for a specific or open taker; `accept` settles both legs atomically; `cancel` returns escrow. Any approved collection pair.
+- **ModRental** — owners `list` a mod for `pricePerDay` POL; renters prepay for a fixed duration, equip via `equipRented` (custody stays in the rental contract), and `returnExpired` settles after expiry. Equipped mods cannot be listed.
+- **ModStore** — catalog of premium designs minted on demand through `SneakerMods.mintAuthorized` (the store holds `MINTER_ROLE`). Proceeds go to the treasury.
+- **Deployment order:** mint → staking → appraiser → marketplace → game → mods → workshop → swap → rental → modStore → veStore, then wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource`, `marketplace.setWorkshop/setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`.
 
 ## Frontend and subgraph
 
@@ -69,6 +91,11 @@ NEXT_PUBLIC_STAKING_VAULT_ADDRESS=
 NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS=
 NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS=
 NEXT_PUBLIC_SNEAKER_GAME_ADDRESS=
+NEXT_PUBLIC_SNEAKER_MODS_ADDRESS=
+NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS=
+NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS=
+NEXT_PUBLIC_MOD_RENTAL_ADDRESS=
+NEXT_PUBLIC_MOD_STORE_ADDRESS=
 ```
 
 The deployed The Graph Studio project is `nuxgraph` version `0.1.0`. Configure its server-only query endpoint/API key for `/api/subgraph`; see [`docs/subgraph-integration.md`](../docs/subgraph-integration.md). The Graph deploy key is not a query API key and must never be committed.
@@ -93,7 +120,7 @@ The scripts live in `scripts/`:
 DEPLOY_TARGET=all npx hardhat run scripts/deploy.ts --network amoy
 
 # Deploy and verify one contract
-DEPLOY_TARGET=RUNEToken npx hardhat run scripts/deploy.ts --network amoy
+DEPLOY_TARGET=RENToken npx hardhat run scripts/deploy.ts --network amoy
 DEPLOY_TARGET=SneakerMint npx hardhat run scripts/deploy.ts --network amoy
 DEPLOY_TARGET=SneakerStaking RUNE_TOKEN_ADDRESS=0x... SNEAKER_MINT_ADDRESS=0x... npx hardhat run scripts/deploy.ts --network amoy
 DEPLOY_TARGET=SneakerAppraiser SNEAKER_MINT_ADDRESS=0x... npx hardhat run scripts/deploy.ts --network amoy

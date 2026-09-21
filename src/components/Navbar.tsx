@@ -13,6 +13,8 @@ const LINKS = [
   { href: "/mint", label: "Mint" },
   { href: "/collection", label: "veSneakers" },
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/workshop", label: "Workshop" },
+  { href: "/badges", label: "Badges" },
   { href: "/game", label: "Game" },
   { href: "/defi", label: "DeFi" },
   { href: "/staking", label: "Staking" },
@@ -21,6 +23,16 @@ const LINKS = [
 
 /// Routes that do not fit in the mobile bottom bar, surfaced through the sheet.
 const SECONDARY_LINKS = [
+  {
+    href: "/workshop",
+    label: "Workshop",
+    description: "Equip mods, burn repair kits, and forge your sneakers.",
+  },
+  {
+    href: "/badges",
+    label: "Badges",
+    description: "Claim achievement badges earned by your veSneakers.",
+  },
   {
     href: "/staking",
     label: "Staking",

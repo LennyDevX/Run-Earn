@@ -32,7 +32,7 @@ export default function MyNftsGallery() {
           You have not minted a sneaker yet
         </h2>
         <p className="max-w-md text-sm leading-relaxed text-foreground/60">
-          Photograph your physical sneaker and let AI create its collectible version.
+          Photograph your sneaker and let AI create its unique virtual collectible.
         </p>
         <Link
           href="/mint"

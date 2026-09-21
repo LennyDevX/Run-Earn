@@ -9,12 +9,18 @@
 | Retired name | Current name | File | Purpose |
 | --- | --- | --- | --- |
 | `SneakerCollection` | `SneakerMint` | `contracts/SneakerMint.sol` | ERC-721 minting for AI-generated sneaker artwork (tiers 0–3) |
-| `SneakerRewards` / `LaceToken` / `RuneToken` | `RUNEToken` | `contracts/RUNEToken.sol` | ERC-20 REN reward token (symbol `REN`) |
+| `SneakerRewards` / `LaceToken` / `RuneToken` / `RUNEToken` | `RENToken` | `contracts/RENToken.sol` | ERC-20 REN reward token (symbol `REN`) |
 | `SneakerStaking` | `SneakerStaking` | `contracts/SneakerStaking.sol` | Native POL vault with rarity-based NFT APY boosts |
 | — | `SneakerAppraiser` | `contracts/SneakerAppraiser.sol` | Read-only NFT valuation contract (POL estimates) |
-| — | `SneakerMarketplace` | `contracts/SneakerMarketplace.sol` | Fixed-price sales, English auctions, and escrowed POL offers |
-| — | `SneakerGame` | `contracts/SneakerGame.sol` | Daily-activation gamification with virtual veRUNE points redeemable for REN |
+| — | `SneakerMarketplace` | `contracts/SneakerMarketplace.sol` | Multi-collection fixed-price sales, English auctions, and escrowed POL offers |
+| — | `SneakerGame` | `contracts/SneakerGame.sol` | Power/health/energy gamification with virtual veRUNE points redeemable for REN |
 | — | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
+| — | `ISneakerBoosts` | `contracts/ISneakerBoosts.sol` | Shared boost read interface consumed by game, staking, appraiser, marketplace |
+| — | `SneakerMods` | `contracts/SneakerMods.sol` | ERC-721 mod/badge collection with on-chain achievement claims |
+| — | `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Six-slot equip system, consumable ability NFTs, and the veRUNE forge |
+| — | `SneakerSwap` | `contracts/SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across collections |
+| — | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
+| — | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs (including consumables) |
 
 ## Current Phase 1 foundation
 
@@ -27,7 +33,7 @@
 - The frontend uses `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`.
 - Raw photos and personal data remain off-chain.
 
-### `RUNEToken.sol`
+### `RENToken.sol`
 
 - ERC-20 name `Run and Earn Rune`, symbol `REN`, decimals `18`.
 - `MAX_SUPPLY` is 100M REN.
@@ -47,7 +53,7 @@ Current default economics are 2.80% base APY (reduced by 30% for sustainability)
 ### `SneakerAppraiser.sol`
 
 - Read-only contract that estimates the POL value of a SneakerMint NFT.
-- Formula: `(baseValue + tierValues[tier] + rarity * rarityWeight) * globalMultiplierBps / 10_000`.
+- Formula: `(baseValue + tierValues[tier] + effectiveRarity * rarityWeight) * globalMultiplierBps / 10_000`, where effective rarity adds the forge `rarityBonus` and the value is then scaled by the equipped Skin `appraisalBonusBps` — both read live from the workshop via `setBoosts`.
 - All parameters are admin-configurable via `updateParams()`.
 - `appraise(tokenId)` reads traits from `SneakerMint` and returns `(estimatedValue, rarity, tier)`.
 - `appraiseRaw(rarity, tier)` returns an estimate without requiring an existing NFT.
@@ -55,16 +61,36 @@ Current default economics are 2.80% base APY (reduced by 30% for sustainability)
 
 The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but it is separate from POL rewards.
 
+### `SneakerGame.sol` — power / health / energy
+
+- **Power** scales the tier base rate by effective rarity: `powerBps = 5000 + rarity × 100` (r50 = 1.0x, r100 = 1.5x); forge rarity counts.
+- **Health** is durability that decays 1 unit per `HEALTH_DECAY_PERIOD` (1 day) of real time plus wear per activation. Accrual is capped at the death timestamp (`lastDecayAt + remainingHealth × 24h`); at 0 the sneaker is worn out and cannot activate.
+- **Energy** capacity = `2 + effectiveRarity / 20`, refilled to max on each manual `activate`; spent by workshop abilities through `spendEnergy` (workshop-only, like `repairFromWorkshop`, `activateFromWorkshop`, `spendPoints`).
+- Views `powerOf`, `healthOf`, `energyOf`, `maxEnergyOf`, `earnRatePerSecond`, `pendingPoints` are all decay-aware; `sneakers(tokenId)` returns 8 fields including `lastDecayAt` and `energy`.
+
+### Upgrade economy (v1.0)
+
+- `SneakerMods.sol`: ERC-721 mods/badges with `ModTraits{slot, rarity, tier, effectBps, aux, consumable, proofHash}`. Six slots: Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal, `aux` = design override), Core (auto-activation), Boost (+staking APY). Achievements are claimable on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked).
+- `SneakerWorkshop.sol`: escrows equipped mods (one per slot), exposes `ISneakerBoosts`, runs `forge` (burns veRUNE via `game.spendPoints` for permanent +rarity/+earn), and `useAbility` which **burns a consumable mod NFT** per use — `aux` selects the ability: `0`/`255` repair kit (free), `1` surge (instant activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge stone (free level, 2⚡).
+- `SneakerMarketplace.sol`: collection-aware V2 — `list(collection, tokenId, price)`, auctions, and POL offers work for sneakers and mods; locks are keyed by `(collection, tokenId)`; staked NFTs and sneakers with equipped mods cannot be listed.
+- `SneakerSwap.sol`: atomic NFT↔NFT swaps with optional POL top-up, any allowed collection pair.
+- `ModRental.sol`: owners list mods for `pricePerDay` POL; renters prepay and equip via the workshop while custody stays in the rental contract; consumables are not rentable.
+- `ModStore.sol`: catalog of premium mod designs minted on demand for POL (store holds `MINTER_ROLE` on SneakerMods), including consumable designs via the `aux`/`consumable` fields.
+
 **POL formula:**
 
 ```text
 effective_apy_bps = min(
-  base_apy_bps + locked_count * per_nft_bonus_bps + sum(tier_bonus_bps),
+  base_apy_bps + locked_count * per_nft_bonus_bps
+    + sum(tier_bonus_bps + workshop_staking_boost_bps),
   max_apy_bps
 )
 pol_rewards = pol_principal * effective_apy_bps * elapsed_seconds
   / (10_000 * 31_536_000)
 ```
+
+The workshop term comes from Boost-slot mods equipped on each locked sneaker
+(`ISneakerBoosts.stakingBoostBps`), read live when `boosts` is set.
 
 **Custody invariants:**
 
@@ -110,12 +136,17 @@ The adapter introspects the configured schema and normalizes address-indexed dep
 
 ## Deployment order
 
-1. Deploy `RUNEToken`.
-2. Deploy `SneakerMint`.
-3. Deploy `SneakerStaking` with NFT and RUNE addresses.
-4. Deploy `SneakerAppraiser` with the NFT address.
-5. Fund the POL reward reserve.
-6. Configure frontend contract addresses and server-only Graph query settings.
-6. Test `/staking` on Polygon Amoy with a disposable wallet.
-7. Verify subgraph activity after indexing.
-8. Use multisig administration and deterministic artifacts before mainnet.
+`DEPLOY_TARGET=all` in `scripts/deploy.ts` deploys in dependency order and runs the
+post-deploy wiring automatically:
+
+1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore`.
+2. Wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`,
+   `mods.setWorkshop`, `workshop.setRentalSource`,
+   `marketplace.setWorkshop/setCollectionAllowed(mods)`,
+   `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`,
+   `nft.grantRole(MINTER_ROLE, veStore)`.
+3. Fund the POL reward reserve (`scripts/fund-staking.ts`) and the veRUNE redemption pool.
+4. Configure frontend contract addresses and server-only Graph query settings.
+5. Test `/staking`, `/marketplace`, `/game`, `/workshop`, and `/badges` on Polygon Amoy with a disposable wallet.
+6. Verify subgraph activity after indexing.
+7. Use multisig administration and deterministic artifacts before mainnet.

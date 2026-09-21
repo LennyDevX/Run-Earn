@@ -5,7 +5,7 @@ This document describes the current EVM implementation for Polygon Amoy. It is n
 ## Current contracts
 
 - `SneakerMint.sol`: ERC-721 minting contract for AI-generated sneaker artwork. Tiers 0–3 (Common, Rare, Epic, Mythic).
-- `RUNEToken.sol`: pausable ERC-20 reward token with symbol `RUNE` and a 100M hard cap; retained for the legacy NFT reward path.
+- `RENToken.sol`: pausable ERC-20 reward token with symbol `REN` and a 100M hard cap; retained for the legacy NFT reward path.
 - `SneakerStaking.sol`: native POL staking vault with optional SneakerMint NFT APY boosts and a legacy RUNE NFT reward path.
 - `SneakerAppraiser.sol`: read-only NFT valuation contract that estimates the POL value of a SneakerMint NFT based on its rarity score and tier.
 
@@ -37,6 +37,8 @@ The APY boost is **rarity-based** — each NFT tier gives a fixed bonus:
 
 There is no flat per-NFT bonus (`perNftBonusBps = 0`). The boost is applied only when the user manually locks the NFT into the vault via `stake(tokenId)`. The NFT must be in the vault (custodied by the staking contract) for the boost to remain active.
 
+Boost-slot mods equipped on a locked sneaker add `workshop.stakingBoostBps(tokenId)` on top of the tier bonus — read live from `SneakerWorkshop` via `setBoosts`, so unequipping the mod removes the extra APY on the next accrual. Mods can be equipped on staked sneakers because the workshop recognizes `staking.stakedOwner` as the sneaker's controller.
+
 ## NFT valuation (SneakerAppraiser)
 
 The `SneakerAppraiser` contract provides an on-chain POL value estimate for each SneakerMint NFT:
@@ -64,7 +66,7 @@ All parameters are admin-configurable via `updateParams()`. The estimate helps u
 effective_apy_bps = min(
   base_apy_bps
     + locked_count * per_nft_bonus_bps
-    + sum(tier_bonus_bps),
+    + sum(tier_bonus_bps + workshop_staking_boost_bps),
   max_apy_bps,
 )
 pol_reward_units = pol_principal
@@ -77,7 +79,7 @@ The APY parameter is an accounting rule, not a guaranteed return. Mainnet requir
 
 ## Activity indexing
 
-The staking UI at `/staking` reads principal, pending POL rewards, APY, locked token IDs, owned SneakerMint NFTs, and reserve state directly from RPC. The marketplace UI at `/marketplace` (fixed-price sales, auctions, POL offers) and the game UI at `/game` (24h activations, streaks, durability, veRUNE redemption) follow the same pattern via the `useMarketplace` and `useSneakerGame` hooks. Recent activity is loaded through `/api/subgraph`, which proxies the `nuxgraph` Studio deployment configured in `docs/subgraph-integration.md`.
+The staking UI at `/staking` reads principal, pending POL rewards, APY, locked token IDs, owned SneakerMint NFTs, and reserve state directly from RPC. The marketplace UI at `/marketplace` (fixed-price sales, auctions, POL offers) and the game UI at `/game` (24h activations, streaks, live health decay, energy, veRUNE redemption) follow the same pattern via the `useMarketplace` and `useSneakerGame` hooks. Recent activity is loaded through `/api/subgraph`, which proxies the `nuxgraph` Studio deployment configured in `docs/subgraph-integration.md`.
 
 The deployed subgraph must index `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, and `Unstaked` for complete activity history. Marketplace and game events (`ListingCreated`, `NFTSold`, `AuctionSettled`, `OfferAccepted`, `Activated`, `PointsClaimed`, `Redeemed`) should be indexed for full cross-app activity.
 

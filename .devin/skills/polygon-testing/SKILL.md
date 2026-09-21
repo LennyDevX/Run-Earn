@@ -1,11 +1,11 @@
 ---
 name: polygon-testing
-description: Test Run-Earn's Hardhat 3 Solidity contracts, native POL staking, SneakerMint NFT boosts, RUNEToken rewards, viem integrations, and subgraph activity.
+description: Test Run-Earn's Hardhat 3 Solidity contracts, native POL staking, SneakerMint NFT boosts, RENToken rewards, the mod workshop economy (SneakerMods/SneakerWorkshop/SneakerSwap/ModRental/ModStore), viem integrations, and subgraph activity.
 ---
 
 # Run-Earn Polygon Contract Testing
 
-Use this skill whenever modifying contracts, deployment configuration, ABIs, wallet flows, minting, native POL staking, RUNE rewards, NFT boosts, or subgraph activity.
+Use this skill whenever modifying contracts, deployment configuration, ABIs, wallet flows, minting, native POL staking, REN rewards, NFT boosts, the mod upgrade economy, or subgraph activity.
 
 ## Test locations
 
@@ -35,9 +35,9 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - Duplicate/zero proof hash, rarity `0..100`, tier `< 4` (Common, Rare, Epic, Mythic).
 - Sequential IDs, traits, pause/unpause, fuzz bounds.
 
-### `RUNEToken`
+### `RENToken`
 
-- ERC-20 name, symbol `RUNE`, decimals, roles, 100M cap.
+- ERC-20 name, symbol `REN`, decimals, roles, 100M cap.
 - Authorized/unauthorized mint, zero recipient, cap boundary.
 - Burn, insufficient balance, paused minting and transfers.
 
@@ -61,26 +61,31 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - `tierLabel`, `tierBoostBps`, and `tierValueList` view functions return expected values.
 - Fuzz: rarity 0..100, tier 0..3.
 
-### `SneakerMarketplace`
+### `SneakerMarketplace` (multi-collection)
 
-- Constructor addresses, fee cap (max 20%), zero premium reverts.
-- Listings: escrow NFT, buy splits payment (fee to `accumulatedFees`), cancel returns NFT, wrong payment reverts, seller cannot buy.
-- Staked NFTs cannot be listed or auctioned (`stakedOwner` check).
+- Constructor addresses, fee cap (max 20%), zero premium reverts, `allowedCollections` gating (`setCollectionAllowed`, disallowed collection reverts).
+- All primitives take `collection` first: `list(collection, tokenId, price)`, `createAuction(collection, ...)`, `makeOffer(collection, tokenId, duration)`; locks keyed by `(collection, tokenId)` via `tokenSaleKind`.
+- Listings: escrow NFT, buy splits payment (fee to `accumulatedFees`), cancel returns NFT, wrong payment reverts, seller cannot buy. Repeat for `SneakerMods` tokens.
+- Staked NFTs cannot be listed or auctioned (`stakedOwner` check); sneakers with equipped workshop mods cannot be listed (`workshop.hasEquippedMods`) — test the unequip-then-list path.
 - Auctions: create escrows NFT, bid refunds previous bidder, 1% min increment, settle pays seller minus fee, no-bid settle returns NFT, settle reverts while running, seller cannot bid, bid after end reverts.
 - Offers: make escrows POL (NFT stays with owner), accept pays seller minus fee and transfers NFT, cancel refunds bidder, own-token/listed-token reverts, expiry reverts.
 - Views: `suggestedPrice` = appraiser × premium; `valueRecommendations` returns 4 tips.
 - Admin: `updateParams`, `withdrawFees`, non-admin reverts.
 
-### `SneakerGame`
+### `SneakerGame` (power / health / energy)
 
 - Constructor addresses, zero durability/rate reverts, redemption disabled by default.
-- Activation: first activation initializes durability, 24h cooldown, streak builds within 48h, resets after break, worn-out reverts, not-owner reverts.
-- Accrual: points accrue per second while active (tier base × streak multiplier), stop after the 24h window, stop at 0 durability, already-earned points remain claimable.
+- Activation: first activation initializes durability + `lastDecayAt` + refills energy to max, 24h cooldown, streak builds within 48h, resets after break, worn-out reverts, not-owner reverts.
+- Power: `powerOf` = `5000 + effectiveRarity × 100` bps; verify rarity 50 ≈ 1.0x, rarity 90 ≈ 1.4x; `earnRatePerSecond` = tier base × power × streak × workshop earn bonus.
+- Health: decays 1 unit per `HEALTH_DECAY_PERIOD` (1 day) via `lastDecayAt`, plus wear per activation; at 0 the sneaker is dead — accrual caps at the death timestamp, `canActivate` false, `earnRatePerSecond` 0; `repair` resets the decay clock.
+- Energy: `maxEnergyOf` = `2 + effectiveRarity/20`; manual `activate` refills, `activateFromWorkshop` (surge) does NOT refill (free-energy exploit check); `spendEnergy` reverts for non-workshop callers and on insufficient energy.
+- Accrual: points accrue per second while active (tier base × power × streak), stop after the 24h window, stop at 0 health, already-earned points remain claimable.
 - Claim: adds to `veRuneBalance`, clears pending, not-owner reverts.
-- Repair: costs veRUNE, restores durability, insufficient-balance reverts.
+- Repair: costs veRUNE (Lining discount via boosts), restores health, insufficient-balance reverts, never-activated sneaker reverts.
 - Redemption: disabled by default, converts points to REN at `redemptionRate` (integer division), insufficient balance/zero points reverts, requires funded pool.
-- Views: `streakMultiplierBps` caps at +50%, `canActivate`, `earnRatePerSecond`, `pendingPoints`.
-- Note: `increaseTime` offsets accumulate across Mocha tests — compute deltas from a fresh block timestamp read.
+- `sneakers()` tuple has 8 fields — destructure `lastDecayAt` and `energy` too.
+- Views: `streakMultiplierBps` caps at +50%, `canActivate`, `earnRatePerSecond`, `pendingPoints`, `powerOf`, `healthOf`, `energyOf`, `maxEnergyOf`.
+- Note: `increaseTime` offsets accumulate across Mocha tests — compute deltas from a fresh block timestamp read. Old tests assuming 10 activations before wear-out now fail after ~5 (1 wear + ~1 day decay per cycle).
 
 ### `VeSneakerStore`
 
@@ -94,6 +99,40 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - Views: `quote`, `isAvailable`, `priceOf`, `remaining`, `designCount`, `designs`.
 - `receive()` reverts — test stranded-funds recovery with `setBalance`, not a plain transfer.
 - Fuzz: batch quantity bounds.
+
+### `SneakerMods`
+
+- `mintAuthorized` takes a `ModTraits` struct (`slot`, `rarity`, `tier`, `effectBps`, `consumable`, `aux`, `proofHash`) — never positional trait args.
+- `claim` achievement path: on-chain requirements (streak, lifetimePoints, balance, staked POL), one claim per wallet per achievement, requirement-not-met reverts.
+- `burnAuthorized` reverts for non-workshop callers; `equippedTo` blocks burn of escrowed mods.
+- `setWorkshop` admin wiring.
+
+### `SneakerWorkshop`
+
+- `equip`: one mod per slot, escrow custody (`equippedTo`), owner-of-sneaker check (or renter via `rentalSource`), consumable mods rejected, approval required.
+- `unequip`: returns the mod, clears the slot bonus; staked/listed sneaker edge cases.
+- Bonus views per slot: Sole −wear, Upper +earn (`earnBonusBps` + `tempBoostBps` while unexpired), Lining −repair cost, Skin +appraisal, Core auto-activation, Boost +staking APY.
+- `useAbility` per `aux` kind: repair kit → `repairFromWorkshop` (0 energy), surge → `activateFromWorkshop` bypassing cooldown without energy refill (2⚡), boost capsule → `tempBoostBps`/`boostExpiresAt` 24h (1⚡), forge stone → free forge level (2⚡). Every use burns the mod; insufficient energy reverts.
+- `forge`: burns `forgeCostPoints` veRUNE via `game.spendPoints`, increments `forgeLevel`, raises effective rarity.
+- `hasEquippedMods` gating used by the marketplace.
+
+### `SneakerSwap`
+
+- `create` escrows the offered NFT (+optional POL), `accept` executes atomically both directions, `cancel` returns escrow.
+- Expired swaps revert; only allowed collections; counterparty NFT must be owned/approved by the acceptor.
+- Works across collections (sneaker↔mod, mod↔mod).
+
+### `ModRental`
+
+- `list` escrows the mod (3 args — price/day, max duration; consumables rejected), `cancelListing` returns it, `rent` pays upfront POL (fee to `feeCollector`), `extend` tops up days.
+- `equipRented(rentalId, sneakerId)` equips through `workshop.rentalSource`; `releaseEarly` (renter) and `returnExpired` (anyone, after `rentedUntil`) end the rental, unequip, pay the owner, and return the mod.
+- `rentals()` getter returns a positional tuple — index access, not named fields.
+
+### `ModStore`
+
+- `addDesign` takes a params struct (stack-too-deep pattern) — name/uri/slot/rarity/tier/effectBps/consumable/aux/price/supply.
+- `buy` mints via `SneakerMods.mintAuthorized` (store needs `MINTER_ROLE`), charges `msg.value == price`, sends proceeds to treasury.
+- Consumable designs mint usable ability mods; supply caps and inactive designs revert.
 
 ## Subgraph/API checks
 

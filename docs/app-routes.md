@@ -24,8 +24,10 @@ Deep-dive companions:
 | `/mint` | `src/app/mint/page.tsx` | `SneakerMintStudio` | `SneakerMint` | `usePolygonWallet`, `useMintedSneakers` |
 | `/my-nfts` | `src/app/my-nfts/page.tsx` | `MyNftsGallery` | — (local storage) | `useMintedSneakers` |
 | `/collection` | `src/app/collection/page.tsx` | `VeSneakerStorefront` | `VeSneakerStore`, `SneakerMint` | `useVeSneakerStore`, `useSubgraphActivity` |
-| `/marketplace` | `src/app/marketplace/page.tsx` | `MarketplaceDashboard` | `SneakerMarketplace`, `SneakerMint`, `SneakerAppraiser`, `SneakerStaking` | `useMarketplace`, `useSubgraphActivity` |
-| `/game` | `src/app/game/page.tsx` | `SneakerGameDashboard` | `SneakerGame`, `SneakerMint`, `RUNEToken` | `useSneakerGame`, `useSubgraphActivity` |
+| `/workshop` | `src/app/workshop/page.tsx` | `WorkshopDashboard` | `SneakerWorkshop`, `SneakerMods`, `SneakerMint`, `SneakerGame` | `useWorkshop`, `useSubgraphActivity` |
+| `/badges` | `src/app/badges/page.tsx` | `BadgesDashboard` | `SneakerMods` | `useBadges`, `useSubgraphActivity` |
+| `/marketplace` | `src/app/marketplace/page.tsx` | `MarketplaceDashboard` | `SneakerMarketplace`, `SneakerMint`, `SneakerMods`, `SneakerAppraiser`, `SneakerStaking` | `useMarketplace`, `useSubgraphActivity` |
+| `/game` | `src/app/game/page.tsx` | `SneakerGameDashboard` | `SneakerGame`, `SneakerMint`, `RENToken` | `useSneakerGame`, `useSubgraphActivity` |
 | `/staking` | `src/app/staking/page.tsx` | `StakingVaultDashboard` | `SneakerStaking`, `SneakerMint` | `useStakingVault`, `useNftAppraisal`, `useSubgraphActivity` |
 | `/defi` | `src/app/defi/page.tsx` | `StakingVaultDashboard`, `PolygonTransferCard` | `SneakerStaking` | same as `/staking` |
 | `/roadmap` | `src/app/roadmap/page.tsx` | static milestones | — | — |
@@ -62,8 +64,11 @@ it via the `usePolygonWallet()` hook.
 ### Contract ABIs — `src/lib/contracts.ts`
 
 Hand-written minimal ABIs (no codegen) for `sneakerMintAbi`, `stakingAbi`,
-`sneakerAppraiserAbi`, `sneakerMarketplaceAbi`, `sneakerGameAbi`, `erc721BalanceAbi`,
-`erc721ApproveAbi`. When you add a contract function, add the ABI entry here **and**
+`sneakerAppraiserAbi`, `sneakerMarketplaceAbi`, `sneakerGameAbi`, `veSneakerStoreAbi`,
+`sneakerModsAbi`, `sneakerWorkshopAbi`, `sneakerSwapAbi`, `modRentalAbi`, `modStoreAbi`,
+`erc721BalanceAbi`, `erc721ApproveAbi`. The marketplace ABI is collection-aware: `list`,
+`createAuction`, `makeOffer`, and `tokenSaleKind` all take the NFT contract address.
+When you add a contract function, add the ABI entry here **and**
 export the inferred type. `uint16` outputs are inferred as `number` by viem — wrap with
 `BigInt(...)` (see `useSneakerGame`).
 
@@ -115,7 +120,11 @@ pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
 | `useWalletOverview` | Native POL balance for the connected wallet |
 | `useNftAppraisal` | Batch `SneakerAppraiser.appraise(tokenId)` reads + global params |
 | `useStakingVault` | Staking reads + `depositPOL`/`withdrawPOL`/`claimPOLRewards`/`stake`/`unstake` |
-| `useMarketplace` | Marketplace reads + list/buy/auction/offer txs + `approveNft` |
+| `useMarketplace` | Marketplace reads + collection-aware list/buy/auction/offer txs + `approveNft` |
+| `useOwnedMods` | Reads the wallet's mod NFTs + traits (`balanceOf`, `tokenOfOwnerByIndex`, `traitsOf`) |
+| `useWorkshop` | Workshop reads (equipped slots, effective bonuses, forge) + equip/unequip/repairKit/forge txs |
+| `useBadges` | Achievement registry reads + `claim` tx on `SneakerMods` |
+| `useModEconomy` | `SneakerSwap` + `ModRental` + `ModStore` txs (approveMod, createSwap/acceptSwap/cancelSwap, listRental/cancelRental/rent/equipRented/releaseEarly/returnExpired, buyMod) |
 | `useSneakerGame` | Game reads + `activate`/`claimPoints`/`repair`/`redeem` |
 | `useVeSneakerStore` | veSneaker catalog reads + `buy(designIndex, price, quantity)` |
 | `usePolPrice` | Live POL/USD from `/api/pol-price` (Uniswap proxy) for USD hints |
@@ -162,22 +171,24 @@ Conventions every hook follows:
 - **Dev notes:** the API key is server-only. The proof is derived from the generated
   artwork, so regenerating produces a different proof and a different NFT.
 
-### `/my-nfts` — Local collection
+### `/my-nfts` — Local collection + owned mods
 
-- **Files:** `src/app/my-nfts/page.tsx`, `src/components/MyNftsGallery.tsx`.
-- **Purpose:** gallery of sneakers minted from this browser.
-- **Data source:** `localStorage` only (not chain state). On-chain ownership lives in
-  `useOwnedSneakers`, used by `/staking`, `/marketplace`, and `/game`.
+- **Files:** `src/app/my-nfts/page.tsx`, `src/components/MyNftsGallery.tsx`, `src/components/MyModsGallery.tsx`.
+- **Purpose:** gallery of sneakers minted from this browser plus the wallet's
+  on-chain mod/badge NFTs (`MyModsGallery` reads `useOwnedMods` against `SneakerMods`).
+- **Data source:** `localStorage` for the minted list (not chain state) + RPC for mods.
+  On-chain sneaker ownership lives in `useOwnedSneakers`, used by `/staking`,
+  `/marketplace`, and `/game`.
 - **States:** not connected → prompt; empty → CTA to `/mint`; populated → cards with
   rarity badge and explorer link.
 
 ### `/collection` — veSneakers store
 
 - **Files:** `src/app/collection/page.tsx`, `src/components/VeSneakerStorefront.tsx`, `src/lib/ve-sneakers.ts`.
-- **Purpose:** primary sale of **veSneakers** — virtual sneakers anyone can buy with POL,
-  with or without a physical pair. Bought veSneakers behave like minted NFTs: lock them
-  in staking for a POL APY boost, activate them daily for veRUNE, trade them on the
-  marketplace.
+- **Purpose:** primary sale of **veSneakers** — the playable NFTs of the virtual
+  sneaker economy, bought with POL. Bought veSneakers behave like minted NFTs: lock them
+  in staking for a POL APY boost, activate them daily for veRUNE, equip mods in the
+  workshop, trade them on the marketplace.
 - **Contracts:** `VeSneakerStore` (`NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`) mints on demand
   through `SneakerMint.mintAuthorized`, so the store holds `MINTER_ROLE`.
 - **Hooks:** `useVeSneakerStore`, `useSubgraphActivity`, `usePolPrice`.
@@ -197,6 +208,9 @@ Conventions every hook follows:
 - **Dev notes:** the on-chain design list wins over the static catalog for name, rarity,
   tier, price, and supply. To add a design, register it on-chain **and** append to
   `VE_SNEAKER_CATALOG` at the same index.
+- **Mod storefront:** `ModStorefront` (`src/components/ModStorefront.tsx`) renders the
+  `ModStore` catalog on the same page — premium mod designs (including consumables)
+  bought with POL via `useModEconomy.buyMod`.
 
 ### `/marketplace` — Buy, sell, auction, offer
 
@@ -205,37 +219,88 @@ Conventions every hook follows:
   `SneakerMint`, and indirectly `SneakerAppraiser` + `SneakerStaking` (sale locks and
   staked checks).
 - **Hooks:** `useMarketplace`, `useSubgraphActivity`.
-- **Tabs:** `Sell / Auction`, `My Listings`, `Make an Offer`.
-- **Flows:**
-  - **List:** `approve(marketplace, tokenId)` on SneakerMint, then
-    `list(tokenId, price)` — two transactions, both awaited.
-  - **Auction:** `approve`, then `createAuction(tokenId, startPrice, duration)`.
+- **Tabs:** `Sell / Auction`, `My Listings`, `Make an Offer`, plus `ModMarketTabs`
+  (`src/components/ModMarketTabs.tsx`) with `Mods`, `Rentals`, and `Trades` — mod
+  sales, `ModRental` listings/rentals, and `SneakerSwap` NFT↔NFT offers.
+- **Flows (collection-aware — every call passes the NFT contract first):**
+  - **List:** `approve(marketplace, tokenId)` on the collection, then
+    `list(collection, tokenId, price)` — two transactions, both awaited.
+  - **Auction:** `approve`, then `createAuction(collection, tokenId, startPrice, duration)`.
   - **Buy:** `buy(listingId)` with `value === price`.
   - **Cancel listing:** `cancelListing(listingId)` returns the NFT from escrow.
-  - **Offer:** `makeOffer(tokenId, duration)` with escrowed `value`; the NFT stays with
-    its owner until they call `acceptOffer(offerId)`.
-- **Reads:** `tokenSaleKind(tokenId)` (0 free / 1 listed / 2 in auction) and
-  `suggestedPrice(tokenId)` per owned NFT; `listings(id)` scanned over the last 64 slots
-  for the "My Listings" tab.
-- **Edge cases:** staked NFTs cannot be listed/auctioned; wrong payment reverts;
-  auctions need a 1% higher bid; offers expire.
+  - **Offer:** `makeOffer(collection, tokenId, duration)` with escrowed `value`; the NFT
+    stays with its owner until they call `acceptOffer(offerId)`.
+- **Reads:** `tokenSaleKind(collection, tokenId)` (0 free / 1 listed / 2 in auction) and
+  `suggestedPrice(tokenId)` per owned sneaker; `listings(id)` scanned over the last 64
+  slots for the "My Listings" tab.
+- **Collections:** only contracts in `allowedCollections` can trade — `SneakerMint` is
+  allowed in the constructor, `SneakerMods` is enabled at deploy time. Mods list and
+  auction exactly like sneakers but have no appraiser suggestion (priced by the market).
+- **Edge cases:** staked NFTs cannot be listed/auctioned; sneakers with mods still
+  equipped in the workshop cannot be listed or auctioned (unequip first); wrong payment
+  reverts; auctions need a 1% higher bid; offers expire.
 - **Dev notes:** the contract has no enumerable listing index — the 64-slot scan is a
   known limitation. If the marketplace grows, add an index or use the subgraph.
+
+### `/workshop` — Upgrade hub
+
+- **Files:** `src/app/workshop/page.tsx`, `src/components/WorkshopDashboard.tsx`, `src/lib/mods.ts`.
+- **Contracts:** `SneakerWorkshop` (`NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS`),
+  `SneakerMods` (`NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`), `SneakerMint`, `SneakerGame`.
+- **Hooks:** `useWorkshop`, `useSubgraphActivity`.
+- **Slots:** six per sneaker — `SLOTS` in `src/lib/mods.ts` mirrors the contract:
+  Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal,
+  cosmetic override), Core (auto-activation), Boost (+staking APY).
+- **Vitals card:** live `powerOf` / `healthOf` / `energyOf` reads via `useSneakerGame`
+  — health decays 1/day, energy refills on manual activation.
+- **Flows:**
+  - **Equip:** `approve(workshop, modId)` on SneakerMods, then `equip(sneakerId, modId)`
+    — the mod moves into workshop escrow, one mod per slot.
+  - **Unequip:** `unequip(sneakerId, slot)` returns the mod to the owner.
+  - **Consumables:** `useAbility(sneakerId, modId)` burns a consumable mod and applies
+    its `aux` ability — `0`/`255` repair kit (free full health), `1` surge (instant
+    activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge
+    stone (free level, 2⚡). `useRepairKit` remains as a repair-kit-only shortcut.
+  - **Forge:** `forge(sneakerId)` burns claimed veRUNE (`nextForgeCost = base × (level+1)`)
+    for permanent +rarity/+earn-rate levels.
+- **Reads:** `equipped(sneakerId, slot)` per slot plus the bonus snapshot
+  (`earnBonusBps`, `wearReductionBps`, `repairDiscountBps`, `appraisalBonusBps`,
+  `stakingBoostBps`, `autoActive`, `skinOverride`, `forgeLevel`, `nextForgeCost`,
+  `tempBoostBps`, `boostExpiresAt`).
+- **Dev notes:** sneakers with equipped mods cannot be listed or auctioned — the UI
+  shows the equipped state so users can unequip first. Rented mods equip through
+  `ModRental.equipRented`, not `equip`.
+
+### `/badges` — Achievement badges
+
+- **Files:** `src/app/badges/page.tsx`, `src/components/BadgesDashboard.tsx`.
+- **Contracts:** `SneakerMods` (`NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`).
+- **Hooks:** `useBadges`, `useSubgraphActivity`.
+- **Flow:** `claim(achievementId, sneakerId)` mints the badge mod when the on-chain
+  requirement is met (checked by `meetsRequirement`). One claim per wallet per
+  achievement; sneaker-scoped kinds (streak, lifetime points) take the tokenId.
+- **Reads:** `achievementCount` + `achievements(id)` (kind, threshold, slot, traits,
+  active), `meetsRequirement`, `achievementClaimed`.
+- **Dev notes:** badges are mod NFTs — claimed badges appear in `useOwnedMods` and can
+  be equipped, sold, auctioned, traded, or rented like any other mod.
 
 ### `/game` — Sneaker game (veRUNE)
 
 - **Files:** `src/app/game/page.tsx`, `src/components/SneakerGameDashboard.tsx`.
 - **Contracts:** `SneakerGame` (`NEXT_PUBLIC_SNEAKER_GAME_ADDRESS`), `SneakerMint`,
-  `RUNEToken` (redemption).
+  `RENToken` (redemption).
 - **Hooks:** `useSneakerGame`, `useSubgraphActivity`.
 - **Flows:** `activate(tokenId)` (24h cooldown per sneaker), `claimPoints(tokenId)`,
   `repair(tokenId)` (costs veRUNE), `redeem(points)` (only when `redemptionEnabled`).
-- **Reads:** `sneakers(tokenId)` (streak, durability, pending, lifetime),
-  `pendingPoints`, `canActivate`, `secondsUntilActivation`, `veRuneBalance(owner)`,
-  `tierBasePointsPerDay`, `maxDurability`, `wearPerActivation`, `repairCostPoints`,
-  `redemptionRate`, `redemptionEnabled`.
+- **Reads:** `sneakers(tokenId)` (8-field state: streak, durability, pending,
+  lifetime, `lastDecayAt`, `energy`), `pendingPoints`, `powerOf`, `healthOf`,
+  `energyOf`, `maxEnergyOf`, `earnRatePerSecond`, `canActivate`,
+  `secondsUntilActivation`, `veRuneBalance(owner)`, `tierBasePointsPerDay`,
+  `maxDurability`, `wearPerActivation`, `repairCostPoints`, `redemptionRate`,
+  `redemptionEnabled`.
 - **UI states per sneaker:** READY (can activate) / COOLDOWN (countdown) / WORN OUT
-  (durability 0 → repair). Durability bar turns magma at ≤ 30%.
+  (live health 0 → repair). Health bar turns magma at ≤ 30%; each card shows
+  power (daily veRUNE at 1x streak) and energy charges.
 - **Dev notes:** veRUNE is virtual contract state, not an ERC-20 — never render it as a
   transferable token. The countdown is computed client-side from
   `lastActivationAt + 86_400`, refreshed every 30s.
@@ -314,6 +379,11 @@ Conventions every hook follows:
 | `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS` | marketplace |
 | `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS` | game |
 | `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS` | veSneakers store (`/collection`) |
+| `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS` | workshop, badges, marketplace (mods) |
+| `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS` | workshop |
+| `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS` | NFT↔NFT trades |
+| `NEXT_PUBLIC_MOD_RENTAL_ADDRESS` | mod rentals |
+| `NEXT_PUBLIC_MOD_STORE_ADDRESS` | premium mod store |
 | `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` | REN reads/redemption |
 | `GEMINI_API_KEY` | `/api/generate-sneaker` (server-only) |
 | `THE_GRAPH_QUERY_URL` / `_API_KEY` / `_SLUG` / `_VERSION` | `/api/subgraph` (server-only) |

@@ -1,13 +1,13 @@
 ---
 name: runearn-subgraph-activity
-description: Work with Run-Earn's The Graph activity feed — the nuxgraph Studio deployment, the server-only /api/subgraph proxy, dynamic schema introspection, the field allowlist, address matching, and the useSubgraphActivity hook used by the staking, marketplace, and game dashboards.
+description: Work with Run-Earn's The Graph activity feed — the nuxgraph Studio deployment, the server-only /api/subgraph proxy, dynamic schema introspection, the field allowlist, address matching, and the useSubgraphActivity hook used by the staking, marketplace, game, workshop, and badges dashboards.
 ---
 
 # Run-Earn Subgraph Activity
 
 Use this skill for `/api/subgraph`, `src/lib/subgraph.ts`, `src/hooks/useSubgraphActivity.ts`,
-and the "Recent activity" feeds in `StakingVaultDashboard`, `MarketplaceDashboard`, and
-`SneakerGameDashboard`.
+and the "Recent activity" feeds in `StakingVaultDashboard`, `MarketplaceDashboard`,
+`SneakerGameDashboard`, `WorkshopDashboard`, and `BadgesDashboard`.
 
 ## Files
 
@@ -72,6 +72,11 @@ preferring explicit `eventType|action|type` for the label and
 | `SneakerStaking` | `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked` |
 | `SneakerMarketplace` | `ListingCreated`, `NFTSold`, `AuctionSettled`, `OfferAccepted` |
 | `SneakerGame` | `Activated`, `PointsClaimed`, `Repaired`, `Redeemed` |
+| `SneakerMods` | `ModMinted`, `ModBurned`, `AchievementClaimed` |
+| `SneakerWorkshop` | `ModEquipped`, `ModUnequipped`, `AbilityUsed`, `Forged` |
+| `SneakerSwap` | `SwapCreated`, `SwapAccepted`, `SwapCancelled` |
+| `ModRental` | `RentalListed`, `ModRented`, `ModReturned`, `RentalExtended`, `RentalCancelled` |
+| `ModStore` | `ModPurchased` |
 
 Until these are indexed, the dashboards still show RPC state and the local optimistic
 entries from `addLocalActivity(label, hash)`.

@@ -29,7 +29,7 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
 
   async function deployStack() {
     const nft = await viem.deployContract("SneakerMint", ["RUN&EARN Sneakers", "RSNEAK", admin.account.address]);
-    const ren = await viem.deployContract("RUNEToken", [admin.account.address, admin.account.address]);
+    const ren = await viem.deployContract("RENToken", [admin.account.address, admin.account.address]);
     const staking = await viem.deployContract("SneakerStaking", [
       admin.account.address,
       nft.address,
@@ -76,7 +76,7 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
 
   it("lists, buys, and splits payment with fee", async () => {
     const { nft, marketplace } = await deployStack();
-    await marketplace.write.list([1n, 5n * 10n ** 18n], { account: alice.account });
+    await marketplace.write.list([nft.address, 1n, 5n * 10n ** 18n], { account: alice.account });
     assert.equal((await nft.read.ownerOf([1n])).toLowerCase(), marketplace.address.toLowerCase());
 
     const sellerBefore = await publicClient.getBalance({ address: alice.account.address });
@@ -95,13 +95,13 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
     await staking.write.stake([1n], { account: alice.account });
 
     await assert.rejects(
-      marketplace.write.list([1n, 5n * 10n ** 18n], { account: alice.account }),
+      marketplace.write.list([nft.address, 1n, 5n * 10n ** 18n], { account: alice.account }),
     );
   });
 
   it("rejects buying with wrong payment", async () => {
-    const { marketplace } = await deployStack();
-    await marketplace.write.list([1n, 5n * 10n ** 18n], { account: alice.account });
+    const { nft, marketplace } = await deployStack();
+    await marketplace.write.list([nft.address, 1n, 5n * 10n ** 18n], { account: alice.account });
     await assert.rejects(
       marketplace.write.buy([1n], { account: bob.account, value: 4n * 10n ** 18n }),
     );
@@ -109,14 +109,14 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
 
   it("cancels a listing and returns the NFT", async () => {
     const { nft, marketplace } = await deployStack();
-    await marketplace.write.list([1n, 5n * 10n ** 18n], { account: alice.account });
+    await marketplace.write.list([nft.address, 1n, 5n * 10n ** 18n], { account: alice.account });
     await marketplace.write.cancelListing([1n], { account: alice.account });
     assert.equal((await nft.read.ownerOf([1n])).toLowerCase(), alice.account.address.toLowerCase());
   });
 
   it("runs an auction: bid, outbid, settle", async () => {
     const { nft, marketplace } = await deployStack();
-    await marketplace.write.createAuction([2n, 10n ** 18n, 1n * DAY], { account: bob.account });
+    await marketplace.write.createAuction([nft.address, 2n, 10n ** 18n, 1n * DAY], { account: bob.account });
 
     await marketplace.write.bid([1n], { account: alice.account, value: 10n ** 18n });
     await marketplace.write.bid([1n], { account: carol.account, value: 2n * 10n ** 18n });
@@ -134,7 +134,7 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
 
   it("returns NFT when auction ends with no bids", async () => {
     const { nft, marketplace } = await deployStack();
-    await marketplace.write.createAuction([2n, 10n ** 18n, 1n * DAY], { account: bob.account });
+    await marketplace.write.createAuction([nft.address, 2n, 10n ** 18n, 1n * DAY], { account: bob.account });
     await testClient.increaseTime({ seconds: Number(DAY) + 1 });
     await testClient.mine({ blocks: 1 });
     await marketplace.write.settleAuction([1n]);
@@ -143,7 +143,7 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
 
   it("handles offers: make, accept, cancel", async () => {
     const { nft, marketplace } = await deployStack();
-    await marketplace.write.makeOffer([2n, 1n * DAY], { account: alice.account, value: 2n * 10n ** 18n });
+    await marketplace.write.makeOffer([nft.address, 2n, 1n * DAY], { account: alice.account, value: 2n * 10n ** 18n });
     // NFT stays with bob
     assert.equal((await nft.read.ownerOf([2n])).toLowerCase(), bob.account.address.toLowerCase());
 
@@ -154,11 +154,11 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
   });
 
   it("cancels an offer and refunds the bidder", async () => {
-    const { marketplace } = await deployStack();
-    await marketplace.write.makeOffer([2n, 1n * DAY], { account: alice.account, value: 2n * 10n ** 18n });
+    const { nft, marketplace } = await deployStack();
+    await marketplace.write.makeOffer([nft.address, 2n, 1n * DAY], { account: alice.account, value: 2n * 10n ** 18n });
     await marketplace.write.cancelOffer([1n], { account: alice.account });
     const offer = await marketplace.read.offers([1n]);
-    assert.equal(offer[4], false);
+    assert.equal(offer[5], false);
   });
 
   it("suggests a price from the appraiser with premium", async () => {
@@ -175,8 +175,8 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
   });
 
   it("withdraws accumulated fees", async () => {
-    const { marketplace } = await deployStack();
-    await marketplace.write.list([1n, 5n * 10n ** 18n], { account: alice.account });
+    const { nft, marketplace } = await deployStack();
+    await marketplace.write.list([nft.address, 1n, 5n * 10n ** 18n], { account: alice.account });
     await marketplace.write.buy([1n], { account: bob.account, value: 5n * 10n ** 18n });
     await marketplace.write.withdrawFees([admin.account.address], { account: admin.account });
     assert.equal(await marketplace.read.accumulatedFees(), 0n);

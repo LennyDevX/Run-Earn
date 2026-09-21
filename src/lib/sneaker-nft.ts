@@ -24,9 +24,9 @@ export const PALETTES = [
 export type PaletteId = (typeof PALETTES)[number]["id"];
 
 export const DEFAULT_SNEAKER_DESCRIPTION =
-  "RUN&EARN collectible sneaker created from a real physical sneaker. " +
-  "AI-generated artwork based on the owner's photo, converted into a unique digital asset " +
-  "on Polygon with verifiable rarity and style on-chain.";
+  "RUN&EARN virtual sneaker (veSneaker) created by its owner. " +
+  "AI-generated artwork converted into a unique digital asset on Polygon " +
+  "with verifiable rarity and style on-chain — playable, upgradeable, and tradable.";
 
 export type MintedSneaker = {
   id: string;
@@ -73,7 +73,7 @@ export function buildTokenMetadata(sneaker: Omit<MintedSneaker, "id" | "owner" |
       { trait_type: "Rarity", value: rarity?.label ?? sneaker.rarity },
       { trait_type: "Multiplier", value: rarity?.multiplier ?? "×1.0" },
       { trait_type: "Palette", value: palette?.label ?? sneaker.palette },
-      { trait_type: "Origin", value: "Physical sneaker · AI generated" },
+      { trait_type: "Origin", value: "User sneaker · AI generated" },
       { trait_type: "Network", value: "Polygon" },
     ],
   };

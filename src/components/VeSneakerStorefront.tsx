@@ -113,7 +113,7 @@ export default function VeSneakerStorefront() {
               {isConfigured ? "VE SNEAKER STORE LIVE" : "STORE NOT CONFIGURED"}
             </span>
             <p className="text-xs font-semibold text-foreground/80">
-              Buy with POL · no physical sneaker required
+              Buy with POL · purely virtual game NFTs
             </p>
           </div>
         </div>
@@ -164,10 +164,10 @@ export default function VeSneakerStorefront() {
           </p>
         </div>
         <div className="rounded-3xl border border-foreground/10 bg-surface p-5">
-          <span className="font-pixel text-[9px] text-polygon-purple">NO PHYSICAL PAIR</span>
-          <p className="mt-2 text-sm font-bold">Fully virtual</p>
+          <span className="font-pixel text-[9px] text-polygon-purple">FULLY VIRTUAL</span>
+          <p className="mt-2 text-sm font-bold">Playable NFTs</p>
           <p className="mt-1 text-xs leading-relaxed text-foreground/60">
-            Buy with POL whether or not you own a physical RUN&EARN sneaker.
+            Buy with POL and put your veSneaker to work: game, staking, workshop mods.
           </p>
         </div>
       </div>

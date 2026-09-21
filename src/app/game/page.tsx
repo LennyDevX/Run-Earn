@@ -5,7 +5,7 @@ import SneakerGameDashboard from "@/components/SneakerGameDashboard";
 
 export const metadata: Metadata = {
   title: "Sneaker Game — RUN&EARN",
-  description: "Activate your sneaker NFTs every 24 hours, build daily streaks, maintain durability, and earn virtual veRUNE points redeemable for REN.",
+  description: "Activate your sneaker NFTs every 24 hours, build daily streaks, manage health and energy, and earn virtual veRUNE points redeemable for REN.",
 };
 
 export default function GamePage() {
@@ -36,7 +36,7 @@ export default function GamePage() {
             className="animate-fade-up max-w-2xl text-base leading-relaxed text-foreground/65 md:text-lg"
             style={{ animationDelay: "240ms" }}
           >
-            Sneakers wear out with use. Activate each one every 24 hours to keep it earning veRUNE points, build daily streaks for up to +50% bonus rate, and repair with points when durability runs out. Redeem your points for real REN once the reward pool opens.
+            Every veSneaker mines veRUNE at a power rate set by its rarity — but its health decays day by day. Activate every 24 hours to refill energy, build streaks for up to +50% bonus rate, and repair or burn consumable mod NFTs before the health bar hits zero. Redeem your points for real REN once the reward pool opens.
           </p>
         </section>
 

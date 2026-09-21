@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { describe, it, before } from "mocha";
 import hre from "hardhat";
 
-describe("RUNEToken (TypeScript integration)", () => {
+describe("RENToken (TypeScript integration)", () => {
   let viem: any;
   let admin: any;
   let minter: any;
@@ -15,7 +15,7 @@ describe("RUNEToken (TypeScript integration)", () => {
   });
 
   async function deployRune() {
-    return viem.deployContract("RUNEToken", [admin.account.address, minter.account.address]);
+    return viem.deployContract("RENToken", [admin.account.address, minter.account.address]);
   }
 
   it("sets name, symbol, and decimals", async () => {
@@ -76,7 +76,7 @@ describe("RUNEToken (TypeScript integration)", () => {
 
   it("reverts on zero admin in constructor", async () => {
     await assert.rejects(
-      viem.deployContract("RUNEToken", ["0x0000000000000000000000000000000000000000", minter.account.address]),
+      viem.deployContract("RENToken", ["0x0000000000000000000000000000000000000000", minter.account.address]),
     );
   });
 });

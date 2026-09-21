@@ -1,21 +1,26 @@
 ---
 name: polygon-security
-description: Review Run-Earn Polygon contracts, native POL staking, RUNE rewards, NFT boosts, subgraph activity, and wallet flows for custody, arithmetic, and deployment risks.
+description: Review Run-Earn Polygon contracts, native POL staking, REN rewards, NFT boosts, the mod workshop economy, subgraph activity, and wallet flows for custody, arithmetic, and deployment risks.
 ---
 
 # Run-Earn Polygon Security
 
-Use this skill before merging or deploying any EVM contract, NFT mint flow, native POL staking flow, REN reward distribution, marketplace escrow, game point accounting, subgraph integration, or wallet transaction change.
+Use this skill before merging or deploying any EVM contract, NFT mint flow, native POL staking flow, REN reward distribution, marketplace escrow, game point accounting, mod/workshop upgrade mechanic, subgraph integration, or wallet transaction change.
 
 ## Current system under review
 
 - `SneakerMint.sol`: ERC-721 for AI-generated sneaker artwork with role-authorized production minting. Tiers 0–3 (Common, Rare, Epic, Mythic).
-- `RUNEToken.sol`: ERC-20 `REN`, 18 decimals, 100M hard cap, role-gated minting.
-- `SneakerStaking.sol`: native POL vault with separate principal/reward accounting, rarity-based SneakerMint NFT APY boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%), and legacy REN NFT rewards.
-- `SneakerAppraiser.sol`: read-only NFT valuation contract that estimates POL value based on rarity and tier. Admin-configurable parameters.
-- `SneakerMarketplace.sol`: fixed-price listings, English auctions, and escrowed POL offers with a 2.5% fee and a staked-NFT sale guard.
-- `SneakerGame.sol`: virtual veRUNE points (24h activation, streaks, durability, repair) with a funded REN redemption path.
+- `RENToken.sol`: ERC-20 `REN`, 18 decimals, 100M hard cap, role-gated minting.
+- `SneakerStaking.sol`: native POL vault with separate principal/reward accounting, rarity-based SneakerMint NFT APY boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%), workshop Boost-mod APY via `setBoosts`, and legacy REN NFT rewards.
+- `SneakerAppraiser.sol`: read-only NFT valuation (effective rarity incl. forge + Skin bonus via `setBoosts`). Admin-configurable parameters.
+- `SneakerMarketplace.sol`: multi-collection fixed-price listings, English auctions, and escrowed POL offers with a 2.5% fee, staked-NFT and equipped-mod sale guards.
+- `SneakerGame.sol`: virtual veRUNE points (24h activation, streaks, power/health/energy, repair) with a funded REN redemption path.
 - `VeSneakerStore.sol`: on-demand primary sale of virtual sneakers for POL, with per-design pricing, supply caps, and a treasury payout.
+- `SneakerMods.sol`: ERC-721 mod/badge collection with on-chain achievement claims.
+- `SneakerWorkshop.sol`: six-slot equip escrow, consumable `useAbility` burns, veRUNE forge.
+- `SneakerSwap.sol`: atomic NFT↔NFT trades ± POL.
+- `ModRental.sol`: POL-paid mod rentals with escrow custody and expiry return.
+- `ModStore.sol`: primary sale of premium/consumable mods for POL.
 - `/api/generate-sneaker`: server-only Gemini image generation for the mint studio.
 - `/api/subgraph`: server-only proxy for the `nuxgraph` Studio deployment.
 - `/api/pol-price`: server-only proxy for the Uniswap Trading API POL/USD quote.
@@ -42,7 +47,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 
 ### REN compatibility
 
-- Confirm `RUNEToken.MAX_SUPPLY` (100M), symbol `REN`, minter role, pause behavior, and the separate legacy reward vault.
+- Confirm `RENToken.MAX_SUPPLY` (100M), symbol `REN`, minter role, pause behavior, and the separate legacy reward vault.
 - Ensure REN recovery cannot accidentally drain user POL or NFT custody.
 
 ### Marketplace escrow and payments
@@ -54,17 +59,38 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Confirm offers escrow POL, cannot target own or listed tokens, expire correctly, and that accepting an offer requires NFT approval (the NFT is not in escrow).
 - Verify the fee split (`feeBps`, cap 20%) credits `accumulatedFees` and that `withdrawFees` cannot touch user funds.
 - Confirm `stakedOwner(tokenId) != address(0)` blocks listing and auctioning staked NFTs.
+- Verify `allowedCollections` gates every sale primitive — a non-allowlisted NFT contract must revert on list/auction/offer/accept.
+- Confirm locks are keyed by `(collection, tokenId)` — a listing on one collection must not lock the same tokenId on another.
+- Confirm `workshop.hasEquippedMods(sneakerId)` blocks listing/auctioning mod-equipped sneakers, so a buyer cannot inherit or steal escrowed mods.
 - Check reentrancy on NFT receiver callbacks and that a malicious NFT/collection cannot re-enter settle/buy.
 
-### Game points, durability, and redemption
+### Game points, health, energy, and redemption
 
 - Confirm veRUNE is tracked in contract state only — it must never be minted as a transferable token by this contract.
-- Verify `activate` enforces the 24h cooldown, ownership, and the worn-out guard; durability cannot underflow.
-- Confirm accrual stops at the 24h window boundary and at 0 durability, and that already-earned points remain claimable.
+- Verify `activate` enforces the 24h cooldown, ownership, and the worn-out guard; health (`durability` minus elapsed `HEALTH_DECAY_PERIOD` units) cannot underflow.
+- Confirm accrual stops at the 24h window boundary and at the death timestamp (`lastDecayAt + liveHealth × 24h`), and that already-earned points remain claimable.
+- Verify the power multiplier (`5000 + effectiveRarity × 100` bps) bounds — rarity/forge bonuses cannot push it past the 1.5x cap at rarity 100.
+- Verify `spendEnergy`, `repairFromWorkshop`, `activateFromWorkshop`, and `spendPoints` revert for every caller except the configured workshop.
+- Confirm the surge path (`activateFromWorkshop`) does NOT refill energy — otherwise it would be a free-energy exploit.
+- Verify energy capacity (`2 + effectiveRarity/20`) and that `spendEnergy` cannot underflow.
 - Verify streak logic (build within 48h, reset beyond, cap +50%) cannot be gamed by warping or repeated calls in one block.
-- Confirm `repair` deducts the exact `repairCostPoints` and cannot be called at full durability.
+- Confirm `repair` deducts the exact (Lining-discounted) `repairCostPoints` and cannot be called on a never-activated sneaker.
 - Confirm `redeem` is disabled by default, converts with integer division, and can never pay more REN than the contract holds (funded pool invariant).
 - Verify `fundREN` is admin-only and that `setRedemptionEnabled` is the only gate.
+
+### Upgrade economy (mods, workshop, swap, rental, stores)
+
+- Confirm `SneakerMods.burnAuthorized` only works for the configured workshop — a burned mod must be unrecoverable and unequipped.
+- Verify `claim` achievements check real on-chain requirements and enforce one claim per wallet per achievement.
+- Confirm `equip` escrows the mod (`equippedTo`), rejects consumables, enforces one mod per slot, and only the sneaker owner (or active renter via `rentalSource`) can equip.
+- Verify equipped mods cannot be burned, listed, or swapped while escrowed, and `unequip` returns the exact mod to its owner.
+- Confirm `useAbility` validates `consumable` + `aux` kind, spends the correct energy cost via `game.spendEnergy`, and ALWAYS burns the mod — no ability may be reusable.
+- Verify `tempBoostBps`/`boostExpiresAt` expire correctly and a new capsule refreshes rather than stacking indefinitely.
+- Confirm `forge` burns exactly `forgeCostPoints` veRUNE via `spendPoints` and that forge-stone free levels cannot be replayed.
+- Verify `SneakerSwap` is atomic: both NFTs (± POL) move in one transaction or the whole thing reverts; expired/counterparty-owned swaps cannot be accepted; escrow returns on `cancel`.
+- Confirm `ModRental` escrow cannot be withdrawn mid-rental by the owner, expiry lets anyone return the mod, and the renter's workshop equip rights die with the rental.
+- Verify `ModStore`/`VeSneakerStore` hold `MINTER_ROLE` only on their target collection and cannot mint outside their design catalog.
+- Confirm `workshop.setRentalSource`, `setWorkshop`, and `setBoosts` are admin-only — a wrong address would hijack equip rights or fake boosts.
 
 ### veSneaker primary sale
 
@@ -102,7 +128,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 
 ### Wallet and frontend
 
-- Validate `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`, `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`, `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS`, and `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS` with viem.
+- Validate `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`, `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`, `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS`, `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`, `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS`, `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS`, `NEXT_PUBLIC_MOD_RENTAL_ADDRESS`, and `NEXT_PUBLIC_MOD_STORE_ADDRESS` with viem.
 - Confirm the EIP-1193 connected wallet is the signer.
 - Check wrong chain, rejected signatures, insufficient POL, failed receipts, and stale UI state.
 - Confirm the UI never treats veRUNE or local-storage entries as on-chain ownership.
@@ -122,7 +148,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 1. Consult current official Polygon, OpenZeppelin, Solidity, Hardhat 3, viem, and The Graph documentation.
 2. Inspect Solidity and TypeScript tests, including negative and fuzz cases.
 3. Run `npx hardhat compile`, `npx hardhat test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
-4. Verify `/staking`, `/marketplace`, and `/game` on Polygon Amoy with a disposable wallet and funded test reserve/pools.
+4. Verify `/staking`, `/marketplace` (incl. Mods/Rentals/Trades tabs), `/game`, `/workshop`, `/badges`, and `/collection` on Polygon Amoy with a disposable wallet and funded test reserve/pools.
 5. Verify subgraph events after indexing and compare them against RPC receipts.
 6. Report residual custody, solvency, economic, key-management, and indexing risks.
 7. Do not mark financial logic production-ready without multisig administration and independent smart-contract/economic review.

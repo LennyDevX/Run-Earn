@@ -7,8 +7,9 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
 import PixelSneaker from "@/components/PixelSneaker";
+import { ModsMarketTab, RentalsTab, TradesTab } from "@/components/ModMarketTabs";
 
-type Tab = "list" | "auction" | "offers";
+type Tab = "list" | "auction" | "offers" | "mods" | "rentals" | "trades";
 
 const AUCTION_DURATIONS = [
   { label: "1 hour", seconds: 3600n },
@@ -85,7 +86,7 @@ export default function MarketplaceDashboard() {
     void runAction(async () => {
       // The NFT must be approved for the marketplace before listing.
       await market.approveNft(tokenId);
-      return market.list(tokenId, price);
+      return market.list(market.sneakerAddress as `0x${string}`, tokenId, price);
     }, `NFT #${tokenId} listed`);
   }
 
@@ -101,7 +102,7 @@ export default function MarketplaceDashboard() {
     }
     void runAction(async () => {
       await market.approveNft(tokenId);
-      return market.createAuction(tokenId, startPrice, auctionDuration);
+      return market.createAuction(market.sneakerAddress as `0x${string}`, tokenId, startPrice, auctionDuration);
     }, `Auction for NFT #${tokenId} created`);
   }
 
@@ -120,7 +121,7 @@ export default function MarketplaceDashboard() {
       return;
     }
     void runAction(
-      () => market.makeOffer(BigInt(offerTokenId.trim()), offerDuration, amount),
+      () => market.makeOffer(market.sneakerAddress as `0x${string}`, BigInt(offerTokenId.trim()), offerDuration, amount),
       `Offer placed on NFT #${offerTokenId.trim()}`,
     );
   }
@@ -158,6 +159,9 @@ export default function MarketplaceDashboard() {
                 { id: "list" as Tab, label: "Sell / Auction" },
                 { id: "auction" as Tab, label: "My Listings" },
                 { id: "offers" as Tab, label: "Make an Offer" },
+                { id: "mods" as Tab, label: "Mods" },
+                { id: "rentals" as Tab, label: "Rentals" },
+                { id: "trades" as Tab, label: "Trades" },
               ]
             ).map((tab) => (
               <button
@@ -308,7 +312,7 @@ export default function MarketplaceDashboard() {
                 </div>
                 <h4 className="text-lg font-bold">No sneakers to sell</h4>
                 <p className="max-w-md text-xs leading-relaxed text-foreground/60">
-                  You don&apos;t own any SneakerMint NFTs yet. Mint one from a physical sneaker photo to start selling.
+                  You don&apos;t own any SneakerMint NFTs yet. Mint one with the AI studio or buy a veSneaker to start selling.
                 </p>
               </div>
             )}
@@ -441,6 +445,15 @@ export default function MarketplaceDashboard() {
             </div>
           </div>
         ) : null}
+
+        {/* Tab 4: Mods market */}
+        {activeTab === "mods" ? <ModsMarketTab runAction={runAction} /> : null}
+
+        {/* Tab 5: Mod rentals */}
+        {activeTab === "rentals" ? <RentalsTab runAction={runAction} /> : null}
+
+        {/* Tab 6: NFT trades */}
+        {activeTab === "trades" ? <TradesTab runAction={runAction} /> : null}
 
         {/* Feedback */}
         {actionNotice ? <p className="mt-6 rounded-2xl bg-mint/15 px-4 py-3 text-xs font-semibold text-mint">{actionNotice}</p> : null}

@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 export const metadata: Metadata = {
   title: "Roadmap — RUN&EARN",
   description:
-    "The RUN&EARN roadmap: six audited-ready contracts, the AI mint studio, marketplace, and sneaker game shipped in Q3 2026 — beta launch, online store, and benefits vault next.",
+    "The RUN&EARN roadmap: the virtual sneaker game economy shipped its v1.0 contracts — mods, badges, workshop, swaps, and rentals — with the Amoy beta launch and the REN token next.",
 };
 
 type Status = "done" | "active" | "next" | "planned";
@@ -49,7 +49,7 @@ const QUARTERS = [
     accent: "text-sky",
     highlight: "bg-sky/10",
     summary:
-      "Foundation shipped. Six contracts drafted and tested (mint, REN token, POL staking, appraiser, marketplace, game), the AI mint studio live, and the full web app — including the marketplace and the daily sneaker game — built on top.",
+      "Foundation shipped. The v1.0 contract suite is drafted and tested (mint, REN token, POL staking, appraiser, marketplace, game, mods, workshop, swap, rental, mod store), the AI mint studio is live, and the full web app — including the marketplace and the daily sneaker game — is built on top.",
     milestones: [
       {
         month: "Jul",
@@ -62,14 +62,14 @@ const QUARTERS = [
         month: "Aug",
         title: "Contract foundation",
         description:
-          "Six contracts on Hardhat 3 + OpenZeppelin: SneakerMint (ERC-721), RUNEToken (REN, 100M cap), SneakerStaking (native POL, rarity-based APY boosts), SneakerAppraiser, SneakerMarketplace, and SneakerGame — covered by 221 Solidity + TypeScript tests.",
+          "Six contracts on Hardhat 3 + OpenZeppelin: SneakerMint (ERC-721), RENToken (REN, 100M cap), SneakerStaking (native POL, rarity-based APY boosts), SneakerAppraiser, SneakerMarketplace, and SneakerGame — covered by 221 Solidity + TypeScript tests.",
         status: "done",
       },
       {
         month: "Aug",
         title: "AI-generated NFT artwork",
         description:
-          "The Gemini-powered agent turns a photo of a physical sneaker into a unique retro-futuristic collectible, ready to mint on Polygon with on-chain rarity and tier.",
+          "The Gemini-powered agent turns a photo of your sneaker into a unique retro-futuristic virtual collectible, ready to mint on Polygon with on-chain rarity and tier.",
         status: "done",
       },
       {
@@ -88,7 +88,7 @@ const QUARTERS = [
     accent: "text-mint",
     highlight: "bg-mint/10",
     summary:
-      "Beta launch and economy activation. Contracts deploy to Polygon Amoy, the veRUNE redemption pool opens, the online store bridges physical sneakers, and the benefits vault contract is developed.",
+      "Beta launch and economy activation. The v1.0 contracts deploy to Polygon Amoy, the mod economy opens (badges, workshop, rentals, trades), the veRUNE redemption pool opens, and the benefits vault contract is developed.",
     milestones: [
       {
         month: "Oct",
@@ -113,9 +113,9 @@ const QUARTERS = [
       },
       {
         month: "Nov",
-        title: "Online store ready",
+        title: "Mod economy live",
         description:
-          "The online store goes live to buy the first physical sneakers, bridging real product and on-chain NFT provenance.",
+          "The mod store opens with premium upgrade mods, achievement badges become claimable, and the workshop unlocks equip, repair kits, and forging for every veSneaker.",
         status: "planned",
       },
       {
@@ -134,9 +134,9 @@ const QUARTERS = [
       },
       {
         month: "Q1 2027",
-        title: "Physical redemption bridge",
+        title: "REN token launch",
         description:
-          "Redeem veRUNE or REN for real sneakers from the store, with a one-time verifier registry linking on-chain claims to physical fulfillment.",
+          "REN launches on Polygon as the ecosystem token: veRUNE redemptions open at the configured rate, and mod rentals plus NFT↔NFT trades run on the live economy.",
         status: "planned",
       },
       {
@@ -165,7 +165,7 @@ export default function RoadmapPage() {
             className="animate-fade-up max-w-2xl text-4xl font-bold tracking-tight text-balance md:text-5xl"
             style={{ animationDelay: "120ms" }}
           >
-            From contract foundation to the physical bridge
+            From contract foundation to the virtual sneaker economy
           </h1>
           <p
             className="animate-fade-up max-w-lg leading-relaxed text-foreground/60"

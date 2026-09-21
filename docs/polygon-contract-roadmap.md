@@ -4,9 +4,9 @@ RUN&EARN targets Polygon with standard EVM tooling. The current foundation is a 
 
 ## Current foundation (shipped Q3 2026)
 
-### 1. `RUNEToken` ERC-20
+### 1. `RENToken` ERC-20
 
-`contracts/RUNEToken.sol` is the REN token (symbol `REN`, 18 decimals) with role-gated minting, pausable transfers, a 100M hard cap, and user burn support. It backs the legacy NFT reward path and the future veRUNE redemption pool. Before production, treasury issuance must be controlled by a multisig and explicit emission budget.
+`contracts/RENToken.sol` is the REN token (symbol `REN`, 18 decimals) with role-gated minting, pausable transfers, a 100M hard cap, and user burn support. It backs the legacy NFT reward path and the future veRUNE redemption pool. Before production, treasury issuance must be controlled by a multisig and explicit emission budget.
 
 ### 2. `SneakerMint` ERC-721
 
@@ -26,7 +26,7 @@ RUN&EARN targets Polygon with standard EVM tooling. The current foundation is a 
 
 ### 6. `SneakerGame` gamification
 
-`contracts/SneakerGame.sol` runs the retention loop: activate each sneaker every 24h to earn virtual veRUNE points (Common 100 → Mythic 800/day), daily streaks add +1%/day (cap +50%), each activation wears durability (repair costs 50 veRUNE), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. Tokenomics: `docs/veRune-tokenomics.md`.
+`contracts/SneakerGame.sol` runs the retention loop around three stats — **power** (rarity-scaled veRUNE mining, Common 100 → Mythic 800/day base), **health** (decays 1/day of real time plus wear per activation; at 0 the sneaker stops mining until repaired for 50 veRUNE or a burned repair kit), and **energy** (charges that fuel consumable abilities, refilled on each manual activation). Daily streaks add +1%/day (cap +50%), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. `SneakerWorkshop.useAbility` burns consumable mod NFTs for repair kits, surge activations, 24h boost capsules, and forge stones — each use destroys the NFT, driving repeat demand. Tokenomics: `docs/veRune-tokenomics.md`.
 
 ### 7. Subgraph activity index
 
@@ -34,8 +34,8 @@ The deployed `nuxgraph` Studio subgraph is consumed through the server-only `/ap
 
 ### 8. `VeSneakerStore` primary sale
 
-`contracts/VeSneakerStore.sol` sells **veSneakers** — virtual sneakers — for native POL to
-anyone, with or without a physical pair. It mints on demand through
+`contracts/VeSneakerStore.sol` sells **veSneakers** — the playable NFTs of the virtual
+sneaker economy — for native POL to anyone. It mints on demand through
 `SneakerMint.mintAuthorized` (the store holds `MINTER_ROLE`), so no copies need to be
 pre-minted. Each design carries its own name, token URI, rarity, tier, POL price, and
 supply cap (default 1000). Prices are USD targets converted at `POL_USD_PRICE` — $40
@@ -45,32 +45,43 @@ admin allocate copies to the treasury for airdrops or marketplace listings witho
 payment. The 9 genesis designs are configured and optionally pre-minted by
 `scripts/mint-veSneakers.ts`.
 
-### 9. Verification registry — next production hardening
+### 9. Upgrade economy — shipped in v1.0
 
-A verifier registry should store one-time commitments for physical sneaker purchases. Retail validation, raw photos, and personal data stay off-chain; the registry or signed verifier authorizes the wallet, URI, rarity, and tier.
+- `contracts/SneakerMods.sol` — ERC-721 mod/badge collection with on-chain achievement claims.
+- `contracts/SneakerWorkshop.sol` — six-slot equipment, repair kits, and the veRUNE forge (implements `ISneakerBoosts`).
+- `contracts/SneakerSwap.sol` — atomic NFT↔NFT trades (± POL) across collections.
+- `contracts/ModRental.sol` — time-boxed mod rentals paid in POL.
+- `contracts/ModStore.sol` — primary sale of premium mod designs.
+- `SneakerMarketplace` is collection-aware (listings, auctions, offers keyed by `(collection, tokenId)`); `SneakerGame`, `SneakerStaking`, and `SneakerAppraiser` consume workshop effects through `ISneakerBoosts`.
+
+### 10. Mint verifier authorization — next production hardening
+
+Public `mintWithProof` stays behind `publicMintEnabled`. Before opening it, a verifier
+service or registry should authorize the wallet, URI, rarity, and tier — raw photos and
+personal data stay off-chain.
 
 ## Planned contracts
 
-10. **Sneaker upgrades:** burn veRUNE to raise an existing sneaker's rarity score and tier — increasing its appraiser valuation, staking APY boost, and marketplace price. Closes the value-improvement loop the appraiser recommends.
-11. **Benefits vault:** separate `SneakerVault` for discount, special-offer, early-access, and gift eligibility.
-12. **Physical redemption bridge:** redeem veRUNE or REN for real sneakers from the online store, backed by the verifier registry for one-time physical fulfillment claims.
-13. **Treasury and fee splitter:** distribute approved physical-sale or protocol-fee shares (including the 2.5% marketplace fee and veSneaker sale proceeds) to rewards, operations, and reserves.
-14. **Governance and parameter registry:** timelock APY, tier, fee, veSneaker price, treasury, pause, and migration changes; REN-weighted voting; multisig on mainnet.
-15. **Referral and transfer attribution:** prevent self-referrals, replay, spoofing, and unauthorized claims.
-16. **Quest/activity attestations:** signed activity proofs without storing personal data.
-17. **Merkle distribution:** optional one-time genesis claims with expiry and pause controls.
+11. **Sneaker upgrades:** shipped — `SneakerWorkshop.forge` burns veRUNE for permanent rarity/earn-rate levels, and equipped mods add slot-based effects on top.
+12. **Benefits vault:** separate `SneakerVault` for discount, special-offer, early-access, and gift eligibility.
+13. **REN redemption pool:** fund `SneakerGame` with REN and enable `redeem(points)` so veRUNE converts to the live token at `redemptionRate`.
+14. **Treasury and fee splitter:** distribute protocol-fee shares (the 2.5% marketplace fee, rental fee, and store proceeds) to rewards, operations, and reserves.
+15. **Governance and parameter registry:** timelock APY, tier, fee, veSneaker price, treasury, pause, and migration changes; REN-weighted voting; multisig on mainnet.
+16. **Referral and transfer attribution:** prevent self-referrals, replay, spoofing, and unauthorized claims.
+17. **Quest/activity attestations:** signed activity proofs without storing personal data.
+18. **Merkle distribution:** optional one-time genesis claims with expiry and pause controls.
 
 ## Suggested order
 
-1. Run Solidity + TypeScript tests for all seven contracts (`npx hardhat test`).
-2. Deploy `RUNEToken`, `SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, and `VeSneakerStore` to Polygon Amoy.
-3. Grant `MINTER_ROLE` on `SneakerMint` to `VeSneakerStore` (the deploy script does this automatically) and register the 9 veSneaker designs with `scripts/mint-veSneakers.ts`.
-4. Fund the POL reward reserve and the veRUNE redemption pool; verify deposit, claim, withdrawal, NFT boost, listing, bidding, activation, redemption, and veSneaker purchase behavior.
+1. Run Solidity + TypeScript tests for all twelve contracts (`npx hardhat test`).
+2. Deploy `RENToken`, `SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, and `VeSneakerStore` to Polygon Amoy — `DEPLOY_TARGET=all` handles order and wiring.
+3. The deploy script grants `MINTER_ROLE` on `SneakerMint` to `VeSneakerStore` and on `SneakerMods` to `ModStore`, links the workshop into game/staking/appraiser/marketplace/mods, connects the rental source, and allows the mods collection on the marketplace and swap venue. Register the 9 veSneaker designs with `scripts/mint-veSneakers.ts`.
+4. Fund the POL reward reserve and the veRUNE redemption pool; verify deposit, claim, withdrawal, NFT boost, listing, bidding, activation, redemption, veSneaker purchase, mod purchase, equip, rental, and swap behavior.
 5. Configure the `nuxgraph` query endpoint and verify `/api/subgraph` activity, including marketplace and game events.
 6. Add verifier authorization before production minting.
 7. Complete custody, economic, and independent security review.
 8. Add multisig/timelock governance before mainnet.
-9. Build upgrades, benefits vault, physical bridge, store integration, referrals, quests, and airdrops only after core invariants are stable.
+9. Build the benefits vault, treasury splitter, referrals, quests, and airdrops only after core invariants are stable.
 
 ## Toolchain
 

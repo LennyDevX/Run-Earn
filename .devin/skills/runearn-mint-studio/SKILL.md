@@ -61,8 +61,13 @@ route handler, `src/lib/sneaker-nft.ts`, and the local minted-sneaker store.
 with `RARITIES.findIndex(item => item.id === rarity)`. That tier drives:
 
 - staking APY boost (`SneakerStaking` tier bonuses `[50, 80, 150, 180]` bps),
-- game earn rate (`SneakerGame.tierBasePointsPerDay`),
+- game earn rate (`SneakerGame.tierBasePointsPerDay` — the tier base is then scaled by
+  the rarity-derived `powerOf` multiplier),
 - appraiser tier value (`SneakerAppraiser.tierValues`).
+
+The chosen rarity value itself also feeds `powerOf` (`5000 + rarity × 100` bps) and
+`maxEnergyOf` (`2 + rarity/20`), so a higher-rarity mint earns faster and holds more
+energy charges.
 
 Keep the order stable; changing it silently re-prices every existing NFT.
 

@@ -6,7 +6,7 @@ This document describes the economic design for the REN reward token (ERC-20, sy
 
 | Layer | Type | Where it lives | Convertible? |
 | --- | --- | --- | --- |
-| **REN** | ERC-20 token, 100M hard cap | On-chain (`RUNEToken.sol`) | Tradable, transferable |
+| **REN** | ERC-20 token, 100M hard cap | On-chain (`RENToken.sol`) | Tradable, transferable |
 | **veRUNE** | Virtual points (not tokenized) | Contract state in `SneakerGame.sol` | Redeemable 1:rate for REN once redemption is enabled |
 
 veRUNE is intentionally **not** an ERC-20: it avoids creating an unregulated liquid asset while the product is in beta, keeps gas costs near zero for point accrual, and lets the protocol tune issuance before real value is at stake.
@@ -22,15 +22,23 @@ veRUNE is intentionally **not** an ERC-20: it avoids creating an unregulated liq
 | Liquidity (DEX/CEX) | 10% | 10M | POL/REN and REN/stable pairs | Seeded at launch; LP tokens locked |
 | Community, airdrops & quests | 10% | 10M | Retention campaigns, referral rewards, sneaker drops | Epoch-based |
 
-Total: **100M REN**. The cap is enforced on-chain by `RUNEToken.MAX_SUPPLY`.
+Total: **100M REN**. The cap is enforced on-chain by `RENToken.MAX_SUPPLY`.
 
 ## veRUNE accrual (SneakerGame)
 
-Each SneakerMint NFT behaves like a physical sneaker: it must be **activated every 24 hours** to keep earning, it **wears out** with use, and its earn rate grows with daily streaks.
+Each SneakerMint NFT behaves like a game item with three live stats — **power**, **health**, and **energy** — driven by daily activation.
 
-### Base earn rate by tier
+### The three stats
 
-| Tier | Label | veRUNE / day (at 1x streak) |
+| Stat | What it is | How it moves |
+| --- | --- | --- |
+| **Power** | The veRUNE mining rate: `tierBase × (50% + effectiveRarity%)`. A rarity-50 sneaker mines at ~1.0x its tier base; rarity 100 reaches ~1.5x. Forge levels raise effective rarity permanently. | Fixed by rarity + forge; read via `powerOf(tokenId)`. |
+| **Health** | The sneaker's "time of life". Stored durability minus whole 24h decay periods elapsed (`lastDecayAt`), minus wear per activation. | −1 per day of real time, −`wear` per activation. At 0 the sneaker is worn out: accrual stops and activation reverts until repaired. |
+| **Energy** | Charges that fuel consumable abilities. Capacity = `2 + effectiveRarity / 20`. | Refilled to max on every manual `activate`; spent by `SneakerWorkshop.useAbility` via `game.spendEnergy`. |
+
+### Base earn rate by tier (before power)
+
+| Tier | Label | veRUNE / day (at 1x streak, before power) |
 | --- | --- | --- |
 | 0 | Common | 100 |
 | 1 | Rare | 200 |
@@ -39,18 +47,20 @@ Each SneakerMint NFT behaves like a physical sneaker: it must be **activated eve
 
 ### Mechanics
 
-1. **Activation (every 24h):** the owner calls `activate(tokenId)` once per 24h. Activation starts a 24h earning window.
+1. **Activation (every 24h):** the owner calls `activate(tokenId)` once per 24h. Activation starts a 24h earning window and refills energy to max.
 2. **Streak bonus:** activating within 48h of the previous activation increments the streak. Each streak day adds +1% to the earn rate, capped at +50% (streak 51+). Missing more than 48h resets the streak to 1.
-3. **Durability (wear):** each activation consumes 1 durability point (max 10). At 0 durability the sneaker stops earning until repaired.
-4. **Repair:** costs 50 veRUNE and restores full durability — a point sink that recycles value back into the economy.
-5. **Passive accrual:** points accrue per second while the sneaker is inside its 24h window and durability > 0. Points accumulate per NFT and are claimed by the owner to their veRUNE balance.
+3. **Health decay:** health ticks down 1 point per 24h of real time regardless of activity, plus `wearPerActivation` (1, reduced by Sole mods) on each activation. Accrual is capped at the sneaker's death timestamp (`lastDecayAt + remainingHealth × 24h`); at 0 health the sneaker stops earning and cannot activate.
+4. **Repair:** costs 50 veRUNE and restores full health plus a fresh decay clock — a point sink that recycles value. Equipped Lining mods discount the cost; consumable repair-kit mods restore health for free when burned.
+5. **Consumable abilities (`SneakerWorkshop.useAbility`):** burning a consumable mod NFT applies its `aux` ability — `0`/`255` repair kit (free), `1` surge = instant activation bypassing the cooldown (2⚡), `2` boost capsule = +`effectBps` earn rate for 24h (1⚡), `3` forge stone = free forge level (2⚡). Each burn destroys the NFT — a permanent demand driver for the mod economy.
+6. **Forge:** `SneakerWorkshop.forge` burns claimed veRUNE (`250 × (level + 1)`) for permanent +5 rarity and +2.5% earn-rate per level — the second veRUNE sink.
+7. **Passive accrual:** points accrue per second while the sneaker is inside its 24h window (or permanently with a Core mod) and health > 0. Workshop mods raise the effective rate (`earnBonusBps`, including active boost capsules).
 
-### Example: Mythic sneaker with a 30-day streak
+### Example: Mythic sneaker (rarity 90) with a 30-day streak
 
-- Base: 800 veRUNE/day
+- Base: 800 veRUNE/day × power (50% + 90% = 1.4x) = 1,120 veRUNE/day
 - Streak multiplier at day 30: 1 + min(29 × 1%, 50%) = 1.29x
-- Daily rate: 800 × 1.29 = 1,032 veRUNE/day
-- Monthly (30 days): ~30,960 veRUNE
+- Daily rate: 1,120 × 1.29 ≈ 1,445 veRUNE/day
+- Monthly (30 days): ~43,300 veRUNE — if the sneaker is kept alive (max ~10–13 days of life per full health bar, so ~2–3 repairs or kits per month)
 
 ## veRUNE → REN redemption
 
@@ -77,8 +87,9 @@ The admin can tune `tierBasePointsPerDay`, `streakBonusStepBps`, and `redemption
 
 ## Primary sale: veSneakers (VeSneakerStore)
 
-**veSneakers** are the virtual version of the sneakers. Anyone can buy them with POL —
-no physical pair required — and they behave exactly like minted NFTs afterwards.
+**veSneakers** are the playable NFTs of the virtual sneaker economy. Anyone can buy
+them with POL — fully virtual assets — and they behave exactly like minted NFTs
+afterwards: they earn veRUNE, boost staking, equip mods, and trade on the marketplace.
 
 ### Pricing (USD targets, geometric progression)
 
@@ -127,10 +138,11 @@ produces yield once it is locked or activated.
 
 ## Value loops
 
-1. **Mint → Game:** activate daily → build streak → earn veRUNE → repair to sustain → redeem REN.
+1. **Mint → Game:** activate daily → build streak → refill energy → earn veRUNE → repair to sustain health → redeem REN.
 2. **Mint → Stake:** lock NFT → +0.5% to +1.8% APY on staked POL (30-day lock).
 3. **Mint → Marketplace:** appraiser valuation → sell, auction, or accept offers in POL.
 4. **Stake ↔ Marketplace tension:** staked sneakers earn APY but cannot be sold; the owner chooses between yield and liquidity.
+5. **Consumable burn loop:** health decay + energy costs create permanent demand for mod NFTs — every repair kit, surge, boost capsule, and forge stone is destroyed on use, recycling demand back into the primary mod store and the secondary marketplace.
 
 ## Sustainability guardrails
 

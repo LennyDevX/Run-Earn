@@ -169,7 +169,7 @@ export default function SneakerMintStudio() {
           </label>
           <div className="flex flex-col gap-4 rounded-3xl bg-background p-6">
             <span className="font-pixel text-[9px] text-sky">HOW IT WORKS</span>
-            {["Photograph your physical sneaker", "AI creates a unique collectible version", "Customize the name, rarity, and palette", "Mint on Polygon and find it in your collection"].map((item, index) => (
+            {["Photograph your sneaker", "AI creates a unique virtual collectible", "Customize the name, rarity, and palette", "Mint on Polygon and find it in your collection"].map((item, index) => (
               <div key={item} className="flex gap-3">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground/10 font-pixel text-[9px] text-sky">{index + 1}</span>
                 <p className="text-sm leading-relaxed text-foreground/60">{item}</p>

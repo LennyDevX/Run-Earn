@@ -71,6 +71,11 @@ For best results, the subgraph should index the current contract events:
 - `Staked(owner, tokenId, rarity, tier)`
 - `Unstaked(owner, tokenId)`
 - `RewardsClaimed(owner, amount)`
+- Marketplace: `ListingCreated`, `NFTSold`, `AuctionSettled`, `OfferAccepted`
+- Game: `Activated`, `PointsClaimed`, `Repaired`, `Redeemed`
+- Upgrade economy: `ModMinted`, `ModBurned`, `AchievementClaimed`, `ModEquipped`,
+  `ModUnequipped`, `AbilityUsed`, `Forged`, `SwapCreated`, `SwapAccepted`,
+  `SwapCancelled`, `RentalListed`, `ModRented`, `ModReturned`, `ModPurchased`
 
 Recommended entity fields are `id`, an address field, `amount`/`value`, `tokenId`, `timestamp`/`blockTimestamp`, and `transactionHash`.
 

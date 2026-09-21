@@ -126,7 +126,7 @@ export default function SneakerGameDashboard() {
             <span className="text-sm font-bold text-foreground/50">owned</span>
           </div>
           <p className="mt-2 text-xs text-foreground/50">
-            {game.sneakers.filter((s) => s.state.durability > 0n).length} with durability left
+            {game.sneakers.filter((s) => s.health > 0).length} with health left
           </p>
         </div>
 
@@ -172,7 +172,7 @@ export default function SneakerGameDashboard() {
             <span className="font-pixel text-[9px] text-mint">YOUR SNEAKER COLLECTION</span>
             <h3 className="mt-2 text-2xl font-bold tracking-tight">Activate, maintain, and earn</h3>
             <p className="mt-1 text-sm text-foreground/60">
-              Each sneaker wears out with use. Activate every 24h to keep earning, and repair with veRUNE when durability runs out.
+              Each sneaker&rsquo;s health decays daily and wears with use. Activate every 24h to refill energy and keep earning, and repair with veRUNE or a kit when health runs out.
             </p>
           </div>
         </div>
@@ -182,19 +182,18 @@ export default function SneakerGameDashboard() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {game.sneakers.map((sneaker) => {
                 const rarityObj = RARITIES[Number(sneaker.tier) % RARITIES.length];
-                const durability = Number(sneaker.state.durability);
+                const durability = sneaker.health;
                 const maxDurability = Number(game.params.maxDurability || 10n);
                 const durabilityPct = Math.min(100, (durability / maxDurability) * 100);
-                const wornOut = sneaker.state.durability === 0n && sneaker.state.lastActivationAt > 0n;
+                const wornOut = sneaker.health === 0 && sneaker.state.lastActivationAt > 0n;
                 const readyIn = nowSeconds > 0 ? sneaker.state.lastActivationAt + 86_400n - BigInt(nowSeconds) : sneaker.secondsUntilActivation;
                 const canActivateNow = !wornOut && readyIn <= 0n;
-                const dailyRate = game.params.tierBasePointsPerDay[Number(sneaker.tier) % 4] ?? 0n;
                 const streakMult = sneaker.state.streak > 1n
                   ? 10_000n + (sneaker.state.streak - 1n) * 100n > 15_000n
                     ? 15_000n
                     : 10_000n + (sneaker.state.streak - 1n) * 100n
                   : 10_000n;
-                const boostedDaily = (dailyRate * streakMult) / 10_000n;
+                const boostedDaily = (sneaker.power * streakMult) / 10_000n;
 
                 return (
                   <div
@@ -236,15 +235,23 @@ export default function SneakerGameDashboard() {
                           <span className="font-mono font-bold text-sky">{formatPoints(boostedDaily)} veRUNE/day</span>
                         </div>
                         <div className="flex items-center justify-between">
+                          <span>Power:</span>
+                          <span className="font-mono font-bold text-sky">{formatPoints(sneaker.power)}/day</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Energy:</span>
+                          <span className="font-mono font-bold text-magma">{sneaker.energy}/{sneaker.maxEnergy}⚡</span>
+                        </div>
+                        <div className="flex items-center justify-between">
                           <span>Pending:</span>
                           <span className="font-mono font-bold text-polygon-purple">{formatPoints(sneaker.pending)} veRUNE</span>
                         </div>
                       </div>
 
-                      {/* Durability bar */}
+                      {/* Health bar */}
                       <div className="mt-3">
                         <div className="flex items-center justify-between text-xs text-foreground/60">
-                          <span>Durability:</span>
+                          <span>Health:</span>
                           <span className={`font-mono font-bold ${wornOut ? "text-magma" : "text-foreground"}`}>
                             {durability}/{maxDurability}
                           </span>
@@ -278,7 +285,7 @@ export default function SneakerGameDashboard() {
                       >
                         Claim points
                       </button>
-                      {durability < maxDurability ? (
+                      {durability < maxDurability && sneaker.state.lastActivationAt > 0n ? (
                         <button
                           type="button"
                           disabled={!isConfigured || game.isLoading || game.veRune < game.params.repairCostPoints}

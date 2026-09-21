@@ -9,18 +9,22 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {SneakerMint} from "./SneakerMint.sol";
 import {SneakerAppraiser} from "./SneakerAppraiser.sol";
 import {SneakerStaking} from "./SneakerStaking.sol";
+import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 
 /// @title SneakerMarketplace — fixed-price sales, English auctions, and POL offers
-///      for SneakerMint NFTs.
+///      for every RUN&EARN NFT collection (veSneakers and mods).
 /// @notice Users may list, sell, auction, and make offers on NFTs published by
-///      other users. A sneaker that is locked in SneakerStaking cannot be
-///      listed or auctioned — it must be unstaked first. The marketplace reads
+///      other users from any admin-approved collection. A sneaker that is
+///      locked in SneakerStaking — or that still has mods equipped in
+///      SneakerWorkshop — cannot be listed or auctioned. The marketplace reads
 ///      an on-chain valuation from SneakerAppraiser to suggest a listing price
-///      and to generate value-improvement recommendations.
+///      for sneakers and to generate value-improvement recommendations.
 /// @dev All payments are in native POL. The marketplace holds listed/auctioned
 ///      NFTs in escrow. Offers escrow POL from the bidder until accepted,
 ///      outbid, or cancelled. Listings and auctions enforce a per-token lock
-///      so the same NFT cannot be in two sales at once.
+///      so the same NFT cannot be in two sales at once. Collection-agnostic:
+///      sale entities carry the NFT contract address and locks are keyed by
+///      (collection, tokenId).
 contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721Receiver {
     uint256 public constant BASIS_POINTS = 10_000;
     uint256 public constant MIN_PRICE = 0.001 ether;
@@ -31,6 +35,7 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
     struct Listing {
         address seller;
+        address collection;
         uint256 tokenId;
         uint256 price;
         uint64 listedAt;
@@ -39,6 +44,7 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
     struct Auction {
         address seller;
+        address collection;
         uint256 tokenId;
         uint256 startPrice;
         address highestBidder;
@@ -50,6 +56,7 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
     struct Offer {
         address buyer;
+        address collection;
         uint256 tokenId;
         uint256 amount;
         uint64 expiresAt;
@@ -59,6 +66,13 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     SneakerMint public immutable nft;
     SneakerAppraiser public immutable appraiser;
     SneakerStaking public immutable staking;
+
+    /// @notice Workshop consulted for the equipped-mods guard on sneaker sales.
+    ///      Zero address disables the check.
+    ISneakerBoosts public workshop;
+
+    /// @notice NFT contracts allowed to trade on this marketplace.
+    mapping(address collection => bool allowed) public allowedCollections;
 
     uint256 public feeBps; // marketplace fee in basis points (e.g. 250 = 2.5%)
     uint256 public appraiserPremiumBps; // suggested price = appraiser value * premium / 10000
@@ -73,22 +87,24 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     mapping(uint256 auctionId => Auction auction) public auctions;
     mapping(uint256 offerId => Offer offer) public offers;
 
-    /// @notice tokenId -> active sale lock. 0 = none, 1 = listed, 2 = in auction.
-    mapping(uint256 tokenId => uint8 saleKind) public tokenSaleKind;
+    /// @notice (collection, tokenId) -> active sale lock. 0 = none, 1 = listed, 2 = in auction.
+    mapping(address collection => mapping(uint256 tokenId => uint8 saleKind)) public tokenSaleKind;
 
-    event ListingCreated(uint256 indexed listingId, address indexed seller, uint256 indexed tokenId, uint256 price);
+    event ListingCreated(uint256 indexed listingId, address indexed seller, address indexed collection, uint256 tokenId, uint256 price);
     event ListingCancelled(uint256 indexed listingId);
     event NFTSold(uint256 indexed listingId, address indexed seller, address indexed buyer, uint256 tokenId, uint256 price, uint256 fee);
-    event AuctionCreated(uint256 indexed auctionId, address indexed seller, uint256 indexed tokenId, uint256 startPrice, uint64 endTime);
+    event AuctionCreated(uint256 indexed auctionId, address indexed seller, address indexed collection, uint256 tokenId, uint256 startPrice, uint64 endTime);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount);
     event AuctionSettled(uint256 indexed auctionId, address indexed seller, address indexed winner, uint256 tokenId, uint256 price, uint256 fee);
     event AuctionCancelled(uint256 indexed auctionId);
-    event OfferCreated(uint256 indexed offerId, address indexed buyer, uint256 indexed tokenId, uint256 amount, uint64 expiresAt);
+    event OfferCreated(uint256 indexed offerId, address indexed buyer, address indexed collection, uint256 tokenId, uint256 amount, uint64 expiresAt);
     event OfferAccepted(uint256 indexed offerId, address indexed seller, address indexed buyer, uint256 tokenId, uint256 amount, uint256 fee);
     event OfferCancelled(uint256 indexed offerId);
     event BidWithdrawn(uint256 indexed auctionId, address indexed bidder, uint256 amount);
     event ParamsUpdated(uint256 feeBps, uint256 appraiserPremiumBps, address feeCollector);
     event FeesWithdrawn(address indexed to, uint256 amount);
+    event CollectionAllowed(address indexed collection, bool allowed);
+    event WorkshopUpdated(address indexed workshop);
 
     constructor(
         address admin,
@@ -113,6 +129,7 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         feeBps = feeBps_;
         appraiserPremiumBps = appraiserPremiumBps_;
         feeCollector = feeCollector_;
+        allowedCollections[nftAddress] = true; // veSneakers always tradeable
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -139,6 +156,19 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         emit ParamsUpdated(feeBps_, appraiserPremiumBps_, feeCollector_);
     }
 
+    /// @notice Allow or block an NFT collection on the marketplace.
+    function setCollectionAllowed(address collection, bool allowed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(collection != address(0), "SneakerMarketplace: zero collection");
+        allowedCollections[collection] = allowed;
+        emit CollectionAllowed(collection, allowed);
+    }
+
+    /// @notice Set the workshop used for the equipped-mods sale guard.
+    function setWorkshop(address workshop_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        workshop = ISneakerBoosts(workshop_);
+        emit WorkshopUpdated(workshop_);
+    }
+
     function withdrawFees(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
         require(to != address(0), "SneakerMarketplace: zero recipient");
         uint256 amount = accumulatedFees;
@@ -152,24 +182,25 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     // ─────────────────────────── Listings ────────────────────────
 
     /// @notice List an owned, unstaked NFT for a fixed POL price.
-    function list(uint256 tokenId, uint256 price) external whenNotPaused nonReentrant {
+    /// @param collection NFT contract — must be in allowedCollections.
+    function list(address collection, uint256 tokenId, uint256 price) external whenNotPaused nonReentrant {
         require(price >= MIN_PRICE, "SneakerMarketplace: price too low");
-        require(tokenSaleKind[tokenId] == 0, "SneakerMarketplace: token already on sale");
-        require(staking.stakedOwner(tokenId) == address(0), "SneakerMarketplace: NFT staked");
-        require(nft.ownerOf(tokenId) == msg.sender, "SneakerMarketplace: not owner");
+        require(tokenSaleKind[collection][tokenId] == 0, "SneakerMarketplace: token already on sale");
+        _requireSellable(collection, tokenId);
 
-        tokenSaleKind[tokenId] = 1;
+        tokenSaleKind[collection][tokenId] = 1;
         listings[_nextListingId] = Listing({
             seller: msg.sender,
+            collection: collection,
             tokenId: tokenId,
             price: price,
             listedAt: uint64(block.timestamp),
             active: true
         });
-        emit ListingCreated(_nextListingId, msg.sender, tokenId, price);
+        emit ListingCreated(_nextListingId, msg.sender, collection, tokenId, price);
         _nextListingId += 1;
 
-        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        IERC721(collection).safeTransferFrom(msg.sender, address(this), tokenId);
     }
 
     /// @notice Cancel an active listing and recover the NFT.
@@ -178,8 +209,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         require(listing.active, "SneakerMarketplace: invalid listing");
         require(listing.seller == msg.sender, "SneakerMarketplace: not seller");
         listing.active = false;
-        tokenSaleKind[listing.tokenId] = 0;
-        nft.safeTransferFrom(address(this), msg.sender, listing.tokenId);
+        tokenSaleKind[listing.collection][listing.tokenId] = 0;
+        IERC721(listing.collection).safeTransferFrom(address(this), msg.sender, listing.tokenId);
         emit ListingCancelled(listingId);
     }
 
@@ -191,32 +222,32 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         require(msg.sender != listing.seller, "SneakerMarketplace: seller cannot buy");
 
         listing.active = false;
-        tokenSaleKind[listing.tokenId] = 0;
+        tokenSaleKind[listing.collection][listing.tokenId] = 0;
 
         (uint256 fee, uint256 proceeds) = _splitPayment(listing.price);
         _pay(listing.seller, proceeds);
 
-        nft.safeTransferFrom(address(this), msg.sender, listing.tokenId);
+        IERC721(listing.collection).safeTransferFrom(address(this), msg.sender, listing.tokenId);
         emit NFTSold(listingId, listing.seller, msg.sender, listing.tokenId, listing.price, fee);
     }
 
     // ─────────────────────────── Auctions ────────────────────────
 
     /// @notice Create an English auction for an owned, unstaked NFT.
-    function createAuction(uint256 tokenId, uint256 startPrice, uint64 duration)
+    function createAuction(address collection, uint256 tokenId, uint256 startPrice, uint64 duration)
         external
         whenNotPaused
         nonReentrant
     {
         require(startPrice >= MIN_PRICE, "SneakerMarketplace: price too low");
         require(duration >= MIN_AUCTION_DURATION && duration <= MAX_AUCTION_DURATION, "SneakerMarketplace: invalid duration");
-        require(tokenSaleKind[tokenId] == 0, "SneakerMarketplace: token already on sale");
-        require(staking.stakedOwner(tokenId) == address(0), "SneakerMarketplace: NFT staked");
-        require(nft.ownerOf(tokenId) == msg.sender, "SneakerMarketplace: not owner");
+        require(tokenSaleKind[collection][tokenId] == 0, "SneakerMarketplace: token already on sale");
+        _requireSellable(collection, tokenId);
 
-        tokenSaleKind[tokenId] = 2;
+        tokenSaleKind[collection][tokenId] = 2;
         auctions[_nextAuctionId] = Auction({
             seller: msg.sender,
+            collection: collection,
             tokenId: tokenId,
             startPrice: startPrice,
             highestBidder: address(0),
@@ -225,10 +256,10 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
             active: true,
             settled: false
         });
-        emit AuctionCreated(_nextAuctionId, msg.sender, tokenId, startPrice, uint64(block.timestamp) + duration);
+        emit AuctionCreated(_nextAuctionId, msg.sender, collection, tokenId, startPrice, uint64(block.timestamp) + duration);
         _nextAuctionId += 1;
 
-        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        IERC721(collection).safeTransferFrom(msg.sender, address(this), tokenId);
     }
 
     /// @notice Place a bid on an active auction. Must exceed the current highest bid.
@@ -263,18 +294,18 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
         auction.active = false;
         auction.settled = true;
-        tokenSaleKind[auction.tokenId] = 0;
+        tokenSaleKind[auction.collection][auction.tokenId] = 0;
 
         if (auction.highestBidder == address(0)) {
             // No bids: return the NFT to the seller.
-            nft.safeTransferFrom(address(this), auction.seller, auction.tokenId);
+            IERC721(auction.collection).safeTransferFrom(address(this), auction.seller, auction.tokenId);
             emit AuctionCancelled(auctionId);
             return;
         }
 
         (uint256 fee, uint256 proceeds) = _splitPayment(auction.highestBid);
         _pay(auction.seller, proceeds);
-        nft.safeTransferFrom(address(this), auction.highestBidder, auction.tokenId);
+        IERC721(auction.collection).safeTransferFrom(address(this), auction.highestBidder, auction.tokenId);
         emit AuctionSettled(auctionId, auction.seller, auction.highestBidder, auction.tokenId, auction.highestBid, fee);
     }
 
@@ -289,8 +320,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
         auction.active = false;
         auction.settled = true;
-        tokenSaleKind[auction.tokenId] = 0;
-        nft.safeTransferFrom(address(this), auction.seller, auction.tokenId);
+        tokenSaleKind[auction.collection][auction.tokenId] = 0;
+        IERC721(auction.collection).safeTransferFrom(address(this), auction.seller, auction.tokenId);
         emit AuctionCancelled(auctionId);
     }
 
@@ -298,21 +329,23 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
     /// @notice Make a POL offer on an NFT that is owned and not listed.
     /// @dev The NFT stays with its owner; the offer escrows POL from the bidder.
-    function makeOffer(uint256 tokenId, uint64 duration) external payable whenNotPaused nonReentrant {
+    function makeOffer(address collection, uint256 tokenId, uint64 duration) external payable whenNotPaused nonReentrant {
+        require(allowedCollections[collection], "SneakerMarketplace: collection not allowed");
         require(msg.value >= MIN_PRICE, "SneakerMarketplace: offer too low");
         require(duration >= MIN_OFFER_DURATION && duration <= MAX_OFFER_DURATION, "SneakerMarketplace: invalid duration");
-        require(nft.ownerOf(tokenId) != msg.sender, "SneakerMarketplace: own token");
-        require(tokenSaleKind[tokenId] != 1, "SneakerMarketplace: token listed");
-        require(staking.stakedOwner(tokenId) == address(0), "SneakerMarketplace: NFT staked");
+        require(IERC721(collection).ownerOf(tokenId) != msg.sender, "SneakerMarketplace: own token");
+        require(tokenSaleKind[collection][tokenId] != 1, "SneakerMarketplace: token listed");
+        _requireNotLocked(collection, tokenId);
 
         offers[_nextOfferId] = Offer({
             buyer: msg.sender,
+            collection: collection,
             tokenId: tokenId,
             amount: msg.value,
             expiresAt: uint64(block.timestamp) + duration,
             active: true
         });
-        emit OfferCreated(_nextOfferId, msg.sender, tokenId, msg.value, uint64(block.timestamp) + duration);
+        emit OfferCreated(_nextOfferId, msg.sender, collection, tokenId, msg.value, uint64(block.timestamp) + duration);
         _nextOfferId += 1;
     }
 
@@ -322,13 +355,13 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         Offer storage offer = offers[offerId];
         require(offer.active, "SneakerMarketplace: invalid offer");
         require(block.timestamp < offer.expiresAt, "SneakerMarketplace: offer expired");
-        require(nft.ownerOf(offer.tokenId) == msg.sender, "SneakerMarketplace: not owner");
-        require(staking.stakedOwner(offer.tokenId) == address(0), "SneakerMarketplace: NFT staked");
+        require(IERC721(offer.collection).ownerOf(offer.tokenId) == msg.sender, "SneakerMarketplace: not owner");
+        _requireNotLocked(offer.collection, offer.tokenId);
 
         offer.active = false;
         (uint256 fee, uint256 proceeds) = _splitPayment(offer.amount);
         _pay(msg.sender, proceeds);
-        nft.safeTransferFrom(msg.sender, offer.buyer, offer.tokenId);
+        IERC721(offer.collection).safeTransferFrom(msg.sender, offer.buyer, offer.tokenId);
         emit OfferAccepted(offerId, msg.sender, offer.buyer, offer.tokenId, offer.amount, fee);
     }
 
@@ -345,7 +378,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     // ─────────────────────────── Views ───────────────────────────
 
     /// @notice Suggested listing price derived from the SneakerAppraiser
-    ///      valuation and the marketplace premium.
+    ///      valuation and the marketplace premium. SneakerMint NFTs only —
+    ///      mods are priced by the market.
     function suggestedPrice(uint256 tokenId) external view returns (uint256) {
         (uint256 value, , ) = appraiser.appraise(tokenId);
         return (value * appraiserPremiumBps) / BASIS_POINTS;
@@ -372,6 +406,27 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     }
 
     // ─────────────────────────── Internal ────────────────────────
+
+    /// @notice Full pre-sale validation: allowed collection, caller ownership,
+    ///      and no staking/workshop lock.
+    function _requireSellable(address collection, uint256 tokenId) internal view {
+        require(allowedCollections[collection], "SneakerMarketplace: collection not allowed");
+        _requireNotLocked(collection, tokenId);
+        require(IERC721(collection).ownerOf(tokenId) == msg.sender, "SneakerMarketplace: not owner");
+    }
+
+    /// @notice Sneakers must not be staked nor have mods equipped; escrowed
+    ///      assets (staked NFTs, equipped mods, rented mods) already fail the
+    ///      ownerOf check, but the explicit guards give clearer errors and
+    ///      block offers on tokens whose owner cannot complete a sale.
+    function _requireNotLocked(address collection, uint256 tokenId) internal view {
+        if (collection == address(nft)) {
+            require(staking.stakedOwner(tokenId) == address(0), "SneakerMarketplace: NFT staked");
+            if (address(workshop) != address(0)) {
+                require(!workshop.hasEquippedMods(tokenId), "SneakerMarketplace: NFT has equipped mods");
+            }
+        }
+    }
 
     function _splitPayment(uint256 amount) internal returns (uint256 fee, uint256 proceeds) {
         fee = (amount * feeBps) / BASIS_POINTS;

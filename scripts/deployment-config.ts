@@ -10,7 +10,7 @@ export type DeploymentRecord = {
   admin: Address;
   minter: Address;
   deployedAt: string;
-  contracts: Partial<Record<"RUNEToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore", { address: Address; constructorArgs: readonly unknown[] }>>;
+  contracts: Partial<Record<"RENToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore" | "SneakerMods" | "SneakerWorkshop" | "SneakerSwap" | "ModRental" | "ModStore", { address: Address; constructorArgs: readonly unknown[] }>>;
 };
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
@@ -106,6 +106,26 @@ export function marketplaceParameters() {
   return {
     feeBps: bigintEnv("MARKETPLACE_FEE_BPS", 250n), // 2.5% marketplace fee
     appraiserPremiumBps: bigintEnv("MARKETPLACE_APPRAISER_PREMIUM_BPS", 12_000n), // suggested price = 1.2x appraiser value
+  };
+}
+
+/// Workshop forge parameters — the veRUNE sink for permanent sneaker upgrades.
+///   forgeCostPoints  base veRUNE per level (actual cost = base * (level + 1))
+///   forgeRarityStep  rarity points gained per level
+///   forgeEarnStepBps earn-rate bonus per level
+///   maxForgeLevel    level cap per sneaker
+export function workshopParameters() {
+  return {
+    forgeCostPoints: bigintEnv("WORKSHOP_FORGE_COST_POINTS", 250n * 10n ** 18n), // 250 veRUNE base
+    forgeRarityStep: Number(bigintEnv("WORKSHOP_FORGE_RARITY_STEP", 5n)), // +5 rarity per level
+    forgeEarnStepBps: Number(bigintEnv("WORKSHOP_FORGE_EARN_STEP_BPS", 250n)), // +2.5% earn per level
+    maxForgeLevel: Number(bigintEnv("WORKSHOP_MAX_FORGE_LEVEL", 10n)),
+  };
+}
+
+export function rentalParameters() {
+  return {
+    feeBps: bigintEnv("RENTAL_FEE_BPS", 250n), // 2.5% rental fee
   };
 }
 

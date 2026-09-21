@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import MyNftsGallery from "@/components/MyNftsGallery";
+import MyModsGallery from "@/components/MyModsGallery";
 
 export const metadata: Metadata = {
   title: "My NFTs — RUN&EARN",
@@ -19,10 +20,13 @@ export default function MyNftsPage() {
             Your minted sneakers
           </h1>
           <p className="max-w-2xl leading-relaxed text-foreground/60">
-            Every NFT you have created from your physical sneakers with the AI studio.
+            Every virtual sneaker NFT you have created with the AI studio.
           </p>
         </section>
         <MyNftsGallery />
+        <div className="mt-16">
+          <MyModsGallery />
+        </div>
       </main>
       <Footer />
     </div>

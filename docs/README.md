@@ -9,7 +9,7 @@ Solidity.
 
 | Doc | What it covers |
 | --- | --- |
-| [`app-routes.md`](app-routes.md) | Every route (`/mint`, `/collection` (veSneakers store), `/marketplace`, `/game`, `/staking`, `/defi`, `/roadmap`, APIs): files, contracts, hooks, flows, edge cases, and how to add a route |
+| [`app-routes.md`](app-routes.md) | Every route (`/mint`, `/collection` (veSneakers + mod stores), `/workshop`, `/badges`, `/my-nfts`, `/marketplace`, `/game`, `/staking`, `/defi`, `/roadmap`, APIs): files, contracts, hooks, flows, edge cases, and how to add a route |
 | [`wallet-connectivity.md`](wallet-connectivity.md) | EIP-6963 discovery, MetaMask Connect, OKX Universal Provider, chain guard, mobile handoff |
 | [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, and the future mobile/UI/UX/performance roadmap |
 | [`subgraph-integration.md`](subgraph-integration.md) | The Graph Studio `nuxgraph` deployment, the `/api/subgraph` proxy, dynamic schema introspection |
@@ -22,7 +22,7 @@ Solidity.
 | [`contract-architecture-plan.md`](contract-architecture-plan.md) | Contract inventory, rename map, per-contract responsibilities, POL formula, custody invariants, deployment order |
 | [`polygon-contract-roadmap.md`](polygon-contract-roadmap.md) | Shipped vs planned contracts and the recommended build/deploy order |
 | [`polygon-staking-model.md`](polygon-staking-model.md) | Native POL staking, rarity-based NFT boosts, reward reserve accounting, appraiser valuation |
-| [`veRune-tokenomics.md`](veRune-tokenomics.md) | 100M REN allocation, veRUNE accrual (24h activation, streaks, durability), veSneaker primary-sale pricing, redemption economics |
+| [`veRune-tokenomics.md`](veRune-tokenomics.md) | 100M REN allocation, veRUNE accrual (power/health/energy stats, 24h activation, streaks, consumable abilities), veSneaker primary-sale pricing, redemption economics |
 | [`polygon-test-runbook.md`](polygon-test-runbook.md) | Test matrix, Amoy deployment and verification runbook, funding steps |
 
 ## Skills
@@ -36,6 +36,7 @@ matches a task.
 | `polygon-frontend-evm` | Wallet UX, RPC reads, route/hook work, viem integration |
 | `polygon-testing` | Solidity + TypeScript test matrices for all contracts |
 | `polygon-security` | Custody, arithmetic, escrow, and deployment risk review |
+| `runearn-upgrade-economy` | The mod/badge economy: SneakerMods, Workshop slots, consumable abilities, swaps, rentals, ModStore, power/health/energy stats |
 | `runearn-mint-studio` | The AI photo → artwork → mint pipeline and local collection storage |
 | `runearn-subgraph-activity` | Activity indexing, schema introspection, the subgraph proxy |
 | `swap-integration` (Uniswap) | Official Uniswap Trading API / Universal Router reference — quotes, swaps, Permit2, UniswapX, error codes |
@@ -51,7 +52,7 @@ npm run lint
 npm run typecheck
 npm run build
 npx hardhat compile
-npx hardhat test          # 266 tests (177 Solidity + 89 TypeScript)
+npx hardhat test          # 354 tests (250 Solidity + 104 TypeScript)
 ```
 
 ## Mobile

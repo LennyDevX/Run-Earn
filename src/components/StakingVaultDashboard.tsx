@@ -612,7 +612,7 @@ export default function StakingVaultDashboard() {
               <span className="font-pixel text-[9px] text-mint">BASE PROTOCOL APY</span>
               <span className="text-2xl font-extrabold text-mint">2.80%</span>
               <p className="text-xs text-foreground/60">
-                Sustainable base yield funded by physical sneaker commerce and verified protocol revenue.
+                Sustainable base yield funded by the virtual sneaker economy and verified protocol revenue.
               </p>
             </div>
             <div className="flex flex-col gap-2 rounded-3xl border border-foreground/10 bg-background p-5">
@@ -747,7 +747,7 @@ export default function StakingVaultDashboard() {
               </div>
               <h4 className="text-lg font-bold">No Sneaker NFTs Found</h4>
               <p className="max-w-md text-xs leading-relaxed text-foreground/60">
-                You don&apos;t have any RUN&EARN Sneaker NFTs in your wallet yet. Create a unique collectible sneaker from a physical photo to boost your staking APY (up to +1.8% per NFT) and get an on-chain POL valuation.
+                You don&apos;t have any RUN&EARN Sneaker NFTs in your wallet yet. Create a unique virtual sneaker with the AI studio to boost your staking APY (up to +1.8% per NFT) and get an on-chain POL valuation.
               </p>
               <Link
                 href="/mint"

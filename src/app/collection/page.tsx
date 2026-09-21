@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import VeSneakerStorefront from "@/components/VeSneakerStorefront";
+import ModStorefront from "@/components/ModStorefront";
 
 export const metadata: Metadata = {
   title: "veSneakers — RUN&EARN",
   description:
-    "Buy RUN&EARN veSneakers with POL — virtual sneakers that boost your POL staking APY, earn veRUNE points, and trade on the marketplace. No physical pair required.",
+    "Buy RUN&EARN veSneakers with POL — virtual sneakers that boost your POL staking APY, earn veRUNE points, equip mods, and trade on the marketplace.",
 };
 
 export default function CollectionPage() {
@@ -30,14 +31,18 @@ export default function CollectionPage() {
             className="animate-fade-up max-w-2xl leading-relaxed text-foreground/60"
             style={{ animationDelay: "240ms" }}
           >
-            veSneakers are the virtual version of the RUN&EARN sneakers. Buy them with
-            POL whether or not you own a physical pair, then lock them in staking for a
-            POL APY boost, activate them daily to earn veRUNE, and trade them on the
+            veSneakers are the playable NFTs of the RUN&EARN virtual sneaker economy.
+            Buy them with POL, lock them in staking for a POL APY boost, activate them
+            daily to earn veRUNE, equip mod NFTs in the workshop, and trade them on the
             marketplace. Each design is capped at 1,000 copies.
           </p>
         </section>
 
         <VeSneakerStorefront />
+
+        <div className="mt-16">
+          <ModStorefront />
+        </div>
       </main>
 
       <Footer />

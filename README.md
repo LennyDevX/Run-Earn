@@ -1,6 +1,22 @@
 # RUN&EARN
 
-RUN&EARN is a Next.js App Router experience for Polygon sneaker NFTs, native POL staking, RUNE rewards, and community utility.
+RUN&EARN is a virtual sneaker game economy on Polygon: AI-minted sneaker NFTs (veSneakers) that you upgrade, trade, rent, and put to work — with native POL staking, virtual veRUNE points, and the REN token on the horizon.
+
+## v1.0 — Virtual sneaker game economy
+
+This release delivers the core contracts and base concepts of the game, developed and tested end-to-end and ready for Polygon Amoy deployment. Nothing is deployed to mainnet yet; this is the deployment-ready foundation designed to scale.
+
+**What v1.0 includes:**
+
+- **veSneakers** (`SneakerMint`) — the core ERC-721s. Create them with the AI mint studio from a photo of your sneaker, or buy designs from the veSneaker store. Fully virtual, playable, upgradeable, tradable.
+- **Power · Health · Energy** (`SneakerGame`) — every veSneaker mines veRUNE at a power rate set by rarity, loses 1 health/day of real time (plus wear per activation), and spends energy on special abilities. A worn-out sneaker stops mining until repaired.
+- **Mods & badges** (`SneakerMods`) — a second ERC-721 collection of upgrade NFTs. Achievement badges are claimed by meeting on-chain conditions (streaks, lifetime veRUNE, collection size, POL staked); premium mods are sold by the store.
+- **Workshop** (`SneakerWorkshop`) — equip mods into six slots (sole, upper, lining, skin, core, boost) to cut wear, raise health and appraisal, auto-activate daily, and amplify staking APY. Consumable mod NFTs burn on use: repair kits restore health, surge triggers instant activation, boost capsules raise earn rate for 24h, and forge stones grant a free forge level — fueling a burn-driven economy.
+- **Marketplace V2** (`SneakerMarketplace`) — one venue for every collection: fixed-price sales, English auctions, and escrowed POL offers on sneakers *and* mods.
+- **Trades & rentals** (`SneakerSwap`, `ModRental`) — atomic NFT↔NFT swaps (± POL) and time-boxed mod rentals.
+- **veRUNE → REN** — veRUNE is the in-game virtual currency earned by daily activation and spent on repairs and forging; it redeems for the REN token once the reward pool opens.
+
+The earlier physical-store and physical-redemption direction is no longer part of the product — RUN&EARN is a purely virtual economy.
 
 ## Development
 
@@ -30,10 +46,12 @@ The app uses:
 Desktop extensions and in-app wallet browsers use EIP-6963/EIP-1193. Mobile browsers use the official MetaMask Connect and OKX Universal Provider SDK handoff with deep-link support. The app defaults to Polygon mainnet; set `NEXT_PUBLIC_POLYGON_NETWORK=amoy` for testnet work. User actions are signed by the connected wallet.
 
 - `/mint` generates AI sneaker artwork and a SHA-256 proof locally; production minting still requires verifier authorization.
-- `/collection` is the **veSneakers** store: buy virtual sneakers with POL (no physical pair required), then boost staking APY, earn veRUNE, and trade them.
-- `/marketplace` lists, buys, auctions, and makes escrowed POL offers on SneakerMint NFTs with on-chain appraiser valuations.
-- `/game` runs the daily sneaker activation loop: 24h activations, streak bonuses, durability wear/repair, and veRUNE point redemption.
-- `/staking` accepts native POL deposits, tracks POL earnings, locks sneaker NFTs for APY boosts, and shows recent indexed activity.
+- `/collection` is the **veSneakers** store: buy virtual sneakers with POL, then boost staking APY, earn veRUNE, equip mods, and trade them.
+- `/workshop` is the upgrade hub: live power/health/energy vitals, six equip slots, consumable ability NFTs, and the veRUNE forge.
+- `/badges` lists claimable achievements minted as mod NFTs.
+- `/marketplace` lists, buys, auctions, and makes escrowed POL offers on any allowed collection — sneakers and mods — with on-chain appraiser valuations.
+- `/game` runs the daily sneaker activation loop: 24h activations, streak bonuses, live health decay, energy refills, and veRUNE point redemption.
+- `/staking` accepts native POL deposits, tracks POL earnings, locks sneaker NFTs for APY boosts (including Boost mods), and shows recent indexed activity.
 - `/defi` contains the broader DeFi overview and the staking dashboard.
 
 Copy `.env.example` to `.env.local`:
@@ -98,13 +116,19 @@ and `runearn-subgraph-activity`.
 The current Solidity foundation is:
 
 - `contracts/SneakerMint.sol`
-- `contracts/RUNEToken.sol` (symbol `REN`, 100M hard cap)
+- `contracts/RENToken.sol` (symbol `REN`, 100M hard cap)
 - `contracts/SneakerStaking.sol`
 - `contracts/SneakerAppraiser.sol`
 - `contracts/SneakerMarketplace.sol`
 - `contracts/SneakerGame.sol`
 - `contracts/VeSneakerStore.sol`
+- `contracts/ISneakerBoosts.sol` — shared boost interface read by game, staking, appraiser, and marketplace
+- `contracts/SneakerMods.sol` — ERC-721 upgrade/badge collection with on-chain achievement claims
+- `contracts/SneakerWorkshop.sol` — six-slot equip system, consumable ability NFTs, and the veRUNE forge
+- `contracts/SneakerSwap.sol` — atomic NFT↔NFT trades (± POL) across collections
+- `contracts/ModRental.sol` — time-boxed mod rentals paid in POL
+- `contracts/ModStore.sol` — primary sale of premium mod designs
 
-`SneakerStaking` separates user POL principal from a funded POL reward reserve. SneakerMint NFTs can be manually locked to increase APY with rarity-based boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%). `SneakerAppraiser` provides on-chain POL value estimates for each NFT based on rarity and tier. `SneakerMarketplace` supports fixed-price sales, English auctions, and POL offers — staked NFTs cannot be listed. `SneakerGame` adds a daily-activation gamification loop with virtual veRUNE points redeemable for REN. `VeSneakerStore` sells virtual sneakers (veSneakers) for POL on demand, no physical pair required. Tokenomics are documented in [`docs/veRune-tokenomics.md`](docs/veRune-tokenomics.md); contract boundaries, economics, and deployment order in [`docs/contract-architecture-plan.md`](docs/contract-architecture-plan.md) and [`docs/polygon-staking-model.md`](docs/polygon-staking-model.md).
+`SneakerStaking` separates user POL principal from a funded POL reward reserve. SneakerMint NFTs can be manually locked to increase APY with rarity-based boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%) plus Boost-mod bonuses via the workshop. `SneakerAppraiser` provides on-chain POL value estimates for each NFT based on rarity, tier, forge level, and equipped Skin mods. `SneakerMarketplace` supports fixed-price sales, English auctions, and POL offers across approved collections — staked NFTs and sneakers with equipped mods cannot be listed. `SneakerGame` runs the mining loop — rarity-scaled power, daily health decay, and energy for consumable abilities — with virtual veRUNE points redeemable for REN and workshop effects (earn bonus, wear reduction, repair discount, auto-activation) applied on-chain. `VeSneakerStore` sells virtual sneakers (veSneakers) for POL on demand; `ModStore` does the same for premium upgrade mods. Tokenomics are documented in [`docs/veRune-tokenomics.md`](docs/veRune-tokenomics.md); contract boundaries, economics, and deployment order in [`docs/contract-architecture-plan.md`](docs/contract-architecture-plan.md) and [`docs/polygon-staking-model.md`](docs/polygon-staking-model.md).
 
 No staking or reward contract is treated as production-ready until it has tests, Polygon Amoy validation, economic review, multisig controls, reserve policy, and independent security review.

@@ -17,6 +17,8 @@ export type SneakerGameState = {
   durability: bigint;
   pendingPoints: bigint;
   lifetimePoints: bigint;
+  lastDecayAt: bigint;
+  energy: bigint;
 };
 
 export type GameSneaker = OwnedSneaker & {
@@ -24,6 +26,11 @@ export type GameSneaker = OwnedSneaker & {
   pending: bigint;
   canActivate: boolean;
   secondsUntilActivation: bigint;
+  power: bigint;
+  health: number;
+  energy: number;
+  maxEnergy: number;
+  earnRate: bigint;
 };
 
 export type GameParams = {
@@ -111,7 +118,11 @@ export function useSneakerGame() {
       setTotalRedeemedPoints(redeemed as bigint);
 
       const tokenIds = owned.sneakers.map((s) => s.tokenId);
-      const [states, pendings, canActives, secondsUntil] = await Promise.all([
+      const readStat = (functionName: string, tokenId: bigint, fallback: bigint | number | boolean) =>
+        wallet.publicClient
+          .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName, args: [tokenId] } as never)
+          .catch(() => fallback);
+      const [states, pendings, canActives, secondsUntil, powers, healths, energies, maxEnergies, earnRates] = await Promise.all([
         Promise.all(
           tokenIds.map((tokenId) =>
             wallet.publicClient
@@ -119,31 +130,20 @@ export function useSneakerGame() {
               .catch(() => null),
           ),
         ),
-        Promise.all(
-          tokenIds.map((tokenId) =>
-            wallet.publicClient
-              .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "pendingPoints", args: [tokenId] })
-              .catch(() => 0n),
-          ),
-        ),
-        Promise.all(
-          tokenIds.map((tokenId) =>
-            wallet.publicClient
-              .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "canActivate", args: [tokenId] })
-              .catch(() => false),
-          ),
-        ),
-        Promise.all(
-          tokenIds.map((tokenId) =>
-            wallet.publicClient
-              .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "secondsUntilActivation", args: [tokenId] })
-              .catch(() => 0n),
-          ),
-        ),
+        Promise.all(tokenIds.map((tokenId) => readStat("pendingPoints", tokenId, 0n))),
+        Promise.all(tokenIds.map((tokenId) => readStat("canActivate", tokenId, false))),
+        Promise.all(tokenIds.map((tokenId) => readStat("secondsUntilActivation", tokenId, 0n))),
+        Promise.all(tokenIds.map((tokenId) => readStat("powerOf", tokenId, 0n))),
+        Promise.all(tokenIds.map((tokenId) => readStat("healthOf", tokenId, 0))),
+        Promise.all(tokenIds.map((tokenId) => readStat("energyOf", tokenId, 0))),
+        Promise.all(tokenIds.map((tokenId) => readStat("maxEnergyOf", tokenId, 0))),
+        Promise.all(tokenIds.map((tokenId) => readStat("earnRatePerSecond", tokenId, 0n))),
       ]);
 
       const next: GameSneaker[] = owned.sneakers.map((sneaker, idx) => {
-        const raw = states[idx] as readonly [bigint, bigint, bigint, bigint, bigint, bigint] | null;
+        const raw = states[idx] as
+          | readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+          | null;
         const state: SneakerGameState = raw
           ? {
               lastActivationAt: raw[0],
@@ -152,6 +152,8 @@ export function useSneakerGame() {
               durability: raw[3],
               pendingPoints: raw[4],
               lifetimePoints: raw[5],
+              lastDecayAt: raw[6],
+              energy: raw[7],
             }
           : {
               lastActivationAt: 0n,
@@ -160,6 +162,8 @@ export function useSneakerGame() {
               durability: 0n,
               pendingPoints: 0n,
               lifetimePoints: 0n,
+              lastDecayAt: 0n,
+              energy: 0n,
             };
         return {
           ...sneaker,
@@ -167,6 +171,11 @@ export function useSneakerGame() {
           pending: pendings[idx] as bigint,
           canActivate: canActives[idx] as boolean,
           secondsUntilActivation: secondsUntil[idx] as bigint,
+          power: powers[idx] as bigint,
+          health: Number(healths[idx]),
+          energy: Number(energies[idx]),
+          maxEnergy: Number(maxEnergies[idx]),
+          earnRate: earnRates[idx] as bigint,
         };
       });
       setSneakers(next);

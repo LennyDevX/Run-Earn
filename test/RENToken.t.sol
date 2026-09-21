@@ -2,17 +2,17 @@
 pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
-import {RUNEToken} from "../contracts/RUNEToken.sol";
+import {RENToken} from "../contracts/RENToken.sol";
 
-contract RUNETokenTest is Test {
-    RUNEToken token;
+contract RENTokenTest is Test {
+    RENToken token;
     address admin = address(0xA11CE);
     address minter = address(0xB0B);
     address alice = address(0xA1);
     address bob = address(0xB0);
 
     function setUp() public {
-        token = new RUNEToken(admin, minter);
+        token = new RENToken(admin, minter);
     }
 
     // ─────────── Constructor ───────────
@@ -23,13 +23,13 @@ contract RUNETokenTest is Test {
     }
 
     function test_Constructor_RevertZeroAdmin() public {
-        vm.expectRevert("RUNEToken: zero admin");
-        new RUNEToken(address(0), minter);
+        vm.expectRevert("RENToken: zero admin");
+        new RENToken(address(0), minter);
     }
 
     function test_Constructor_RevertZeroMinter() public {
-        vm.expectRevert("RUNEToken: zero minter");
-        new RUNEToken(admin, address(0));
+        vm.expectRevert("RENToken: zero minter");
+        new RENToken(admin, address(0));
     }
 
     function test_NameAndSymbol() public view {
@@ -59,14 +59,14 @@ contract RUNETokenTest is Test {
 
     function test_Mint_RevertZeroRecipient() public {
         vm.prank(minter);
-        vm.expectRevert("RUNEToken: zero recipient");
+        vm.expectRevert("RENToken: zero recipient");
         token.mint(address(0), 1000);
     }
 
     function test_Mint_RevertCapExceeded() public {
         uint256 overCap = token.MAX_SUPPLY() + 1;
         vm.prank(minter);
-        vm.expectRevert("RUNEToken: cap exceeded");
+        vm.expectRevert("RENToken: cap exceeded");
         token.mint(alice, overCap);
     }
 

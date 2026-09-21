@@ -3,14 +3,14 @@ pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
 import {SneakerMint} from "../contracts/SneakerMint.sol";
-import {RUNEToken} from "../contracts/RUNEToken.sol";
+import {RENToken} from "../contracts/RENToken.sol";
 import {SneakerStaking} from "../contracts/SneakerStaking.sol";
 import {SneakerAppraiser} from "../contracts/SneakerAppraiser.sol";
 import {SneakerMarketplace} from "../contracts/SneakerMarketplace.sol";
 
 contract SneakerMarketplaceTest is Test {
     SneakerMint nft;
-    RUNEToken ren;
+    RENToken ren;
     SneakerStaking staking;
     SneakerAppraiser appraiser;
     SneakerMarketplace marketplace;
@@ -30,7 +30,7 @@ contract SneakerMarketplaceTest is Test {
 
     function setUp() public {
         nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
-        ren = new RUNEToken(admin, admin);
+        ren = new RENToken(admin, admin);
         staking = new SneakerStaking(
             admin,
             address(nft),
@@ -97,15 +97,15 @@ contract SneakerMarketplaceTest is Test {
 
     function test_List_TransfersNFTToMarketplace() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         assertEq(nft.ownerOf(1), address(marketplace));
-        assertEq(marketplace.tokenSaleKind(1), 1);
+        assertEq(marketplace.tokenSaleKind(address(nft), 1), 1);
     }
 
     function test_List_RevertNotOwner() public {
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: not owner");
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
     }
 
     function test_List_RevertStakedNFT() public {
@@ -117,18 +117,18 @@ contract SneakerMarketplaceTest is Test {
 
         vm.prank(alice);
         vm.expectRevert("SneakerMarketplace: NFT staked");
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
     }
 
     function test_List_RevertPriceTooLow() public {
         vm.prank(alice);
         vm.expectRevert("SneakerMarketplace: price too low");
-        marketplace.list(1, 0.0001 ether);
+        marketplace.list(address(nft), 1, 0.0001 ether);
     }
 
     function test_Buy_PaysSellerAndTransfersNFT() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
 
         uint256 sellerBefore = alice.balance;
         vm.deal(bob, 10 ether);
@@ -139,12 +139,12 @@ contract SneakerMarketplaceTest is Test {
         // Seller receives 5 ETH minus 2.5% fee = 4.875
         assertEq(alice.balance, sellerBefore + 4.875 ether);
         assertEq(marketplace.accumulatedFees(), 0.125 ether);
-        assertEq(marketplace.tokenSaleKind(1), 0);
+        assertEq(marketplace.tokenSaleKind(address(nft), 1), 0);
     }
 
     function test_Buy_RevertWrongPayment() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         vm.deal(bob, 10 ether);
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: wrong payment");
@@ -153,7 +153,7 @@ contract SneakerMarketplaceTest is Test {
 
     function test_Buy_RevertSellerCannotBuy() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         vm.expectRevert("SneakerMarketplace: seller cannot buy");
@@ -162,16 +162,16 @@ contract SneakerMarketplaceTest is Test {
 
     function test_CancelListing_ReturnsNFT() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         vm.prank(alice);
         marketplace.cancelListing(1);
         assertEq(nft.ownerOf(1), alice);
-        assertEq(marketplace.tokenSaleKind(1), 0);
+        assertEq(marketplace.tokenSaleKind(address(nft), 1), 0);
     }
 
     function test_CancelListing_RevertNotSeller() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: not seller");
         marketplace.cancelListing(1);
@@ -181,9 +181,9 @@ contract SneakerMarketplaceTest is Test {
 
     function test_CreateAuction_EscrowsNFT() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         assertEq(nft.ownerOf(2), address(marketplace));
-        assertEq(marketplace.tokenSaleKind(2), 2);
+        assertEq(marketplace.tokenSaleKind(address(nft), 2), 2);
     }
 
     function test_CreateAuction_RevertStakedNFT() public {
@@ -194,12 +194,12 @@ contract SneakerMarketplaceTest is Test {
 
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: NFT staked");
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
     }
 
     function test_Bid_AndSettle() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
 
         vm.deal(alice, 10 ether);
         vm.prank(alice);
@@ -219,12 +219,12 @@ contract SneakerMarketplaceTest is Test {
         assertEq(nft.ownerOf(2), carol);
         // Seller receives 2 ETH minus 2.5% = 1.95
         assertEq(bob.balance, sellerBefore + 1.95 ether);
-        assertEq(marketplace.tokenSaleKind(2), 0);
+        assertEq(marketplace.tokenSaleKind(address(nft), 2), 0);
     }
 
     function test_Bid_RevertTooLow() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         vm.expectRevert("SneakerMarketplace: bid too low");
@@ -233,7 +233,7 @@ contract SneakerMarketplaceTest is Test {
 
     function test_Bid_RevertSellerCannotBid() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         vm.deal(bob, 10 ether);
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: seller cannot bid");
@@ -242,7 +242,7 @@ contract SneakerMarketplaceTest is Test {
 
     function test_Bid_RevertAfterEnd() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         vm.warp(block.timestamp + 1 days + 1);
         vm.deal(alice, 10 ether);
         vm.prank(alice);
@@ -252,16 +252,16 @@ contract SneakerMarketplaceTest is Test {
 
     function test_SettleAuction_NoBids_ReturnsNFT() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         vm.warp(block.timestamp + 1 days + 1);
         marketplace.settleAuction(1);
         assertEq(nft.ownerOf(2), bob);
-        assertEq(marketplace.tokenSaleKind(2), 0);
+        assertEq(marketplace.tokenSaleKind(address(nft), 2), 0);
     }
 
     function test_SettleAuction_RevertWhileRunning() public {
         vm.prank(bob);
-        marketplace.createAuction(2, 1 ether, 1 days);
+        marketplace.createAuction(address(nft), 2, 1 ether, 1 days);
         vm.expectRevert("SneakerMarketplace: auction running");
         marketplace.settleAuction(1);
     }
@@ -271,9 +271,9 @@ contract SneakerMarketplaceTest is Test {
     function test_MakeOffer_EscrowsPOL() public {
         vm.deal(alice, 10 ether);
         vm.prank(alice);
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
 
-        (address buyer, uint256 tokenId, uint256 amount, , bool active) = marketplace.offers(1);
+        (address buyer, , uint256 tokenId, uint256 amount, , bool active) = marketplace.offers(1);
         assertEq(buyer, alice);
         assertEq(tokenId, 2);
         assertEq(amount, 2 ether);
@@ -286,22 +286,22 @@ contract SneakerMarketplaceTest is Test {
         vm.deal(bob, 10 ether);
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: own token");
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
     }
 
     function test_MakeOffer_RevertListedToken() public {
         vm.prank(bob);
-        marketplace.list(2, 5 ether);
+        marketplace.list(address(nft), 2, 5 ether);
         vm.deal(alice, 10 ether);
         vm.prank(alice);
         vm.expectRevert("SneakerMarketplace: token listed");
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
     }
 
     function test_AcceptOffer_PaysSellerAndTransfersNFT() public {
         vm.deal(alice, 10 ether);
         vm.prank(alice);
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
 
         uint256 sellerBefore = bob.balance;
         vm.prank(bob);
@@ -309,14 +309,14 @@ contract SneakerMarketplaceTest is Test {
 
         assertEq(nft.ownerOf(2), alice);
         assertEq(bob.balance, sellerBefore + 1.95 ether); // 2 - 2.5%
-        (, , , , bool active) = marketplace.offers(1);
+        (, , , , , bool active) = marketplace.offers(1);
         assertFalse(active);
     }
 
     function test_AcceptOffer_RevertNotOwner() public {
         vm.deal(alice, 10 ether);
         vm.prank(alice);
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
         vm.prank(carol);
         vm.expectRevert("SneakerMarketplace: not owner");
         marketplace.acceptOffer(1);
@@ -325,7 +325,7 @@ contract SneakerMarketplaceTest is Test {
     function test_CancelOffer_ReturnsPOL() public {
         vm.deal(alice, 10 ether);
         vm.prank(alice);
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
 
         uint256 before = alice.balance;
         vm.prank(alice);
@@ -336,7 +336,7 @@ contract SneakerMarketplaceTest is Test {
     function test_CancelOffer_RevertNotBuyer() public {
         vm.deal(alice, 10 ether);
         vm.prank(alice);
-        marketplace.makeOffer{value: 2 ether}(2, 1 days);
+        marketplace.makeOffer{value: 2 ether}(address(nft), 2, 1 days);
         vm.prank(bob);
         vm.expectRevert("SneakerMarketplace: not buyer");
         marketplace.cancelOffer(1);
@@ -359,7 +359,7 @@ contract SneakerMarketplaceTest is Test {
 
     function test_WithdrawFees() public {
         vm.prank(alice);
-        marketplace.list(1, 5 ether);
+        marketplace.list(address(nft), 1, 5 ether);
         vm.deal(bob, 10 ether);
         vm.prank(bob);
         marketplace.buy{value: 5 ether}(1);

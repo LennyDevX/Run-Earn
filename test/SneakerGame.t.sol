@@ -3,12 +3,12 @@ pragma solidity 0.8.36;
 
 import {Test} from "forge-std/Test.sol";
 import {SneakerMint} from "../contracts/SneakerMint.sol";
-import {RUNEToken} from "../contracts/RUNEToken.sol";
+import {RENToken} from "../contracts/RENToken.sol";
 import {SneakerGame} from "../contracts/SneakerGame.sol";
 
 contract SneakerGameTest is Test {
     SneakerMint nft;
-    RUNEToken ren;
+    RENToken ren;
     SneakerGame game;
 
     address admin = address(0xA11CE);
@@ -28,7 +28,7 @@ contract SneakerGameTest is Test {
 
     function setUp() public {
         nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
-        ren = new RUNEToken(admin, admin);
+        ren = new RENToken(admin, admin);
         game = new SneakerGame(
             admin,
             address(nft),
@@ -73,7 +73,7 @@ contract SneakerGameTest is Test {
     function test_Activate_StartsStreakAndWearsDurability() public {
         vm.prank(alice);
         game.activate(1);
-        (, , uint32 streak, uint16 durability, , ) = game.sneakers(1);
+        (, , uint32 streak, uint16 durability, , , , ) = game.sneakers(1);
         assertEq(streak, 1);
         assertEq(durability, maxDurability - wearPerActivation);
     }
@@ -99,7 +99,7 @@ contract SneakerGameTest is Test {
         vm.warp(block.timestamp + 25 hours);
         vm.prank(alice);
         game.activate(1);
-        (, , uint32 streak, , , ) = game.sneakers(1);
+        (, , uint32 streak, , , , , ) = game.sneakers(1);
         assertEq(streak, 2);
     }
 
@@ -109,20 +109,19 @@ contract SneakerGameTest is Test {
         vm.warp(block.timestamp + 3 days); // beyond 48h window
         vm.prank(alice);
         game.activate(1);
-        (, , uint32 streak, , , ) = game.sneakers(1);
+        (, , uint32 streak, , , , , ) = game.sneakers(1);
         assertEq(streak, 1);
     }
 
     function test_Activate_RevertWornOut() public {
-        // Activate until durability runs out
-        for (uint256 i = 0; i < maxDurability; i++) {
+        // With 1 wear + ~1 day of health decay per 25h cycle the sneaker dies
+        // after ~5 daily activations.
+        for (uint256 i = 0; i < 5; i++) {
             vm.prank(alice);
             game.activate(1);
             vm.warp(block.timestamp + 25 hours);
         }
-        // Durability is now 0
-        (, , , uint16 durability, , ) = game.sneakers(1);
-        assertEq(durability, 0);
+        assertEq(game.healthOf(1), 0);
         vm.prank(alice);
         vm.expectRevert("SneakerGame: sneaker worn out");
         game.activate(1);
@@ -162,7 +161,7 @@ contract SneakerGameTest is Test {
     }
 
     function test_PendingPoints_ZeroWhenWornOut() public {
-        for (uint256 i = 0; i < maxDurability; i++) {
+        for (uint256 i = 0; i < 5; i++) {
             vm.prank(alice);
             game.activate(1);
             vm.warp(block.timestamp + 25 hours);
@@ -188,7 +187,7 @@ contract SneakerGameTest is Test {
         game.claimPoints(1);
         assertApproxEqRel(game.veRuneBalance(alice), 400 ether, 0.01e18);
 
-        (, , , , uint256 pending, ) = game.sneakers(1);
+        (, , , , uint256 pending, , , ) = game.sneakers(1);
         assertEq(pending, 0);
     }
 
@@ -222,7 +221,7 @@ contract SneakerGameTest is Test {
         vm.prank(alice);
         game.repair(1);
 
-        (, , , uint16 durability, , ) = game.sneakers(1);
+        (, , , uint16 durability, , , , ) = game.sneakers(1);
         assertEq(durability, maxDurability);
         assertEq(game.veRuneBalance(alice), balanceBefore - repairCost);
     }
@@ -303,5 +302,81 @@ contract SneakerGameTest is Test {
         assertFalse(game.canActivate(1));
         vm.warp(block.timestamp + 25 hours);
         assertTrue(game.canActivate(1));
+    }
+
+    // ─────────── Power (rarity-scaled mining) ───────────
+
+    function test_Power_ScalesWithRarity() public view {
+        // Sneaker 1: Epic r50 → 400 * (5000 + 50*100)/10000 = 400/day (1.0x)
+        assertEq(game.powerOf(1), 400 ether);
+        // Sneaker 2: Mythic r90 → 800 * (5000 + 90*100)/10000 = 1120/day (1.4x)
+        assertEq(game.powerOf(2), 1120 ether);
+    }
+
+    function test_Power_RarityScalesEarnRate() public {
+        vm.prank(alice);
+        game.activate(2); // Mythic r90 → 1120/day
+        vm.warp(block.timestamp + 1 days);
+        assertApproxEqRel(game.pendingPoints(2), 1120 ether, 0.01e18);
+    }
+
+    // ─────────── Health (time decay) ───────────
+
+    function test_Health_DecaysOverTime() public {
+        vm.prank(alice);
+        game.activate(1); // health 10 - 1 wear = 9
+        vm.warp(block.timestamp + 3 days);
+        assertEq(game.healthOf(1), 6); // 9 - 3 days decay
+    }
+
+    function test_Health_DecayBlocksActivation() public {
+        vm.prank(alice);
+        game.activate(1);
+        vm.warp(block.timestamp + 10 days); // 9 health - 10 days → dead
+        assertEq(game.healthOf(1), 0);
+        assertFalse(game.canActivate(1));
+        assertEq(game.earnRatePerSecond(1), 0);
+    }
+
+    function test_Health_RepairResetsDecayClock() public {
+        // Fund alice with veRUNE from sneaker 2.
+        vm.startPrank(alice);
+        game.activate(2);
+        vm.warp(block.timestamp + 24 hours);
+        game.claimPoints(2);
+        game.activate(1);
+        vm.warp(block.timestamp + 5 days);
+        game.repair(1);
+        vm.stopPrank();
+        assertEq(game.healthOf(1), maxDurability);
+        vm.warp(block.timestamp + 2 days);
+        assertEq(game.healthOf(1), maxDurability - 2); // decay restarts from repair
+    }
+
+    // ─────────── Energy ───────────
+
+    function test_Energy_CapacityAndRefill() public {
+        // r50 → maxEnergy = 2 + 50/20 = 4; r90 → 2 + 90/20 = 6
+        assertEq(game.maxEnergyOf(1), 4);
+        assertEq(game.maxEnergyOf(2), 6);
+        // Fresh sneaker reports full energy before first activation.
+        assertEq(game.energyOf(1), 4);
+        vm.prank(alice);
+        game.activate(1);
+        assertEq(game.energyOf(1), 4);
+    }
+
+    function test_Energy_SpendEnergy_RevertNotWorkshop() public {
+        vm.prank(alice);
+        game.activate(1);
+        vm.prank(alice);
+        vm.expectRevert("SneakerGame: not workshop");
+        game.spendEnergy(1, 1);
+    }
+
+    function test_ActivateFromWorkshop_RevertNotWorkshop() public {
+        vm.prank(alice);
+        vm.expectRevert("SneakerGame: not workshop");
+        game.activateFromWorkshop(1, alice);
     }
 }

@@ -1,0 +1,50 @@
+import type { Metadata } from "next";
+import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
+import WorkshopDashboard from "@/components/WorkshopDashboard";
+
+export const metadata: Metadata = {
+  title: "Workshop — RUN&EARN",
+  description: "Equip mod NFTs into six upgrade slots, burn consumable abilities, and forge your veSneakers with veRUNE for permanent stat boosts.",
+};
+
+export default function WorkshopPage() {
+  return (
+    <div className="flex flex-1 flex-col">
+      <Navbar />
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
+        <section className="flex flex-col gap-5 py-12 md:py-16">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="animate-fade-up rounded-full border border-mint/20 bg-mint/10 px-3.5 py-1.5 font-pixel text-[10px] text-mint">
+              WORKSHOP
+            </span>
+            <span className="animate-fade-up rounded-full border border-magma/20 bg-magma/10 px-3.5 py-1.5 font-pixel text-[10px] text-magma" style={{ animationDelay: "60ms" }}>
+              MODS &amp; FORGE
+            </span>
+          </div>
+
+          <h1
+            className="animate-fade-up max-w-3xl text-4xl font-extrabold tracking-tight text-balance md:text-5xl lg:text-6xl"
+            style={{ animationDelay: "120ms" }}
+          >
+            Upgrade your veSneakers
+          </h1>
+
+          <p
+            className="animate-fade-up max-w-2xl text-base leading-relaxed text-foreground/65 md:text-lg"
+            style={{ animationDelay: "240ms" }}
+          >
+            Equip mod NFTs into six slots — sole, upper, lining, skin, core, and boost — to cut wear,
+            raise the earn rate, restyle your sneaker, auto-activate every day, and amplify staking APY.
+            Burn consumable mods for repair kits, instant surges, 24h boosts, and free forge levels.
+          </p>
+        </section>
+
+        <WorkshopDashboard />
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

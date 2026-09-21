@@ -22,7 +22,7 @@ const runeAbi = [
   { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
 ] as const;
 
-function deploymentAddress(networkName: string, name: "RUNEToken" | "SneakerStaking") {
+function deploymentAddress(networkName: string, name: "RENToken" | "SneakerStaking") {
   try {
     return loadDeployment(networkName).contracts[name]?.address;
   } catch {
@@ -95,7 +95,7 @@ async function main() {
   if (asset === "RUNE") {
     const runeAddress = addressEnv(
       "RUNE_TOKEN_ADDRESS",
-      deploymentAddress(networkName, "RUNEToken") ?? "0x0000000000000000000000000000000000000000" as Address,
+      deploymentAddress(networkName, "RENToken") ?? "0x0000000000000000000000000000000000000000" as Address,
     );
     const decimals = await publicClient.readContract({ address: runeAddress, abi: runeAbi, functionName: "decimals" });
     const amount = parseUnits(amountText, decimals);
