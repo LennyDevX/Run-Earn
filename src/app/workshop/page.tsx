@@ -35,9 +35,10 @@ export default function WorkshopPage() {
             className="animate-fade-up max-w-2xl text-base leading-relaxed text-foreground/65 md:text-lg"
             style={{ animationDelay: "240ms" }}
           >
-            Equip mod NFTs into six slots — sole, upper, lining, skin, core, and boost — to cut wear,
-            raise the earn rate, restyle your sneaker, auto-activate every day, and amplify staking APY.
-            Burn consumable mods for repair kits, instant surges, 24h boosts, and free forge levels.
+            Equip mod NFTs into seven slots — sole, upper, lining, skin, core, boost, and skill — to cut
+            wear, raise the earn rate, restyle your sneaker, auto-activate every day, amplify staking APY,
+            and run passive skill effects. Burn consumable mods for repair kits, instant surges, earn
+            boosts, energy refills, lucky repairs, and free forge levels.
           </p>
         </section>
 

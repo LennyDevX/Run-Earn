@@ -2,62 +2,149 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import WalletButton from "@/components/WalletButton";
 import MoreSheet from "@/components/MoreSheet";
+import { usePolygonWallet } from "@/components/Providers";
+import { useProfile } from "@/hooks/useProfile";
 
-/// Desktop navigation (>= md).
+/// Desktop navigation (>= md): five primary destinations, everything else grouped
+/// inside the "More" dropdown.
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/mint", label: "Mint" },
   { href: "/collection", label: "veSneakers" },
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/workshop", label: "Workshop" },
-  { href: "/badges", label: "Badges" },
   { href: "/game", label: "Game" },
-  { href: "/defi", label: "DeFi" },
-  { href: "/staking", label: "Staking" },
-  { href: "/roadmap", label: "Roadmap" },
+  { href: "/marketplace", label: "Market" },
+];
+
+/// Dropdown groups shown on desktop inside the "More" menu.
+const MENU_GROUPS = [
+  {
+    label: "Play",
+    links: [
+      {
+        href: "/workshop",
+        label: "Workshop",
+        description: "Equip mods, burn kits, and forge your sneakers.",
+      },
+      {
+        href: "/badges",
+        label: "Badges",
+        description: "Claim achievement badges earned by your veSneakers.",
+      },
+      {
+        href: "/my-nfts",
+        label: "My NFTs",
+        description: "Every sneaker and mod you minted from this wallet.",
+      },
+    ],
+  },
+  {
+    label: "Earn",
+    links: [
+      {
+        href: "/staking",
+        label: "Staking",
+        description: "Deposit POL, claim rewards, lock sneakers for APY.",
+      },
+      {
+        href: "/defi",
+        label: "DeFi overview",
+        description: "How the yield engine and rarity tiers work.",
+      },
+    ],
+  },
+  {
+    label: "Project",
+    links: [
+      {
+        href: "/roadmap",
+        label: "Roadmap",
+        description: "What shipped and what is coming next.",
+      },
+    ],
+  },
 ];
 
 /// Routes that do not fit in the mobile bottom bar, surfaced through the sheet.
-const SECONDARY_LINKS = [
-  {
-    href: "/workshop",
-    label: "Workshop",
-    description: "Equip mods, burn repair kits, and forge your sneakers.",
-  },
-  {
-    href: "/badges",
-    label: "Badges",
-    description: "Claim achievement badges earned by your veSneakers.",
-  },
-  {
-    href: "/staking",
-    label: "Staking",
-    description: "Deposit POL, claim rewards, lock sneakers for an APY boost.",
-  },
-  {
-    href: "/my-nfts",
-    label: "My NFTs",
-    description: "Every sneaker you minted from this wallet.",
-  },
-  {
-    href: "/defi",
-    label: "DeFi overview",
-    description: "How the yield engine and rarity tiers work.",
-  },
-  {
-    href: "/roadmap",
-    label: "Roadmap",
-    description: "What shipped and what is coming next.",
-  },
-];
+const SECONDARY_LINKS = MENU_GROUPS.flatMap((group) => group.links);
+
+/// Avatar/identity shortcut — sits left of the theme toggle on desktop and is
+/// also reachable on mobile (where the toggle lives inside the More sheet).
+function ProfileButton() {
+  const pathname = usePathname();
+  const wallet = usePolygonWallet();
+  const { avatarUrl } = useProfile(wallet.address);
+  const active = pathname === "/profile";
+
+  return (
+    <Link
+      href="/profile"
+      aria-label="Open your profile"
+      aria-current={active ? "page" : undefined}
+      className={`flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all active:scale-95 ${
+        active
+          ? "border-mint/60 bg-mint/10 shadow-sm shadow-mint/20"
+          : "border-foreground/15 bg-surface text-foreground/70 hover:border-foreground/30 hover:text-foreground"
+      }`}
+    >
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatarUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="size-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.9}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+        </svg>
+      )}
+    </Link>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const menuActive = SECONDARY_LINKS.some((link) => pathname === link.href);
+
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    setMenuOpen(false);
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
     <>
@@ -84,9 +171,76 @@ export default function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Grouped overflow menu */}
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className={`flex cursor-pointer items-center gap-1.5 transition-colors hover:text-foreground ${
+                  menuActive || menuOpen ? "font-semibold text-foreground" : "text-foreground/60"
+                }`}
+              >
+                More
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className={`size-3.5 transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+
+              {menuOpen ? (
+                <div
+                  role="menu"
+                  className="animate-backdrop-in absolute right-0 top-full mt-4 w-72 rounded-2xl border border-foreground/10 bg-background/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
+                >
+                  {MENU_GROUPS.map((group) => (
+                    <div key={group.label} className="py-1 first:pt-0 last:pb-0">
+                      <p className="px-3 pb-1 pt-2 font-pixel text-[9px] uppercase tracking-widest text-foreground/40">
+                        {group.label}
+                      </p>
+                      {group.links.map((link) => {
+                        const active = pathname === link.href;
+                        return (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            role="menuitem"
+                            aria-current={active ? "page" : undefined}
+                            onClick={() => setMenuOpen(false)}
+                            className={`flex flex-col rounded-xl px-3 py-2.5 transition-colors ${
+                              active ? "bg-mint/10" : "hover:bg-foreground/5"
+                            }`}
+                          >
+                            <span
+                              className={`text-sm font-semibold ${active ? "text-mint" : "text-foreground"}`}
+                            >
+                              {link.label}
+                            </span>
+                            <span className="mt-0.5 text-xs leading-relaxed text-foreground/55">
+                              {link.description}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </nav>
 
           <div className="flex items-center gap-2">
+            <ProfileButton />
             <div className="hidden md:block">
               <ThemeToggle />
             </div>

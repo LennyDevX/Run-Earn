@@ -173,9 +173,9 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 
 ## Workshop UI flow (`/workshop`, `useWorkshop` hook)
 
-1. Sneaker selector → six equip slots (Sole/Upper/Lining/Skin/Core/Boost), effective-stats panel, forge card, consumables section. Full mechanics: `runearn-upgrade-economy` skill.
+1. Sneaker selector → seven equip slots (Sole/Upper/Lining/Skin/Core/Boost/Skill), effective-stats panel, forge card, consumables section. Full mechanics: `runearn-upgrade-economy` skill.
 2. Equip is two transactions: `approve(workshop, modId)` on SneakerMods, then `equip(sneakerId, modId)` — the mod goes into workshop escrow. `unequip(sneakerId, slot)` returns it.
-3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), forge stone (2⚡).
+3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), forge stone (2⚡), Overdrive (3⚡, 48h), Stim pack (0⚡ refill), Lucky repair (1⚡, heal + boost).
 4. Forge burns `forgeCostPoints` veRUNE per level — show `forgeLevel` and the rarity/effective-earn bump.
 5. Blocked sneakers (staked, listed, rented out) must surface the contract revert as actionable copy.
 
@@ -211,6 +211,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 - Verify `/marketplace` list (approve + list) for sneakers AND mods, buy, auction bid/settle, offer make/accept/cancel, suggested prices, and mod-equipped-sneaker listing rejection on Amoy.
 - Verify `/marketplace` Rentals (list/rent/return) and Trades (create/accept/cancel swap) tabs on Amoy.
 - Verify `/game` activate (24h cooldown + energy refill), streak display, live health bar (time decay), power/energy stats, repair, claim points, and redemption gating on Amoy.
-- Verify `/workshop` equip/unequip across all six slots, each `useAbility` consumable burn (repair/surge/boost/forge stone), forge levels, and equipped-mod custody on Amoy.
-- Verify `/badges` achievement claims and `/collection` ModStore premium purchases on Amoy.
+- Verify `/workshop` equip/unequip across all seven slots (incl. the passive Skill slot), each `useAbility` consumable burn (repair/surge/boost/forge stone/Overdrive/Stim/Lucky), forge levels, and equipped-mod custody on Amoy.
+- Verify `/badges` achievement claims — including the "Level skills" section (free `PlayerLevel` claim gated by `PlayerProgress.levelOf`) — and `/collection` ModStore premium purchases plus `requiredLevel` gates on Amoy.
+- Verify `/profile`: username edit, avatar upload + NFT pick, on-chain level card (`progressOf`), skills list, and the Navbar `ProfileButton`.
 - **Mobile:** 320/390/430px + landscape + 768px tablet; bottom nav reachable on every route with correct `aria-current`; nothing hidden behind the bar; no horizontal overflow; reduced motion honoured; sheets trap focus and close on Escape; `/manifest.webmanifest`, `/favicon.ico`, `/apple-icon.png` return 200.

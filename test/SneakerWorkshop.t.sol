@@ -305,6 +305,86 @@ contract SneakerWorkshopTest is Test {
         workshop.useAbility(1, 1); // equipped-slot mod, not consumable
     }
 
+    // ─────────── Skill abilities (level-gated consumables, aux 4–6) ───────────
+
+    function test_Ability_Overdrive_48hBoost() public {
+        // Overdrive (aux 4) → +50% earn for 48h, costs 3 energy.
+        vm.prank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(6, 80, 2, 5_000, 4, true, keccak256("overdrive")));
+        vm.prank(alice);
+        game.activate(1); // energy = 4
+
+        vm.prank(alice);
+        workshop.useAbility(1, 5);
+        assertEq(workshop.tempBoostBps(1), 5_000);
+        assertEq(game.energyOf(1), 1); // 4 - 3
+
+        vm.warp(block.timestamp + 25 hours);
+        assertEq(workshop.earnBonusBps(1), 5_000); // still active past the normal 24h
+        vm.warp(block.timestamp + 24 hours);
+        assertEq(workshop.earnBonusBps(1), 0); // expired at 48h
+    }
+
+    function test_Ability_Stim_RefillsEnergy() public {
+        // Stim pack (aux 5) → energy back to max, free of charge.
+        vm.startPrank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(4, 10, 0, 0, 1, true, keccak256("s1")));
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(4, 10, 0, 0, 1, true, keccak256("s2")));
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(6, 80, 2, 0, 5, true, keccak256("stim")));
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        game.activate(1); // energy = 4
+        workshop.useAbility(1, 5); // surge → 2
+        workshop.useAbility(1, 6); // surge → 0
+        assertEq(game.energyOf(1), 0);
+
+        workshop.useAbility(1, 7); // stim → back to 4
+        assertEq(game.energyOf(1), 4);
+        vm.expectRevert();
+        mods.ownerOf(7);
+        vm.stopPrank();
+    }
+
+    function test_Ability_Stim_RevertOnDeadSneaker() public {
+        vm.prank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(6, 80, 2, 0, 5, true, keccak256("stim")));
+
+        vm.prank(alice);
+        game.activate(1);
+        for (uint i = 0; i < 4; i++) {
+            vm.warp(block.timestamp + 25 hours);
+            vm.prank(alice);
+            game.activate(1);
+        }
+        vm.warp(block.timestamp + 25 hours);
+        assertEq(game.healthOf(1), 0);
+
+        vm.prank(alice);
+        vm.expectRevert("SneakerGame: sneaker worn out");
+        workshop.useAbility(1, 5);
+    }
+
+    function test_Ability_LuckyRepair_RepairsAndBoosts() public {
+        // Lucky repair (aux 6) → full health + 24h boost, costs 1 energy.
+        vm.prank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(6, 80, 2, 1_000, 6, true, keccak256("lucky")));
+
+        vm.prank(alice);
+        game.activate(1);
+        vm.warp(block.timestamp + 25 hours); // health decays
+        assertLt(game.healthOf(1), 10);
+
+        vm.prank(alice);
+        workshop.useAbility(1, 5);
+        (, , , uint16 durability, , , , ) = game.sneakers(1);
+        assertEq(durability, 10);
+        assertEq(workshop.tempBoostBps(1), 1_000); // bonus effect applied
+        assertEq(game.energyOf(1), 3); // 4 - 1
+        vm.expectRevert();
+        mods.ownerOf(5);
+    }
+
     function test_Ability_CoreMod_EarningStopsWhenHealthDies() public {
         vm.prank(alice);
         mods.setApprovalForAll(address(workshop), true);

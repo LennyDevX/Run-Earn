@@ -10,6 +10,7 @@ import { useMintedSneakers } from "@/hooks/useMintedSneakers";
 import { useWalletOverview } from "@/hooks/useWalletOverview";
 import { useNftAppraisal } from "@/hooks/useNftAppraisal";
 import { RARITIES } from "@/lib/sneaker-nft";
+import { centerInScrollRow } from "@/lib/scroll-x";
 import PixelSneaker from "@/components/PixelSneaker";
 
 type Tab = "deposit" | "claim" | "withdraw" | "model";
@@ -327,7 +328,10 @@ export default function StakingVaultDashboard() {
           <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1 md:mx-0 md:px-0 md:pb-0">
             <button
               type="button"
-              onClick={() => setActiveTab("deposit")}
+              onClick={(event) => {
+                setActiveTab("deposit");
+                centerInScrollRow(event.currentTarget);
+              }}
               className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "deposit"
                   ? "bg-foreground text-background shadow-md"
@@ -338,7 +342,10 @@ export default function StakingVaultDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("claim")}
+              onClick={(event) => {
+                setActiveTab("claim");
+                centerInScrollRow(event.currentTarget);
+              }}
               className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "claim"
                   ? "bg-foreground text-background shadow-md"
@@ -349,7 +356,10 @@ export default function StakingVaultDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("withdraw")}
+              onClick={(event) => {
+                setActiveTab("withdraw");
+                centerInScrollRow(event.currentTarget);
+              }}
               className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "withdraw"
                   ? "bg-foreground text-background shadow-md"
@@ -360,7 +370,10 @@ export default function StakingVaultDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("model")}
+              onClick={(event) => {
+                setActiveTab("model");
+                centerInScrollRow(event.currentTarget);
+              }}
               className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                 activeTab === "model"
                   ? "bg-foreground text-background shadow-md"

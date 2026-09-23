@@ -10,20 +10,28 @@ import {SneakerMint} from "./SneakerMint.sol";
 import {SneakerGame} from "./SneakerGame.sol";
 import {SneakerStaking} from "./SneakerStaking.sol";
 
+/// @dev Minimal view of PlayerProgress needed for level-gated achievements.
+interface IPlayerProgressView {
+    function levelOf(address user) external view returns (uint8);
+}
+
 /// @title SneakerMods — upgrade and badge NFTs for RUN&EARN veSneakers.
 /// @notice Mods are ERC-721 tokens that improve a veSneaker when equipped in
-///      SneakerWorkshop. Each mod occupies one of six slots:
+///      SneakerWorkshop. Each mod occupies one of seven slots:
 ///        0 Sole   — reduces durability wear per activation
 ///        1 Upper  — increases the veRUNE earn rate
 ///        2 Lining — discounts the veRUNE repair cost
 ///        3 Skin   — raises the appraiser valuation and restyles the sneaker
 ///        4 Core   — keeps the sneaker earning without manual activation
 ///        5 Boost  — adds APY while the sneaker is locked in staking
-///      Consumable mods (repair kits) are burned on use instead of equipped.
+///        6 Skill  — level-gated skill NFT; its effectBps feeds the earn rate
+///      Consumable mods (repair kits, skill items) are burned on use instead
+///      of equipped.
 /// @dev Mods enter circulation through three paths:
 ///        1. Achievement claims: anyone can claim a badge mod by meeting an
 ///           on-chain verifiable condition (streak, lifetime veRUNE, collection
-///           size, or staked POL). One claim per wallet per achievement.
+///           size, staked POL, or player level via PlayerProgress). One claim
+///           per wallet per achievement.
 ///        2. Authorized mints: the store or backend mints premium mods through
 ///           MINTER_ROLE.
 ///        3. Secondary market: mods are tradable, rentable, and auctionable
@@ -37,7 +45,9 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     uint8 public constant SLOT_SKIN = 3;
     uint8 public constant SLOT_CORE = 4;
     uint8 public constant SLOT_BOOST = 5;
-    uint8 public constant SLOT_COUNT = 6;
+    /// @notice Skill NFTs — level-gated mods whose effectBps feeds the earn rate.
+    uint8 public constant SLOT_SKILL = 6;
+    uint8 public constant SLOT_COUNT = 7;
 
     /// @notice Sentinel for ModTraits.aux on mods that carry no auxiliary value.
     uint8 public constant NO_AUX = 255;
@@ -49,7 +59,8 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
         SneakerStreak, // owned sneaker daily streak >= threshold
         SneakerLifetimePoints, // owned sneaker lifetime veRUNE >= threshold
         NftBalance, // owned sneaker count >= threshold
-        StakedPol // POL principal staked >= threshold (wei)
+        StakedPol, // POL principal staked >= threshold (wei)
+        PlayerLevel // PlayerProgress.levelOf(user) >= threshold — skill NFTs
     }
 
     struct ModTraits {
@@ -82,6 +93,10 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     /// @notice Workshop contract authorized to burn consumable mods.
     address public workshop;
 
+    /// @notice PlayerProgress contract consulted by PlayerLevel achievements.
+    ///      Zero address disables level-gated claims (they always fail).
+    address public progress;
+
     uint256 private _nextTokenId;
     Achievement[] private _achievements;
 
@@ -95,6 +110,7 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     event AchievementClaimed(uint256 indexed achievementId, address indexed user, uint256 indexed tokenId);
     event ModBurned(uint256 indexed tokenId, address indexed caller);
     event WorkshopUpdated(address indexed workshop);
+    event ProgressUpdated(address indexed progress);
 
     constructor(
         string memory name_,
@@ -129,6 +145,12 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     function setWorkshop(address workshop_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         workshop = workshop_;
         emit WorkshopUpdated(workshop_);
+    }
+
+    /// @notice Link PlayerProgress for level-gated (skill) achievements.
+    function setProgress(address progress_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        progress = progress_;
+        emit ProgressUpdated(progress_);
     }
 
     /// @notice Register a claimable achievement and the mod it mints.
@@ -260,6 +282,9 @@ contract SneakerMods is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
         if (achievement.kind == ReqKind.StakedPol) {
             (uint256 principal, , , ) = staking.polPositions(user);
             return principal >= achievement.threshold;
+        }
+        if (achievement.kind == ReqKind.PlayerLevel) {
+            return progress != address(0) && IPlayerProgressView(progress).levelOf(user) >= achievement.threshold;
         }
         // Sneaker-scoped conditions require owning the evaluated sneaker.
         if (nft.ownerOf(sneakerId) != user) return false;

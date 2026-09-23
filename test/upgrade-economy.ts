@@ -289,7 +289,7 @@ describe("Upgrade economy (TypeScript integration)", () => {
     await modStore.write.addDesign([{
       name: "Swift Sole", uri: URI, slot: 0, rarity: 60, tier: 1,
       effectBps: 3_000, aux: 255, consumable: false,
-      price: 2n * 10n ** 18n, maxSupply: 100, minted: 0, active: false,
+      price: 2n * 10n ** 18n, maxSupply: 100, minted: 0, requiredLevel: 0, active: false,
     }], { account: admin.account });
 
     await modStore.write.buy([0n], { account: bob.account, value: 2n * 10n ** 18n });

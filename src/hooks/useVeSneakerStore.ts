@@ -17,6 +17,7 @@ export type VeSneakerDesign = {
   price: bigint;
   maxSupply: bigint;
   minted: bigint;
+  requiredLevel: number;
   active: boolean;
 };
 
@@ -60,16 +61,18 @@ export function useVeSneakerStore() {
 
       setDesigns(
         rows.map((row, index) => {
-          const [name, uri, rarity, tier, price, maxSupply, minted, active] = row as readonly [
-            string,
-            string,
-            number,
-            number,
-            bigint,
-            number,
-            number,
-            boolean,
-          ];
+          const [name, uri, rarity, tier, price, maxSupply, minted, requiredLevel, active] =
+            row as readonly [
+              string,
+              string,
+              number,
+              number,
+              bigint,
+              number,
+              number,
+              number,
+              boolean,
+            ];
           return {
             designIndex: BigInt(index),
             name,
@@ -79,6 +82,7 @@ export function useVeSneakerStore() {
             price,
             maxSupply: BigInt(maxSupply),
             minted: BigInt(minted),
+            requiredLevel: Number(requiredLevel),
             active,
           };
         }),

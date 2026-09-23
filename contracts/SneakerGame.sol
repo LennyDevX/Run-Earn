@@ -83,6 +83,8 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
     mapping(uint256 tokenId => SneakerState state) public sneakers;
     mapping(address owner => uint256 balance) public veRuneBalance;
     mapping(address owner => uint256 redeemedTotal) public totalRedeemed;
+    /// @notice Lifetime veRUNE claimed by a wallet — feeds PlayerProgress XP.
+    mapping(address owner => uint256 earned) public lifetimeEarned;
 
     event Activated(address indexed owner, uint256 indexed tokenId, uint32 streak, uint16 durability);
     event PointsClaimed(address indexed owner, uint256 indexed tokenId, uint256 amount);
@@ -95,6 +97,7 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
     event WorkshopUpdated(address indexed workshop);
     event PointsSpent(address indexed owner, uint256 amount, address indexed spender);
     event EnergySpent(uint256 indexed tokenId, uint16 amount, address indexed spender);
+    event EnergyRefilled(uint256 indexed tokenId, uint16 energy);
 
     constructor(
         address admin,
@@ -244,6 +247,7 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
 
         state.pendingPoints = 0;
         veRuneBalance[msg.sender] += amount;
+        lifetimeEarned[msg.sender] += amount;
         emit PointsClaimed(msg.sender, tokenId, amount);
     }
 
@@ -277,6 +281,18 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
         state.durability = maxFor;
         state.lastDecayAt = uint64(block.timestamp);
         emit Repaired(nft.ownerOf(tokenId), tokenId, 0);
+    }
+
+    /// @notice Refill a sneaker's energy to its max capacity. Called by the
+    ///      workshop when a stim-pack consumable is burned. Reverts on
+    ///      worn-out sneakers so a stim NFT is never wasted on a dead sneaker.
+    function refillEnergyFromWorkshop(uint256 tokenId) external whenNotPaused {
+        require(msg.sender == workshop, "SneakerGame: not workshop");
+        SneakerState storage state = sneakers[tokenId];
+        require(state.lastActivationAt != 0, "SneakerGame: sneaker never activated");
+        require(_liveDurability(state) > 0, "SneakerGame: sneaker worn out");
+        state.energy = _maxEnergyFor(tokenId);
+        emit EnergyRefilled(tokenId, state.energy);
     }
 
     /// @notice Spend energy charges on behalf of the workshop (abilities).

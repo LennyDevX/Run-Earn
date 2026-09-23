@@ -20,13 +20,15 @@ Use this skill for EVM contract design, Solidity implementation, Hardhat 3 confi
 | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
 | `ISneakerBoosts` | `contracts/ISneakerBoosts.sol` | Shared boost read interface consumed by game, staking, appraiser, marketplace |
 | `SneakerMods` | `contracts/SneakerMods.sol` | ERC-721 mod/badge collection with on-chain achievement claims (`claim`) |
-| `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Six-slot equip escrow, `useAbility` consumable burns, and the veRUNE forge |
+| `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip escrow (incl. passive Skill slot), `useAbility` consumable burns, and the veRUNE forge |
 | `SneakerSwap` | `contracts/SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across allowed collections |
 | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL; custody stays in escrow, renter equips via workshop |
-| `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs for POL, including consumables |
+| `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs for POL, including consumables and `requiredLevel` gates |
+| `PlayerProgress` | `contracts/PlayerProgress.sol` | Live-state XP/levels across the protocol + public username/NFT-avatar identity |
 
 For the upgrade-economy internals (slots, traits, ability kinds, energy costs,
-stats) see the `runearn-upgrade-economy` skill.
+stats) see the `runearn-upgrade-economy` skill. For XP sources, the level curve,
+skill gating, and the hybrid profile see the `runearn-player-progression` skill.
 
 Do not reintroduce `SneakerCollection`, `SneakerRewards`, `LaceToken`, or `RuneToken` in new code, tests, docs, environment variables, or deployment scripts. The ERC-20 symbol is `REN` (not `RUNE`); veRUNE is the virtual point balance in SneakerGame.
 
@@ -101,8 +103,9 @@ Use `hre.network.create()` and `connection.viem` in Hardhat 3 tests. Use `viem.d
 
 ## Deployment and funding scripts
 
-- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|ModRental|ModStore` and writes an ignored deployment manifest.
-- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`.
+- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|ModRental|ModStore|PlayerProgress` and writes an ignored deployment manifest.
+- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`.
+- `scripts/seed-skills.ts` seeds the level-gated skill catalog (free `PlayerLevel` achievements + `requiredLevel` store copies) — idempotent, run after the progress wiring.
 - Single-target deploys read dependency addresses from `*_ADDRESS` env vars, so partial redeploys can re-wire against existing contracts.
 - Deploy with `npx hardhat run scripts/deploy.ts --network amoy` or `--network polygon`.
 - Set `SKIP_VERIFY=true` only when verification is intentionally skipped; otherwise `POLYGONSCAN_API_KEY` is required.

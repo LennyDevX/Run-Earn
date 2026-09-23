@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { encodeFunctionData, isAddress, type Address, type Hex } from "viem";
 import { explorerTransactionUrl, NETWORK, usePolygonWallet } from "@/components/Providers";
@@ -15,6 +15,7 @@ import {
   type RarityLevel,
 } from "@/lib/sneaker-nft";
 import { sneakerMintAbi } from "@/lib/contracts";
+import { centerInScrollRow } from "@/lib/scroll-x";
 import { notifyMintedSneakersUpdated } from "@/hooks/useMintedSneakers";
 
 const SNEAKER_MINT_ADDRESS = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
@@ -26,6 +27,7 @@ type GeneratedImage = { dataUrl: string; mimeType: string };
 export default function SneakerMintStudio() {
   const wallet = usePolygonWallet();
   const [step, setStep] = useState(0);
+  const stepsRowRef = useRef<HTMLDivElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [generated, setGenerated] = useState<GeneratedImage | null>(null);
@@ -39,6 +41,13 @@ export default function SneakerMintStudio() {
   const [error, setError] = useState<string | null>(null);
 
   const selectedRarity = useMemo(() => RARITIES.find((item) => item.id === rarity), [rarity]);
+
+  // Keep the active step centered inside the horizontal step row on mobile,
+  // including when the wizard advances programmatically.
+  useEffect(() => {
+    const chip = stepsRowRef.current?.children[step];
+    if (chip instanceof HTMLElement) centerInScrollRow(chip);
+  }, [step]);
 
   function selectPhoto(file: File | undefined) {
     if (!file) return;
@@ -138,7 +147,7 @@ export default function SneakerMintStudio() {
 
   return (
     <section className="rounded-[2.5rem] border border-foreground/8 bg-surface p-5 sm:p-8 md:p-10">
-      <div className="scroll-x -mx-5 mb-8 flex gap-2 px-5 pb-1 sm:-mx-8 sm:px-8 md:mx-0 md:px-0">
+      <div ref={stepsRowRef} className="scroll-x -mx-5 mb-8 flex gap-2 px-5 pb-1 sm:-mx-8 sm:px-8 md:mx-0 md:px-0">
         {STEPS.map((label, index) => (
           <button
             key={label}

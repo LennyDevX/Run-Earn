@@ -90,6 +90,11 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     /// @notice (collection, tokenId) -> active sale lock. 0 = none, 1 = listed, 2 = in auction.
     mapping(address collection => mapping(uint256 tokenId => uint8 saleKind)) public tokenSaleKind;
 
+    /// @notice Completed trades per wallet (buy + sell side) — feeds
+    ///      PlayerProgress XP. Counted when a sale closes: `buy`,
+    ///      `acceptOffer`, and `settleAuction` with a winner.
+    mapping(address user => uint256 trades) public tradesCount;
+
     event ListingCreated(uint256 indexed listingId, address indexed seller, address indexed collection, uint256 tokenId, uint256 price);
     event ListingCancelled(uint256 indexed listingId);
     event NFTSold(uint256 indexed listingId, address indexed seller, address indexed buyer, uint256 tokenId, uint256 price, uint256 fee);
@@ -223,6 +228,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
 
         listing.active = false;
         tokenSaleKind[listing.collection][listing.tokenId] = 0;
+        tradesCount[msg.sender] += 1;
+        tradesCount[listing.seller] += 1;
 
         (uint256 fee, uint256 proceeds) = _splitPayment(listing.price);
         _pay(listing.seller, proceeds);
@@ -304,6 +311,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         }
 
         (uint256 fee, uint256 proceeds) = _splitPayment(auction.highestBid);
+        tradesCount[auction.seller] += 1;
+        tradesCount[auction.highestBidder] += 1;
         _pay(auction.seller, proceeds);
         IERC721(auction.collection).safeTransferFrom(address(this), auction.highestBidder, auction.tokenId);
         emit AuctionSettled(auctionId, auction.seller, auction.highestBidder, auction.tokenId, auction.highestBid, fee);
@@ -359,6 +368,8 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
         _requireNotLocked(offer.collection, offer.tokenId);
 
         offer.active = false;
+        tradesCount[msg.sender] += 1;
+        tradesCount[offer.buyer] += 1;
         (uint256 fee, uint256 proceeds) = _splitPayment(offer.amount);
         _pay(msg.sender, proceeds);
         IERC721(offer.collection).safeTransferFrom(msg.sender, offer.buyer, offer.tokenId);

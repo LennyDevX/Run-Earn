@@ -2,7 +2,7 @@ import type { Address } from "viem";
 
 /// Workshop slot metadata for the upgrade economy (SneakerMods/SneakerWorkshop).
 
-export const SLOT_COUNT = 6;
+export const SLOT_COUNT = 7;
 export const NO_AUX = 255;
 
 export type SlotInfo = {
@@ -63,6 +63,14 @@ export const SLOTS: readonly SlotInfo[] = [
     area: "Staking amplifier",
     effect: "Adds APY while the sneaker is locked in staking",
   },
+  {
+    id: 6,
+    key: "skill",
+    label: "Skill",
+    icon: "⭐",
+    area: "Player skill NFT",
+    effect: "Permanent earn-rate bonus granted by a level-unlocked skill",
+  },
 ] as const;
 
 export function slotInfo(slot: number): SlotInfo {
@@ -90,6 +98,9 @@ export const ABILITY_LABELS: Record<number, string> = {
   1: "Surge — instant activation, bypasses cooldown (2 energy)",
   2: "Boost capsule — temporary earn-rate boost for 24h (1 energy)",
   3: "Forge stone — free forge level (2 energy)",
+  4: "Overdrive — stronger earn-rate boost for 48h (3 energy)",
+  5: "Stim pack — instant energy refill, burns on use",
+  6: "Lucky repair — full health restore + boost, burns on use (1 energy)",
 };
 
 /// Human-readable effect label for a mod's traits.
@@ -98,6 +109,12 @@ export function modEffectLabel(traits: ModTraits): string {
     const kind = traits.aux === NO_AUX ? 0 : traits.aux;
     if (kind === 2) {
       return `Boost capsule — +${(traits.effectBps / 100).toFixed(1)}% earn for 24h (1 energy)`;
+    }
+    if (kind === 4) {
+      return `Overdrive — +${(traits.effectBps / 100).toFixed(1)}% earn for 48h (3 energy)`;
+    }
+    if (kind === 6 && traits.effectBps > 0) {
+      return `Lucky repair — full health + ${(traits.effectBps / 100).toFixed(1)}% earn for 24h (1 energy)`;
     }
     return ABILITY_LABELS[kind] ?? "Consumable — burns on use";
   }
@@ -115,6 +132,8 @@ export function modEffectLabel(traits: ModTraits): string {
       return "Auto-activation every 24h";
     case 5:
       return `+${pct} staking APY`;
+    case 6:
+      return `+${pct} earn rate (skill)`;
     default:
       return `Effect ${pct}`;
   }
@@ -126,6 +145,7 @@ export const REQ_KIND_LABELS = [
   "Lifetime veRUNE",
   "Collection size",
   "POL staked",
+  "Player level",
 ] as const;
 
 export type WorkshopBonusSnapshot = {
@@ -135,6 +155,7 @@ export type WorkshopBonusSnapshot = {
   repairDiscountBps: bigint;
   appraisalBonusBps: bigint;
   stakingBoostBps: bigint;
+  skillBonusBps: bigint;
   rarityBonus: number;
   autoActive: boolean;
   skinOverride: number;

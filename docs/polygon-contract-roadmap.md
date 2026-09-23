@@ -26,7 +26,7 @@ RUN&EARN targets Polygon with standard EVM tooling. The current foundation is a 
 
 ### 6. `SneakerGame` gamification
 
-`contracts/SneakerGame.sol` runs the retention loop around three stats — **power** (rarity-scaled veRUNE mining, Common 100 → Mythic 800/day base), **health** (decays 1/day of real time plus wear per activation; at 0 the sneaker stops mining until repaired for 50 veRUNE or a burned repair kit), and **energy** (charges that fuel consumable abilities, refilled on each manual activation). Daily streaks add +1%/day (cap +50%), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. `SneakerWorkshop.useAbility` burns consumable mod NFTs for repair kits, surge activations, 24h boost capsules, and forge stones — each use destroys the NFT, driving repeat demand. Tokenomics: `docs/veRune-tokenomics.md`.
+`contracts/SneakerGame.sol` runs the retention loop around three stats — **power** (rarity-scaled veRUNE mining, Common 100 → Mythic 800/day base), **health** (decays 1/day of real time plus wear per activation; at 0 the sneaker stops mining until repaired for 50 veRUNE or a burned repair kit), and **energy** (charges that fuel consumable abilities, refilled on each manual activation). Daily streaks add +1%/day (cap +50%), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. `SneakerWorkshop.useAbility` burns consumable mod NFTs for repair kits, surge activations, 24h boost capsules, forge stones, 48h Overdrives, Stim pack energy refills, and Lucky repairs — each use destroys the NFT, driving repeat demand. Tokenomics: `docs/veRune-tokenomics.md`.
 
 ### 7. Subgraph activity index
 
@@ -47,12 +47,24 @@ payment. The 9 genesis designs are configured and optionally pre-minted by
 
 ### 9. Upgrade economy — shipped in v1.0
 
-- `contracts/SneakerMods.sol` — ERC-721 mod/badge collection with on-chain achievement claims.
-- `contracts/SneakerWorkshop.sol` — six-slot equipment, repair kits, and the veRUNE forge (implements `ISneakerBoosts`).
+- `contracts/SneakerMods.sol` — ERC-721 mod/badge collection with on-chain achievement claims (including `ReqKind.PlayerLevel` skill claims).
+- `contracts/SneakerWorkshop.sol` — seven-slot equipment (six upgrade slots + passive Skill slot), repair kits, and the veRUNE forge (implements `ISneakerBoosts`).
 - `contracts/SneakerSwap.sol` — atomic NFT↔NFT trades (± POL) across collections.
 - `contracts/ModRental.sol` — time-boxed mod rentals paid in POL.
-- `contracts/ModStore.sol` — primary sale of premium mod designs.
+- `contracts/ModStore.sol` — primary sale of premium mod designs, with `requiredLevel` gates.
 - `SneakerMarketplace` is collection-aware (listings, auctions, offers keyed by `(collection, tokenId)`); `SneakerGame`, `SneakerStaking`, and `SneakerAppraiser` consume workshop effects through `ISneakerBoosts`.
+
+### 9b. `PlayerProgress` — levels and skill gating
+
+`contracts/PlayerProgress.sol` aggregates live protocol state into a 10-tier
+player level: owned veSneakers (×100), owned mods (×40), lifetime claimed veRUNE
+(10 XP per 1,000 via `SneakerGame.lifetimeEarned`), completed marketplace trades
+(×60 via `tradesCount`, both sides), workshop actions (×30 via `actionsCount`),
+and staked POL principal (×20 per POL). Levels gate skill NFTs — free claims via
+`SneakerMods` `PlayerLevel` achievements and purchasable copies via
+`ModStore`/`VeSneakerStore` `requiredLevel` designs — and host the public
+profile (`setUsername`, `setNftAvatar`). Level is live standing: selling NFTs or
+unstaking POL lowers it. Full reference: [`player-progression.md`](player-progression.md).
 
 ### 10. Mint verifier authorization — next production hardening
 
@@ -73,9 +85,9 @@ personal data stay off-chain.
 
 ## Suggested order
 
-1. Run Solidity + TypeScript tests for all twelve contracts (`npx hardhat test`).
-2. Deploy `RENToken`, `SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, and `VeSneakerStore` to Polygon Amoy — `DEPLOY_TARGET=all` handles order and wiring.
-3. The deploy script grants `MINTER_ROLE` on `SneakerMint` to `VeSneakerStore` and on `SneakerMods` to `ModStore`, links the workshop into game/staking/appraiser/marketplace/mods, connects the rental source, and allows the mods collection on the marketplace and swap venue. Register the 9 veSneaker designs with `scripts/mint-veSneakers.ts`.
+1. Run Solidity + TypeScript tests for all thirteen contracts (`npx hardhat test`).
+2. Deploy `RENToken`, `SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, `VeSneakerStore`, and `PlayerProgress` to Polygon Amoy — `DEPLOY_TARGET=all` handles order and wiring.
+3. The deploy script grants `MINTER_ROLE` on `SneakerMint` to `VeSneakerStore` and on `SneakerMods` to `ModStore`, links the workshop into game/staking/appraiser/marketplace/mods, connects the rental source, allows the mods collection on the marketplace and swap venue, and wires `setProgress` on mods/both stores to `PlayerProgress`. Register the 9 veSneaker designs with `scripts/mint-veSneakers.ts` and the skill catalog with `scripts/seed-skills.ts`.
 4. Fund the POL reward reserve and the veRUNE redemption pool; verify deposit, claim, withdrawal, NFT boost, listing, bidding, activation, redemption, veSneaker purchase, mod purchase, equip, rental, and swap behavior.
 5. Configure the `nuxgraph` query endpoint and verify `/api/subgraph` activity, including marketplace and game events.
 6. Add verifier authorization before production minting.

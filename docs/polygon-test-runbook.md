@@ -1,6 +1,6 @@
 # Polygon Amoy test runbook
 
-The frontend uses viem with an EIP-1193 injected wallet provider. The v1.0 contract set is `SneakerMint`, `RENToken`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `VeSneakerStore`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, and `ModStore`. Amoy is the default test environment; this runbook is not a mainnet deployment approval.
+The frontend uses viem with an EIP-1193 injected wallet provider. The v1.0 contract set is `SneakerMint`, `RENToken`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`, `SneakerGame`, `VeSneakerStore`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, and `PlayerProgress`. Amoy is the default test environment; this runbook is not a mainnet deployment approval.
 
 ## 1. Configure the app
 
@@ -23,6 +23,7 @@ NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS=<workshop-address>
 NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS=<swap-address>
 NEXT_PUBLIC_MOD_RENTAL_ADDRESS=<rental-address>
 NEXT_PUBLIC_MOD_STORE_ADDRESS=<mod-store-address>
+NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS=<player-progress-address>
 
 THE_GRAPH_QUERY_URL=https://api.studio.thegraph.com/query/<QUERY_API_KEY>/nuxgraph/0.1.0
 THE_GRAPH_QUERY_API_KEY=<QUERY_API_KEY>
@@ -60,12 +61,13 @@ Do not deploy if contract tests or application checks fail.
 Deploy from a disposable wallet outside the repository. `DEPLOY_TARGET=all` deploys
 the whole v1.0 set in dependency order and runs the post-deploy wiring:
 
-1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore`.
-2. The script then wires: `game.setBoosts/setWorkshop(workshop)`, `staking.setBoosts(workshop)`, `appraiser.setBoosts(workshop)`, `mods.setWorkshop(workshop)`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop(workshop)` + `setCollectionAllowed(mods, true)`, `swap.setCollectionAllowed(mods, true)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`.
-3. Fund the POL reward reserve with `SneakerStaking.fundPOLRewards()`.
-4. Fund the legacy RUNE vault only if the NFT RUNE reward path is enabled.
-5. Keep public mint disabled unless deliberately testing the beta path.
-6. Record deployed addresses in `.env.local` — every page degrades to demo mode when its address is missing.
+1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore` → `PlayerProgress`.
+2. The script then wires: `game.setBoosts/setWorkshop(workshop)`, `staking.setBoosts(workshop)`, `appraiser.setBoosts(workshop)`, `mods.setWorkshop(workshop)`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop(workshop)` + `setCollectionAllowed(mods, true)`, `swap.setCollectionAllowed(mods, true)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`.
+3. Seed the skill catalog: `SNEAKER_MODS_ADDRESS=0x... MOD_STORE_ADDRESS=0x... npx hardhat run scripts/seed-skills.ts --network amoy` (idempotent — skips existing levels/designs).
+4. Fund the POL reward reserve with `SneakerStaking.fundPOLRewards()`.
+5. Fund the legacy RUNE vault only if the NFT RUNE reward path is enabled.
+6. Keep public mint disabled unless deliberately testing the beta path.
+7. Record deployed addresses in `.env.local` — every page degrades to demo mode when its address is missing.
 
 ## 5. Staking route demo
 
@@ -88,11 +90,19 @@ the whole v1.0 set in dependency order and runs the post-deploy wiring:
 3. Open `/workshop`, pick the sneaker, equip a mod into its slot (approve + equip),
    and confirm the effective-stats panel changes.
 4. Burn a consumable (`useAbility`): repair kit → full health, surge → instant
-   activation, boost capsule → +earn for 24h, forge stone → +1 forge level. Confirm
-   the mod NFT is burned and the energy cost was deducted.
+   activation, boost capsule → +earn for 24h, forge stone → +1 forge level,
+   Overdrive → +earn for 48h, Stim pack → energy refill, Lucky repair → full
+   health + boost. Confirm the mod NFT is burned and the energy cost was deducted.
 5. Forge once veRUNE is claimed — verify `forgeLevel` and the rarity/earn bump.
 6. Open `/badges` and claim an achievement whose on-chain requirement is met.
-7. On `/marketplace`, list a mod (Mods tab), open a rental (Rentals tab), and
+   In the "Level skills" section, confirm locked skills show "Unlocks at level N"
+   and a claimable skill mints for free once `PlayerProgress.levelOf` qualifies.
+7. Open `/profile`: set a username, pick an NFT avatar, and confirm the level
+   card shows the on-chain `progressOf` snapshot ("Verified on-chain").
+8. Equip a passive skill NFT in the workshop's Skill slot (slot 6) and confirm
+   the "Skill bonus" row and `earnBonusBps` increase. Buy an extra skill copy
+   from `/collection` — it must revert/disable below the required level.
+9. On `/marketplace`, list a mod (Mods tab), open a rental (Rentals tab), and
    create/accept a swap (Trades tab). Confirm a sneaker with equipped mods cannot
    be listed until unequipped.
 
@@ -115,7 +125,7 @@ If the activity panel is empty but RPC state works, inspect the subgraph schema 
 
 Set the terminal-only variables in `.env.local` or the deployment environment. `DEPLOYER_PRIVATE_KEY` is the signer used for gas; `DEPLOY_ADMIN_ADDRESS` can be a multisig or separate admin.
 
-Deploy all twelve contracts and verify them:
+Deploy all thirteen contracts and verify them:
 
 ```bash
 DEPLOY_TARGET=all npx hardhat run scripts/deploy.ts --network amoy
@@ -124,7 +134,7 @@ DEPLOY_TARGET=all npx hardhat run scripts/deploy.ts --network amoy
 Deploy and verify one contract (`DEPLOY_TARGET` accepts `all`, `RENToken`,
 `SneakerMint`, `SneakerStaking`, `SneakerAppraiser`, `SneakerMarketplace`,
 `SneakerGame`, `VeSneakerStore`, `SneakerMods`, `SneakerWorkshop`, `SneakerSwap`,
-`ModRental`, `ModStore`):
+`ModRental`, `ModStore`, `PlayerProgress`):
 
 ```bash
 DEPLOY_TARGET=RENToken npx hardhat run scripts/deploy.ts --network amoy

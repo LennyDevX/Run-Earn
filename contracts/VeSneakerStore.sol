@@ -6,6 +6,11 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SneakerMint} from "./SneakerMint.sol";
 
+/// @dev Minimal view of PlayerProgress needed for level-gated designs.
+interface IPlayerProgressView {
+    function levelOf(address user) external view returns (uint8);
+}
+
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
 /// @notice veSneakers are the playable NFTs of the RUN&EARN virtual sneaker
 ///      economy. Anyone can buy them with native POL — fully virtual assets. Once
@@ -28,11 +33,17 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         uint256 price; // POL per copy
         uint16 maxSupply;
         uint16 minted;
+        /// @notice Minimum PlayerProgress level required to buy (0 = open to all).
+        uint8 requiredLevel;
         bool active;
     }
 
     SneakerMint public immutable nft;
     address payable public treasury;
+
+    /// @notice PlayerProgress consulted for level-gated designs. Zero address
+    ///      disables gating — level-gated designs become unpurchasable.
+    address public progress;
 
     Design[] private _designs;
 
@@ -42,6 +53,7 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     event VeSneakerPurchased(uint256 indexed designIndex, address indexed buyer, uint256 quantity, uint256 totalPaid, uint256 firstTokenId);
     event VeSneakerReserved(uint256 indexed designIndex, address indexed recipient, uint256 quantity, uint256 firstTokenId);
     event TreasuryUpdated(address indexed treasury);
+    event ProgressUpdated(address indexed progress);
     event ProceedsWithdrawn(address indexed to, uint256 amount);
 
     constructor(address admin, address nftAddress, address payable treasury_) {
@@ -88,6 +100,7 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
             price: price,
             maxSupply: maxSupply,
             minted: 0,
+            requiredLevel: 0,
             active: true
         }));
         emit DesignAdded(designIndex, name, rarity, tier, price, maxSupply);
@@ -111,6 +124,18 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         require(bytes(uri).length > 0, "VeSneakerStore: empty uri");
         _requireDesign(designIndex).uri = uri;
         emit DesignUriUpdated(designIndex, uri);
+    }
+
+    /// @notice Update the required player level for a design. Admin only.
+    ///      `reserveMint` bypasses the gate — it is an admin allocation.
+    function setDesignRequiredLevel(uint256 designIndex, uint8 requiredLevel) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireDesign(designIndex).requiredLevel = requiredLevel;
+    }
+
+    /// @notice Link PlayerProgress for level-gated designs.
+    function setProgress(address progress_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        progress = progress_;
+        emit ProgressUpdated(progress_);
     }
 
     function setTreasury(address payable treasury_) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -207,6 +232,12 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         Design storage design = _requireDesign(designIndex);
         require(design.active, "VeSneakerStore: design inactive");
         require(design.minted + quantity <= design.maxSupply, "VeSneakerStore: supply exhausted");
+        if (design.requiredLevel > 0) {
+            require(
+                progress != address(0) && IPlayerProgressView(progress).levelOf(buyer) >= design.requiredLevel,
+                "VeSneakerStore: level required"
+            );
+        }
         uint256 total = design.price * quantity;
         require(msg.value == total, "VeSneakerStore: wrong payment");
 

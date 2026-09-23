@@ -12,7 +12,8 @@ Related: [`app-routes.md`](app-routes.md) for per-route detail,
 | Concern | Where |
 | --- | --- |
 | Bottom navigation (5 destinations) | `src/components/MobileNav.tsx` (mounted once in `src/app/layout.tsx`) |
-| Overflow routes + theme | "More" sheet in `src/components/Navbar.tsx` |
+| Overflow routes + theme | "More" sheet (mobile) / dropdown menu (desktop) in `src/components/Navbar.tsx` |
+| Profile shortcut | `ProfileButton` in `src/components/Navbar.tsx` (left of the theme toggle) |
 | Reusable bottom sheet | `src/components/MoreSheet.tsx` |
 | Safe-area tokens, reduced motion, touch hygiene | `src/app/globals.css` |
 | `viewport-fit=cover`, theme color, `appleWebApp` | `src/app/layout.tsx` (`export const viewport`) |
@@ -27,8 +28,10 @@ Related: [`app-routes.md`](app-routes.md) for per-route detail,
 **Destinations:** Home `/` · Mint `/mint` · veSneakers `/collection` · Game `/game` ·
 Market `/marketplace`.
 
-Everything else (`/staking`, `/my-nfts`, `/defi`, `/roadmap`) lives in the header's
-"More" sheet, which also carries the theme toggle on mobile.
+Everything else (`/workshop`, `/badges`, `/my-nfts`, `/staking`, `/defi`, `/roadmap`)
+lives in the header's "More" menu — a bottom sheet on mobile and a grouped dropdown
+(PLAY / EARN / PROJECT) on desktop — which also carries the theme toggle on mobile.
+`/profile` is reachable from the `ProfileButton` next to the theme toggle.
 
 Behaviour:
 
@@ -78,6 +81,12 @@ zeroes it at `md`. **This is why new pages do not need their own bottom padding.
   `autoComplete="off"`, `autoCapitalize="none"`, `spellCheck={false}`.
 - **Horizontal rows** (filters, tabs, step bars) use `.scroll-x` with `-mx-6 px-6` so
   they bleed to the edge and scroll instead of wrapping into multiple rows.
+  **Selecting an item must auto-center it**: call `centerInScrollRow(target)` from
+  `src/lib/scroll-x.ts` in the `onClick` (it runs
+  `scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })`).
+  For selections that change programmatically (e.g. the mint-studio step bar),
+  scroll the active child inside a `useEffect` keyed on the index — a DOM call in
+  an effect is fine, `setState` is not.
 
 ## Motion
 

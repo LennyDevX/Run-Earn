@@ -19,7 +19,7 @@ interface IModRental {
 
 /// @title SneakerWorkshop — equip/unequip engine, repair kits, and veRUNE forge.
 /// @notice The workshop is the core of the RUN&EARN upgrade mini-game. Owners
-///      equip SneakerMods NFTs into one of six slots on a veSneaker; equipped
+///      equip SneakerMods NFTs into one of seven slots on a veSneaker; equipped
 ///      mods are escrowed here (or stay in ModRental escrow when rented) and
 ///      their effects are exposed through ISneakerBoosts so the game, staking,
 ///      and appraiser contracts can read them live.
@@ -37,11 +37,15 @@ interface IModRental {
 contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Receiver, ISneakerBoosts {
     uint256 public constant BASIS_POINTS = 10_000;
 
-    /// Consumable ability kinds (SneakerMods.ModTraits.aux).
+    /// Consumable ability kinds (SneakerMods.ModTraits.aux). Kinds 4–6 are
+    /// level-gated skill items minted via PlayerLevel achievements / ModStore.
     uint8 public constant ABILITY_REPAIR = 0; // full health restore (aux 0 or 255)
     uint8 public constant ABILITY_SURGE = 1; // instant activation, bypasses cooldown
     uint8 public constant ABILITY_BOOST = 2; // +effectBps earn rate for BOOST_DURATION
     uint8 public constant ABILITY_FORGE_STONE = 3; // free forge level
+    uint8 public constant ABILITY_OVERDRIVE = 4; // +effectBps earn rate for OVERDRIVE_DURATION
+    uint8 public constant ABILITY_STIM = 5; // instant energy refill to max
+    uint8 public constant ABILITY_LUCKY_REPAIR = 6; // full repair + optional 24h boost
 
     /// Energy charged per ability. Repair kits are free — recovery must always
     /// be available even when the sneaker has no energy left.
@@ -49,9 +53,14 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
     uint16 public constant ENERGY_COST_SURGE = 2;
     uint16 public constant ENERGY_COST_BOOST = 1;
     uint16 public constant ENERGY_COST_FORGE_STONE = 2;
+    uint16 public constant ENERGY_COST_OVERDRIVE = 3;
+    uint16 public constant ENERGY_COST_STIM = 0;
+    uint16 public constant ENERGY_COST_LUCKY_REPAIR = 1;
 
     /// How long a burned boost capsule stays active.
     uint64 public constant BOOST_DURATION = 24 hours;
+    /// Overdrive is the premium skill capsule — twice the standard boost window.
+    uint64 public constant OVERDRIVE_DURATION = 48 hours;
 
     SneakerMint public immutable nft;
     SneakerMods public immutable mods;
@@ -77,6 +86,10 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
     mapping(uint256 => uint16) public tempBoostBps;
     /// sneakerId => timestamp when the temporary boost lapses.
     mapping(uint256 => uint64) public boostExpiresAt;
+
+    /// @notice Workshop actions per wallet (equip, unequip, ability use,
+    ///      forge) — feeds PlayerProgress XP.
+    mapping(address => uint256) public actionsCount;
 
     /// Base veRUNE cost per forge level; actual cost = forgeCostPoints * (level + 1).
     uint256 public forgeCostPoints;
@@ -158,6 +171,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
         require(mods.ownerOf(modId) == msg.sender, "SneakerWorkshop: not mod owner");
         _attach(sneakerId, modId, msg.sender);
         custodian[modId] = address(this);
+        actionsCount[msg.sender] += 1;
         mods.safeTransferFrom(msg.sender, address(this), modId);
     }
 
@@ -168,6 +182,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
         require(_controlsSneaker(user, sneakerId), "SneakerWorkshop: not sneaker owner");
         _attach(sneakerId, modId, user);
         custodian[modId] = rentalSource;
+        actionsCount[user] += 1;
     }
 
     /// @notice Unequip a mod from a sneaker the caller controls. Owned mods
@@ -175,6 +190,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
     function unequip(uint256 sneakerId, uint8 slot) external nonReentrant {
         require(_controlsSneaker(msg.sender, sneakerId), "SneakerWorkshop: not sneaker owner");
         _detach(sneakerId, slot, msg.sender);
+        actionsCount[msg.sender] += 1;
     }
 
     /// @notice Force-detach a mod. Callable only by the rental contract when a
@@ -204,6 +220,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
         SneakerMods.ModTraits memory traits = mods.traitsOf(modId);
         require(traits.consumable, "SneakerWorkshop: not consumable");
 
+        actionsCount[msg.sender] += 1;
         uint8 kind = traits.aux == mods.NO_AUX() ? ABILITY_REPAIR : traits.aux;
 
         if (kind == ABILITY_REPAIR) {
@@ -237,6 +254,32 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
             emit Forged(msg.sender, sneakerId, level + 1, 0);
             return;
         }
+        if (kind == ABILITY_OVERDRIVE) {
+            require(traits.effectBps > 0, "SneakerWorkshop: empty boost");
+            game.spendEnergy(sneakerId, ENERGY_COST_OVERDRIVE);
+            mods.burn(modId);
+            tempBoostBps[sneakerId] = traits.effectBps;
+            boostExpiresAt[sneakerId] = uint64(block.timestamp) + OVERDRIVE_DURATION;
+            emit AbilityUsed(msg.sender, sneakerId, modId, kind);
+            return;
+        }
+        if (kind == ABILITY_STIM) {
+            mods.burn(modId);
+            game.refillEnergyFromWorkshop(sneakerId);
+            emit AbilityUsed(msg.sender, sneakerId, modId, kind);
+            return;
+        }
+        if (kind == ABILITY_LUCKY_REPAIR) {
+            game.spendEnergy(sneakerId, ENERGY_COST_LUCKY_REPAIR);
+            mods.burn(modId);
+            game.repairFromWorkshop(sneakerId);
+            if (traits.effectBps > 0) {
+                tempBoostBps[sneakerId] = traits.effectBps;
+                boostExpiresAt[sneakerId] = uint64(block.timestamp) + BOOST_DURATION;
+            }
+            emit AbilityUsed(msg.sender, sneakerId, modId, kind);
+            return;
+        }
         revert("SneakerWorkshop: unknown ability");
     }
 
@@ -253,6 +296,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
         require(equippedTo[modId] == 0, "SneakerWorkshop: mod equipped");
         require(traits.consumable, "SneakerWorkshop: not consumable");
 
+        actionsCount[msg.sender] += 1;
         mods.burn(modId);
         game.repairFromWorkshop(sneakerId);
         emit RepairKitUsed(msg.sender, sneakerId, modId);
@@ -269,6 +313,7 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
         uint256 cost = forgeCostPoints * (uint256(level) + 1);
         game.spendPoints(msg.sender, cost);
         forgeLevel[sneakerId] = level + 1;
+        actionsCount[msg.sender] += 1;
         emit Forged(msg.sender, sneakerId, level + 1, cost);
     }
 
@@ -283,10 +328,17 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
 
     function earnBonusBps(uint256 tokenId) external view returns (uint256) {
         uint256 bonus = uint256(_activeEffect(tokenId, mods.SLOT_UPPER())) +
+            uint256(_activeEffect(tokenId, mods.SLOT_SKILL())) +
             uint256(forgeLevel[tokenId]) * forgeEarnStepBps;
         // Burned boost capsule adds its effect while unexpired.
         if (block.timestamp < boostExpiresAt[tokenId]) bonus += tempBoostBps[tokenId];
         return bonus;
+    }
+
+    /// @notice Passive earn bonus contributed by an equipped skill NFT
+    ///      (SLOT_SKILL). Already folded into `earnBonusBps` — exposed for UI.
+    function skillBonusBps(uint256 tokenId) external view returns (uint256) {
+        return _activeEffect(tokenId, mods.SLOT_SKILL());
     }
 
     function wearReductionBps(uint256 tokenId) external view returns (uint256) {

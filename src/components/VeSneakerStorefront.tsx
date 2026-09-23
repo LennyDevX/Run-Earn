@@ -5,9 +5,11 @@ import Link from "next/link";
 import { formatEther, parseEther } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { useVeSneakerStore } from "@/hooks/useVeSneakerStore";
+import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { usePolPrice } from "@/hooks/usePolPrice";
 import PixelSneaker from "@/components/PixelSneaker";
+import { centerInScrollRow } from "@/lib/scroll-x";
 import {
   VE_FALLBACK_PRICE_POL,
   VE_MAX_SUPPLY_FALLBACK,
@@ -29,6 +31,8 @@ function formatPol(value: bigint, maxDigits = 2) {
 export default function VeSneakerStorefront() {
   const wallet = usePolygonWallet();
   const store = useVeSneakerStore();
+  const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
+  const playerLevel = progress.snapshot?.level ?? 0;
   const { addLocalActivity } = useSubgraphActivity(wallet.address);
   const polPrice = usePolPrice();
   const [filter, setFilter] = useState<Filter>("All");
@@ -59,6 +63,7 @@ export default function VeSneakerStorefront() {
           maxSupply,
           minted,
           remaining: maxSupply - minted,
+          requiredLevel: onChain?.requiredLevel ?? 0,
           active: onChain?.active ?? true,
           label: VE_TIER_LABEL[tier] ?? "Common",
           boost: VE_TIER_BOOST[tier] ?? "+0.5% APY",
@@ -178,7 +183,10 @@ export default function VeSneakerStorefront() {
           <button
             key={item}
             type="button"
-            onClick={() => setFilter(item)}
+            onClick={(event) => {
+              setFilter(item);
+              centerInScrollRow(event.currentTarget);
+            }}
             className={`min-h-11 shrink-0 cursor-pointer rounded-full px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
               filter === item
                 ? "bg-foreground text-background"
@@ -195,7 +203,9 @@ export default function VeSneakerStorefront() {
         {visible.map((row, i) => {
           const quantity = quantityByDesign[row.index] ?? 1;
           const soldOut = row.remaining <= 0n;
-          const disabled = !isConfigured || !row.active || soldOut || store.isLoading;
+          const levelLocked =
+            row.requiredLevel > 0 && (!progress.configured || playerLevel < row.requiredLevel);
+          const disabled = !isConfigured || !row.active || soldOut || levelLocked || store.isLoading;
           return (
             <article
               key={row.name}
@@ -211,6 +221,11 @@ export default function VeSneakerStorefront() {
                 <span className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase ${VE_RARITY_STYLES[row.label]}`}>
                   {row.label}
                 </span>
+                {row.requiredLevel > 0 ? (
+                  <span className={`absolute bottom-3 left-3 rounded-full px-2.5 py-1 font-pixel text-[9px] ${levelLocked ? "bg-magma/10 text-magma" : "bg-mint/10 text-mint"}`}>
+                    LV {row.requiredLevel}+
+                  </span>
+                ) : null}
               </div>
 
               <div className="flex items-start justify-between gap-3">
@@ -271,7 +286,13 @@ export default function VeSneakerStorefront() {
                   onClick={() => void handleBuy(row.index, row.price, row.remaining)}
                   className="min-h-11 flex-1 cursor-pointer rounded-full bg-mint px-4 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {soldOut ? "Sold out" : store.isLoading ? "Confirming..." : `Buy for ${formatPol(row.price * BigInt(quantity))} POL`}
+                  {soldOut
+                    ? "Sold out"
+                    : levelLocked
+                      ? `Requires level ${row.requiredLevel}`
+                      : store.isLoading
+                        ? "Confirming..."
+                        : `Buy for ${formatPol(row.price * BigInt(quantity))} POL`}
                 </button>
               </div>
             </article>

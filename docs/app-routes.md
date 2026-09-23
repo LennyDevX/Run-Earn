@@ -23,14 +23,15 @@ Deep-dive companions:
 | `/` | `src/app/page.tsx` | `SneakerCarousel`, `PolygonTransferCard` | — | — |
 | `/mint` | `src/app/mint/page.tsx` | `SneakerMintStudio` | `SneakerMint` | `usePolygonWallet`, `useMintedSneakers` |
 | `/my-nfts` | `src/app/my-nfts/page.tsx` | `MyNftsGallery` | — (local storage) | `useMintedSneakers` |
-| `/collection` | `src/app/collection/page.tsx` | `VeSneakerStorefront` | `VeSneakerStore`, `SneakerMint` | `useVeSneakerStore`, `useSubgraphActivity` |
+| `/collection` | `src/app/collection/page.tsx` | `VeSneakerStorefront`, `ModStorefront` | `VeSneakerStore`, `ModStore`, `SneakerMint`, `PlayerProgress` | `useVeSneakerStore`, `useModEconomy`, `usePlayerProgress`, `useSubgraphActivity` |
 | `/workshop` | `src/app/workshop/page.tsx` | `WorkshopDashboard` | `SneakerWorkshop`, `SneakerMods`, `SneakerMint`, `SneakerGame` | `useWorkshop`, `useSubgraphActivity` |
-| `/badges` | `src/app/badges/page.tsx` | `BadgesDashboard` | `SneakerMods` | `useBadges`, `useSubgraphActivity` |
+| `/badges` | `src/app/badges/page.tsx` | `BadgesDashboard` | `SneakerMods`, `PlayerProgress` | `useBadges`, `usePlayerProgress`, `useSubgraphActivity` |
 | `/marketplace` | `src/app/marketplace/page.tsx` | `MarketplaceDashboard` | `SneakerMarketplace`, `SneakerMint`, `SneakerMods`, `SneakerAppraiser`, `SneakerStaking` | `useMarketplace`, `useSubgraphActivity` |
 | `/game` | `src/app/game/page.tsx` | `SneakerGameDashboard` | `SneakerGame`, `SneakerMint`, `RENToken` | `useSneakerGame`, `useSubgraphActivity` |
 | `/staking` | `src/app/staking/page.tsx` | `StakingVaultDashboard` | `SneakerStaking`, `SneakerMint` | `useStakingVault`, `useNftAppraisal`, `useSubgraphActivity` |
 | `/defi` | `src/app/defi/page.tsx` | `StakingVaultDashboard`, `PolygonTransferCard` | `SneakerStaking` | same as `/staking` |
 | `/roadmap` | `src/app/roadmap/page.tsx` | static milestones | — | — |
+| `/profile` | `src/app/profile/page.tsx` | `ProfileDashboard` | `SneakerMint`, `SneakerMods` (owned counts), `PlayerProgress` | `useProfile`, `usePlayerProgress`, `useMintedSneakers`, `useOwnedSneakers`, `useOwnedMods`, `useSubgraphActivity` |
 | `/api/generate-sneaker` | `src/app/api/generate-sneaker/route.ts` | — | — | — |
 | `/api/subgraph` | `src/app/api/subgraph/route.ts` | — | The Graph Studio | — |
 | `/api/pol-price` | `src/app/api/pol-price/route.ts` | — | Uniswap Trading API | `usePolPrice` |
@@ -66,7 +67,7 @@ it via the `usePolygonWallet()` hook.
 Hand-written minimal ABIs (no codegen) for `sneakerMintAbi`, `stakingAbi`,
 `sneakerAppraiserAbi`, `sneakerMarketplaceAbi`, `sneakerGameAbi`, `veSneakerStoreAbi`,
 `sneakerModsAbi`, `sneakerWorkshopAbi`, `sneakerSwapAbi`, `modRentalAbi`, `modStoreAbi`,
-`erc721BalanceAbi`, `erc721ApproveAbi`. The marketplace ABI is collection-aware: `list`,
+`playerProgressAbi`, `erc721BalanceAbi`, `erc721ApproveAbi`. The marketplace ABI is collection-aware: `list`,
 `createAuction`, `makeOffer`, and `tokenSaleKind` all take the NFT contract address.
 When you add a contract function, add the ABI entry here **and**
 export the inferred type. `uint16` outputs are inferred as `number` by viem — wrap with
@@ -106,6 +107,9 @@ pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
 - `Navbar` keeps the desktop links at `md+`, is `sticky` with a translucent backdrop, and
   exposes a 44px menu button below `md` that opens `MoreSheet` with Staking, My NFTs,
   DeFi, Roadmap and the theme toggle.
+- `Navbar` also mounts `ProfileButton` — a round avatar/user icon to the left of the
+  desktop theme toggle (and next to the wallet button on mobile) linking to `/profile`.
+  It renders the profile avatar image when one is set.
 - `body` reserves the bar height plus the bottom safe-area inset, so pages do not need
   their own bottom padding. Details and conventions: [`mobile-experience.md`](mobile-experience.md).
 
@@ -129,6 +133,8 @@ pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
 | `useVeSneakerStore` | veSneaker catalog reads + `buy(designIndex, price, quantity)` |
 | `usePolPrice` | Live POL/USD from `/api/pol-price` (Uniswap proxy) for USD hints |
 | `useSubgraphActivity` | `/api/subgraph` feed + `addLocalActivity` optimistic entries |
+| `useProfile` | Local per-wallet profile (username, avatar: uploaded image or minted-NFT art) under `runearn:profile:<address>`; `PROFILE_UPDATED_EVENT` broadcasts changes |
+| `usePlayerProgress` | On-chain `PlayerProgress` reads — `progressOf` (xp/level/thresholds), `xpBreakdown`, public username + NFT avatar pointer. `configured` false until `NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS` is set |
 
 Conventions every hook follows:
 
@@ -211,6 +217,11 @@ Conventions every hook follows:
 - **Mod storefront:** `ModStorefront` (`src/components/ModStorefront.tsx`) renders the
   `ModStore` catalog on the same page — premium mod designs (including consumables)
   bought with POL via `useModEconomy.buyMod`.
+- **Level gates:** both stores support `requiredLevel` per design — gated cards show a
+  `LV X+` chip and the buy button reads "Requires level X" (disabled) when
+  `usePlayerProgress` reports a lower level or `PlayerProgress` is unconfigured.
+  This is how extra copies of skill NFTs are sold — see
+  [`player-progression.md`](player-progression.md).
 
 ### `/marketplace` — Buy, sell, auction, offer
 
@@ -248,9 +259,10 @@ Conventions every hook follows:
 - **Contracts:** `SneakerWorkshop` (`NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS`),
   `SneakerMods` (`NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`), `SneakerMint`, `SneakerGame`.
 - **Hooks:** `useWorkshop`, `useSubgraphActivity`.
-- **Slots:** six per sneaker — `SLOTS` in `src/lib/mods.ts` mirrors the contract:
+- **Slots:** seven per sneaker — `SLOTS` in `src/lib/mods.ts` mirrors the contract:
   Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal,
-  cosmetic override), Core (auto-activation), Boost (+staking APY).
+  cosmetic override), Core (auto-activation), Boost (+staking APY), Skill
+  (passive +earn rate from level-gated skill NFTs).
 - **Vitals card:** live `powerOf` / `healthOf` / `energyOf` reads via `useSneakerGame`
   — health decays 1/day, energy refills on manual activation.
 - **Flows:**
@@ -260,13 +272,16 @@ Conventions every hook follows:
   - **Consumables:** `useAbility(sneakerId, modId)` burns a consumable mod and applies
     its `aux` ability — `0`/`255` repair kit (free full health), `1` surge (instant
     activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge
-    stone (free level, 2⚡). `useRepairKit` remains as a repair-kit-only shortcut.
+    stone (free level, 2⚡), `4` Overdrive (+`effectBps` earn for 48h, 3⚡),
+    `5` Stim pack (instant energy refill, free), `6` Lucky repair (full health +
+    `effectBps` boost for 24h, 1⚡). `useRepairKit` remains as a repair-kit-only
+    shortcut.
   - **Forge:** `forge(sneakerId)` burns claimed veRUNE (`nextForgeCost = base × (level+1)`)
     for permanent +rarity/+earn-rate levels.
 - **Reads:** `equipped(sneakerId, slot)` per slot plus the bonus snapshot
   (`earnBonusBps`, `wearReductionBps`, `repairDiscountBps`, `appraisalBonusBps`,
-  `stakingBoostBps`, `autoActive`, `skinOverride`, `forgeLevel`, `nextForgeCost`,
-  `tempBoostBps`, `boostExpiresAt`).
+  `stakingBoostBps`, `skillBonusBps`, `autoActive`, `skinOverride`, `forgeLevel`,
+  `nextForgeCost`, `tempBoostBps`, `boostExpiresAt`).
 - **Dev notes:** sneakers with equipped mods cannot be listed or auctioned — the UI
   shows the equipped state so users can unequip first. Rented mods equip through
   `ModRental.equipRented`, not `equip`.
@@ -279,8 +294,14 @@ Conventions every hook follows:
 - **Flow:** `claim(achievementId, sneakerId)` mints the badge mod when the on-chain
   requirement is met (checked by `meetsRequirement`). One claim per wallet per
   achievement; sneaker-scoped kinds (streak, lifetime points) take the tokenId.
+  `ReqKind.PlayerLevel` badges are the free skill claims — they verify
+  `PlayerProgress.levelOf ≥ threshold` on-chain.
 - **Reads:** `achievementCount` + `achievements(id)` (kind, threshold, slot, traits,
   active), `meetsRequirement`, `achievementClaimed`.
+- **Level skills:** `ReqKind.PlayerLevel` achievements render in a dedicated
+  "Level skills" section — free claim once `PlayerProgress.levelOf` reaches the
+  threshold, with the player's live level shown in the header and a link to
+  `/collection` for purchasable extra copies (ModStore `requiredLevel` designs).
 - **Dev notes:** badges are mod NFTs — claimed badges appear in `useOwnedMods` and can
   be equipped, sold, auctioned, traded, or rented like any other mod.
 
@@ -334,6 +355,33 @@ Conventions every hook follows:
 - **Notes:** pure data — update the `QUARTERS` array. Keep it aligned with
   [`polygon-contract-roadmap.md`](polygon-contract-roadmap.md).
 
+### `/profile` — Runner profile + player level
+
+- **Files:** `src/app/profile/page.tsx`, `src/components/ProfileDashboard.tsx`,
+  `src/lib/profile.ts`, `src/hooks/useProfile.ts`.
+- **Purpose:** per-wallet identity — editable username, avatar (device upload or a
+  minted sneaker's artwork), player level with XP bar, stats grid, and an activity
+  feed combining indexed events with local mint history.
+- **Data source:** `localStorage` under `runearn:profile:<address>` (hybrid by design:
+  identity is local UX state today and migrates on-chain with `PlayerProgress`;
+  uploaded images never leave the device). Owned counts come from `SneakerMint` /
+  `SneakerMods` reads; activity from `useSubgraphActivity`.
+- **Username:** 3–20 chars, validated by `isValidUsername`, default `Runner #<last4>`.
+- **Avatar:** `fileToAvatarDataUrl` square-crops uploads to 256px JPEG (~100 KB);
+  the NFT tab picks any locally minted sneaker and stores its `MintedSneaker.id`.
+  `/my-nfts` cards also expose a "Set as avatar" shortcut.
+- **Levels:** when `NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS` is configured, the level card
+  reads the on-chain `progressOf` snapshot (XP, level, thresholds) — verified,
+  tamper-proof, and the gate for skill NFT unlocks (one free claim per skill,
+  extra copies purchasable in the stores). Without it, `levelProgress` in
+  `src/lib/profile.ts` shows a local estimate (owned sneakers ×100, mods ×40, mints ×60,
+  activity ×30) across the same 10-tier curve.
+- **Skills section:** lists owned skill NFTs — passive slot-6 mods and consumable
+  skills (aux 4–6) — with a "Claim skills →" link to `/badges`. Full system
+  reference: [`player-progression.md`](player-progression.md).
+- **Dev notes:** safe without a wallet (guest profile) and without contract addresses
+  (local signals still drive stats and the level bar).
+
 ### `/api/generate-sneaker` — AI artwork
 
 - **File:** `src/app/api/generate-sneaker/route.ts` (`runtime = "nodejs"`, `maxDuration = 120`).
@@ -384,6 +432,7 @@ Conventions every hook follows:
 | `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS` | NFT↔NFT trades |
 | `NEXT_PUBLIC_MOD_RENTAL_ADDRESS` | mod rentals |
 | `NEXT_PUBLIC_MOD_STORE_ADDRESS` | premium mod store |
+| `NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS` | profile (on-chain XP/levels + public identity) |
 | `NEXT_PUBLIC_REWARD_TOKEN_ADDRESS` | REN reads/redemption |
 | `GEMINI_API_KEY` | `/api/generate-sneaker` (server-only) |
 | `THE_GRAPH_QUERY_URL` / `_API_KEY` / `_SLUG` / `_VERSION` | `/api/subgraph` (server-only) |

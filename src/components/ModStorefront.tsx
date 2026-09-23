@@ -5,6 +5,7 @@ import { formatEther, getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { modStoreAbi } from "@/lib/contracts";
 import { useModEconomy } from "@/hooks/useModEconomy";
+import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { modEffectLabel, slotInfo } from "@/lib/mods";
 import { RARITIES } from "@/lib/sneaker-nft";
@@ -21,6 +22,7 @@ type ModDesign = {
   price: bigint;
   maxSupply: number;
   minted: number;
+  requiredLevel: number;
   active: boolean;
 };
 
@@ -33,6 +35,8 @@ function formatPol(value: bigint, maxDigits = 4) {
 export default function ModStorefront() {
   const wallet = usePolygonWallet();
   const economy = useModEconomy();
+  const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
+  const playerLevel = progress.snapshot?.level ?? 0;
   const { addLocalActivity } = useSubgraphActivity(wallet.address);
   const [designs, setDesigns] = useState<ModDesign[]>([]);
   const [isReading, setIsReading] = useState(false);
@@ -69,8 +73,8 @@ export default function ModStorefront() {
       const next: ModDesign[] = [];
       rows.forEach((raw, i) => {
         if (!raw) return;
-        const [name, , slot, , tier, effectBps, , consumable, price, maxSupply, minted, active] =
-          raw as readonly [string, string, number, number, number, number, number, boolean, bigint, number, number, boolean];
+        const [name, , slot, , tier, effectBps, , consumable, price, maxSupply, minted, requiredLevel, active] =
+          raw as readonly [string, string, number, number, number, number, number, boolean, bigint, number, number, number, boolean];
         next.push({
           index: BigInt(i),
           name,
@@ -81,6 +85,7 @@ export default function ModStorefront() {
           price,
           maxSupply: Number(maxSupply),
           minted: Number(minted),
+          requiredLevel: Number(requiredLevel),
           active: Boolean(active),
         });
       });
@@ -132,6 +137,8 @@ export default function ModStorefront() {
             const slot = slotInfo(design.slot);
             const rarityObj = RARITIES[design.tier % RARITIES.length];
             const soldOut = design.maxSupply > 0 && design.minted >= design.maxSupply;
+            const levelLocked =
+              design.requiredLevel > 0 && (!progress.configured || playerLevel < design.requiredLevel);
             const traits = {
               slot: design.slot,
               rarity: 0,
@@ -158,6 +165,11 @@ export default function ModStorefront() {
                         CONSUMABLE
                       </span>
                     ) : null}
+                    {design.requiredLevel > 0 ? (
+                      <span className={`absolute bottom-3 left-3 rounded-full px-2.5 py-1 font-pixel text-[9px] ${levelLocked ? "bg-magma/10 text-magma" : "bg-mint/10 text-mint"}`}>
+                        LV {design.requiredLevel}+
+                      </span>
+                    ) : null}
                   </div>
                   <h3 className="mt-4 font-bold tracking-tight">{design.name}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-foreground/50">{modEffectLabel(traits)}</p>
@@ -169,11 +181,15 @@ export default function ModStorefront() {
                 </div>
                 <button
                   type="button"
-                  disabled={economy.isLoading || !design.active || soldOut}
+                  disabled={economy.isLoading || !design.active || soldOut || levelLocked}
                   onClick={() => handleBuy(design)}
                   className="min-h-11 w-full cursor-pointer rounded-full bg-mint px-4 text-sm font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {soldOut ? "Sold out" : `Buy · ${formatPol(design.price)} POL`}
+                  {soldOut
+                    ? "Sold out"
+                    : levelLocked
+                      ? `Requires level ${design.requiredLevel}`
+                      : `Buy · ${formatPol(design.price)} POL`}
                 </button>
               </article>
             );

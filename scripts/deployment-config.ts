@@ -10,7 +10,7 @@ export type DeploymentRecord = {
   admin: Address;
   minter: Address;
   deployedAt: string;
-  contracts: Partial<Record<"RENToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore" | "SneakerMods" | "SneakerWorkshop" | "SneakerSwap" | "ModRental" | "ModStore", { address: Address; constructorArgs: readonly unknown[] }>>;
+  contracts: Partial<Record<"RENToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore" | "SneakerMods" | "SneakerWorkshop" | "SneakerSwap" | "ModRental" | "ModStore" | "PlayerProgress", { address: Address; constructorArgs: readonly unknown[] }>>;
 };
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
@@ -127,6 +127,19 @@ export function rentalParameters() {
   return {
     feeBps: bigintEnv("RENTAL_FEE_BPS", 250n), // 2.5% rental fee
   };
+}
+
+/// PlayerProgress level curve — XP needed to reach each level (index 0 = L1).
+/// Override with PROGRESS_LEVEL_THRESHOLDS="0,300,800,..." (comma-separated,
+/// strictly increasing, first entry must be 0).
+export function progressParameters() {
+  const raw = optionalEnv("PROGRESS_LEVEL_THRESHOLDS");
+  const defaults = [0, 300, 800, 1600, 2800, 4500, 7000, 10500, 15000, 21000];
+  const thresholds = (raw ? raw.split(",").map((part) => BigInt(part.trim())) : defaults.map(BigInt));
+  if (thresholds.length < 2 || thresholds[0] !== 0n) {
+    throw new Error("PROGRESS_LEVEL_THRESHOLDS needs >= 2 ascending entries starting at 0.");
+  }
+  return { levelThresholds: thresholds };
 }
 
 export function gameParameters() {

@@ -17,10 +17,11 @@
 | — | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
 | — | `ISneakerBoosts` | `contracts/ISneakerBoosts.sol` | Shared boost read interface consumed by game, staking, appraiser, marketplace |
 | — | `SneakerMods` | `contracts/SneakerMods.sol` | ERC-721 mod/badge collection with on-chain achievement claims |
-| — | `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Six-slot equip system, consumable ability NFTs, and the veRUNE forge |
+| — | `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip system, consumable ability NFTs, and the veRUNE forge |
 | — | `SneakerSwap` | `contracts/SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across collections |
 | — | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
 | — | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs (including consumables) |
+| — | `PlayerProgress` | `contracts/PlayerProgress.sol` | On-chain player XP/levels from live protocol state + public username/NFT-avatar identity |
 
 ## Current Phase 1 foundation
 
@@ -70,12 +71,13 @@ The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but 
 
 ### Upgrade economy (v1.0)
 
-- `SneakerMods.sol`: ERC-721 mods/badges with `ModTraits{slot, rarity, tier, effectBps, aux, consumable, proofHash}`. Six slots: Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal, `aux` = design override), Core (auto-activation), Boost (+staking APY). Achievements are claimable on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked).
-- `SneakerWorkshop.sol`: escrows equipped mods (one per slot), exposes `ISneakerBoosts`, runs `forge` (burns veRUNE via `game.spendPoints` for permanent +rarity/+earn), and `useAbility` which **burns a consumable mod NFT** per use — `aux` selects the ability: `0`/`255` repair kit (free), `1` surge (instant activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge stone (free level, 2⚡).
+- `SneakerMods.sol`: ERC-721 mods/badges with `ModTraits{slot, rarity, tier, effectBps, aux, consumable, proofHash}`. Seven slots: Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal, `aux` = design override), Core (auto-activation), Boost (+staking APY), Skill (passive +earn rate from level-gated skill NFTs). Achievements are claimable on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked, `ReqKind.PlayerLevel` via `PlayerProgress.levelOf`).
+- `SneakerWorkshop.sol`: escrows equipped mods (one per slot), exposes `ISneakerBoosts` (`skillBonusBps` folds the slot-6 passive into `earnBonusBps`), runs `forge` (burns veRUNE via `game.spendPoints` for permanent +rarity/+earn), and `useAbility` which **burns a consumable mod NFT** per use — `aux` selects the ability: `0`/`255` repair kit (free), `1` surge (instant activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge stone (free level, 2⚡), `4` Overdrive (+`effectBps` earn for 48h, 3⚡), `5` Stim pack (instant energy refill via `game.refillEnergyFromWorkshop`, free), `6` Lucky repair (full health + `effectBps` boost for 24h, 1⚡).
 - `SneakerMarketplace.sol`: collection-aware V2 — `list(collection, tokenId, price)`, auctions, and POL offers work for sneakers and mods; locks are keyed by `(collection, tokenId)`; staked NFTs and sneakers with equipped mods cannot be listed.
 - `SneakerSwap.sol`: atomic NFT↔NFT swaps with optional POL top-up, any allowed collection pair.
 - `ModRental.sol`: owners list mods for `pricePerDay` POL; renters prepay and equip via the workshop while custody stays in the rental contract; consumables are not rentable.
-- `ModStore.sol`: catalog of premium mod designs minted on demand for POL (store holds `MINTER_ROLE` on SneakerMods), including consumable designs via the `aux`/`consumable` fields.
+- `ModStore.sol`: catalog of premium mod designs minted on demand for POL (store holds `MINTER_ROLE` on SneakerMods), including consumable designs via the `aux`/`consumable` fields. `ModDesign.requiredLevel` gates purchases by `PlayerProgress.levelOf` — the paid path for extra skill copies.
+- `PlayerProgress.sol`: deterministic XP/levels aggregated from live protocol state — sneaker balance ×100, mod balance ×40, `game.lifetimeEarned`/1,000 ×10, `marketplace.tradesCount` ×60, `workshop.actionsCount` ×30, staked POL principal ×20 — mapped onto a 10-tier threshold table (`0 → 21,000`). Also hosts the public profile half: `setUsername` (3–20 bytes) and `setNftAvatar` (ownership-verified pointer); uploaded images stay client-side. Levels are live standing — selling NFTs or unstaking POL lowers them. See [`player-progression.md`](player-progression.md).
 
 **POL formula:**
 
@@ -139,14 +141,16 @@ The adapter introspects the configured schema and normalizes address-indexed dep
 `DEPLOY_TARGET=all` in `scripts/deploy.ts` deploys in dependency order and runs the
 post-deploy wiring automatically:
 
-1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore`.
+1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore` → `PlayerProgress`.
 2. Wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`,
    `mods.setWorkshop`, `workshop.setRentalSource`,
    `marketplace.setWorkshop/setCollectionAllowed(mods)`,
    `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`,
-   `nft.grantRole(MINTER_ROLE, veStore)`.
+   `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress`,
+   `modStore.setProgress`, `veStore.setProgress`.
 3. Fund the POL reward reserve (`scripts/fund-staking.ts`) and the veRUNE redemption pool.
+3b. Seed the level-gated skill catalog (`scripts/seed-skills.ts` — achievements + store copies).
 4. Configure frontend contract addresses and server-only Graph query settings.
-5. Test `/staking`, `/marketplace`, `/game`, `/workshop`, and `/badges` on Polygon Amoy with a disposable wallet.
+5. Test `/staking`, `/marketplace`, `/game`, `/workshop`, `/badges`, and `/profile` on Polygon Amoy with a disposable wallet.
 6. Verify subgraph activity after indexing.
 7. Use multisig administration and deterministic artifacts before mainnet.

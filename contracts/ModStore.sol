@@ -6,6 +6,11 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SneakerMods} from "./SneakerMods.sol";
 
+/// @dev Minimal view of PlayerProgress needed for level-gated designs.
+interface IPlayerProgressView {
+    function levelOf(address user) external view returns (uint8);
+}
+
 /// @title ModStore — primary sale of premium upgrade mods for POL.
 /// @notice The store mints SneakerMods on demand: the buyer pays POL and the
 ///      store calls SneakerMods.mintAuthorized, so no copies are pre-minted.
@@ -27,11 +32,17 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         uint256 price; // POL per copy
         uint16 maxSupply;
         uint16 minted;
+        /// @notice Minimum PlayerProgress level required to buy (0 = open to all).
+        uint8 requiredLevel;
         bool active;
     }
 
     SneakerMods public immutable mods;
     address payable public treasury;
+
+    /// @notice PlayerProgress consulted for level-gated designs. Zero address
+    ///      disables gating — level-gated designs become unpurchasable.
+    address public progress;
 
     ModDesign[] private _designs;
 
@@ -39,6 +50,7 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
     event ModDesignUpdated(uint256 indexed designIndex, uint256 price, uint16 maxSupply, bool active);
     event ModPurchased(uint256 indexed designIndex, address indexed buyer, uint256 quantity, uint256 totalPaid, uint256 firstTokenId);
     event TreasuryUpdated(address indexed treasury);
+    event ProgressUpdated(address indexed progress);
     event ProceedsWithdrawn(address indexed to, uint256 amount);
 
     constructor(address admin, address modsAddress, address payable treasury_) {
@@ -85,6 +97,7 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
             price: design.price,
             maxSupply: design.maxSupply,
             minted: 0,
+            requiredLevel: design.requiredLevel,
             active: true
         }));
         emit ModDesignAdded(
@@ -105,6 +118,18 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         design.maxSupply = maxSupply;
         design.active = active;
         emit ModDesignUpdated(designIndex, price, maxSupply, active);
+    }
+
+    /// @notice Update the required player level for a design. Admin only.
+    function setDesignRequiredLevel(uint256 designIndex, uint8 requiredLevel) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireDesign(designIndex).requiredLevel = requiredLevel;
+        emit ModDesignUpdated(designIndex, _requireDesign(designIndex).price, _requireDesign(designIndex).maxSupply, _requireDesign(designIndex).active);
+    }
+
+    /// @notice Link PlayerProgress for level-gated designs.
+    function setProgress(address progress_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        progress = progress_;
+        emit ProgressUpdated(progress_);
     }
 
     function setTreasury(address payable treasury_) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -180,6 +205,12 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         ModDesign storage design = _requireDesign(designIndex);
         require(design.active, "ModStore: design inactive");
         require(design.minted + quantity <= design.maxSupply, "ModStore: supply exhausted");
+        if (design.requiredLevel > 0) {
+            require(
+                progress != address(0) && IPlayerProgressView(progress).levelOf(buyer) >= design.requiredLevel,
+                "ModStore: level required"
+            );
+        }
         uint256 total = design.price * quantity;
         require(msg.value == total, "ModStore: wrong payment");
 

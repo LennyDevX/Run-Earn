@@ -6,6 +6,7 @@ import { NETWORK_LABEL, explorerTransactionUrl, usePolygonWallet } from "@/compo
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
+import { centerInScrollRow } from "@/lib/scroll-x";
 import PixelSneaker from "@/components/PixelSneaker";
 import { ModsMarketTab, RentalsTab, TradesTab } from "@/components/ModMarketTabs";
 
@@ -167,7 +168,10 @@ export default function MarketplaceDashboard() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={(event) => {
+                  setActiveTab(tab.id);
+                  centerInScrollRow(event.currentTarget);
+                }}
                 className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
                   activeTab === tab.id
                     ? "bg-foreground text-background shadow-md"

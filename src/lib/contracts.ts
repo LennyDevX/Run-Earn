@@ -202,6 +202,7 @@ export const sneakerMarketplaceAbi = [
   { type: "function", name: "allowedCollections", stateMutability: "view", inputs: [{ name: "collection", type: "address" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "feeBps", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "accumulatedFees", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "tradesCount", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   // Views
   { type: "function", name: "suggestedPrice", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "valueRecommendations", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "string[]" }] },
@@ -217,6 +218,7 @@ export const sneakerGameAbi = [
   { type: "function", name: "sneakers", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "lastActivationAt", type: "uint64" }, { name: "lastAccrualAt", type: "uint64" }, { name: "streak", type: "uint32" }, { name: "durability", type: "uint16" }, { name: "pendingPoints", type: "uint256" }, { name: "lifetimePoints", type: "uint256" }, { name: "lastDecayAt", type: "uint64" }, { name: "energy", type: "uint16" }] },
   { type: "function", name: "veRuneBalance", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "totalRedeemed", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "lifetimeEarned", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   // Views
   { type: "function", name: "pendingPoints", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "earnRatePerSecond", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
@@ -269,6 +271,7 @@ export const veSneakerStoreAbi = [
       { name: "price", type: "uint256" },
       { name: "maxSupply", type: "uint16" },
       { name: "minted", type: "uint16" },
+      { name: "requiredLevel", type: "uint8" },
       { name: "active", type: "bool" },
     ],
   },
@@ -388,6 +391,8 @@ export const sneakerWorkshopAbi = [
   { type: "function", name: "repairDiscountBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "appraisalBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "stakingBoostBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "skillBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "actionsCount", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "rarityBonus", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
   { type: "function", name: "autoActive", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "skinOverride", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
@@ -474,6 +479,7 @@ export const modStoreAbi = [
       { name: "price", type: "uint256" },
       { name: "maxSupply", type: "uint16" },
       { name: "minted", type: "uint16" },
+      { name: "requiredLevel", type: "uint8" },
       { name: "active", type: "bool" },
     ],
   },
@@ -488,3 +494,22 @@ export type SneakerWorkshopAbi = typeof sneakerWorkshopAbi;
 export type SneakerSwapAbi = typeof sneakerSwapAbi;
 export type ModRentalAbi = typeof modRentalAbi;
 export type ModStoreAbi = typeof modStoreAbi;
+
+export const playerProgressAbi = [
+  // Profile (public identity — uploaded images stay off-chain)
+  { type: "function", name: "setUsername", stateMutability: "nonpayable", inputs: [{ name: "username", type: "string" }], outputs: [] },
+  { type: "function", name: "setNftAvatar", stateMutability: "nonpayable", inputs: [{ name: "collection", type: "address" }, { name: "tokenId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "usernames", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "string" }] },
+  { type: "function", name: "avatarCollection", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "address" }] },
+  { type: "function", name: "avatarTokenId", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  // XP / levels
+  { type: "function", name: "xpOf", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "xpBreakdown", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "sneakerXp", type: "uint256" }, { name: "modXp", type: "uint256" }, { name: "veRuneXp", type: "uint256" }, { name: "tradeXp", type: "uint256" }, { name: "workshopXp", type: "uint256" }, { name: "stakingXp", type: "uint256" }] },
+  { type: "function", name: "levelOf", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint8" }] },
+  { type: "function", name: "progressOf", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "xp", type: "uint256" }, { name: "level", type: "uint8" }, { name: "currentLevelXp", type: "uint256" }, { name: "nextLevelXp", type: "uint256" }] },
+  { type: "function", name: "levelThresholds", stateMutability: "view", inputs: [{ name: "", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "thresholds", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256[]" }] },
+  { type: "function", name: "MAX_LEVEL", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+] as const;
+
+export type PlayerProgressAbi = typeof playerProgressAbi;

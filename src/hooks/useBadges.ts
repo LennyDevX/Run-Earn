@@ -15,6 +15,7 @@ export type BadgeAchievement = {
   slot: number;
   tier: number;
   effectBps: number;
+  aux: number;
   consumable: boolean;
   active: boolean;
   meets: boolean;
@@ -88,6 +89,7 @@ export function useBadges() {
             slot: Number(raw[2]),
             tier: Number(raw[4]),
             effectBps: Number(raw[5]),
+            aux: Number(raw[6]),
             consumable: Boolean(raw[7]),
             active: Boolean(raw[9]),
             meets: Boolean(meets),

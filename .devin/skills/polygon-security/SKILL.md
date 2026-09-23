@@ -17,10 +17,11 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - `SneakerGame.sol`: virtual veRUNE points (24h activation, streaks, power/health/energy, repair) with a funded REN redemption path.
 - `VeSneakerStore.sol`: on-demand primary sale of virtual sneakers for POL, with per-design pricing, supply caps, and a treasury payout.
 - `SneakerMods.sol`: ERC-721 mod/badge collection with on-chain achievement claims.
-- `SneakerWorkshop.sol`: six-slot equip escrow, consumable `useAbility` burns, veRUNE forge.
+- `SneakerWorkshop.sol`: seven-slot equip escrow (incl. passive Skill slot), consumable `useAbility` burns, veRUNE forge.
 - `SneakerSwap.sol`: atomic NFT↔NFT trades ± POL.
 - `ModRental.sol`: POL-paid mod rentals with escrow custody and expiry return.
-- `ModStore.sol`: primary sale of premium/consumable mods for POL.
+- `ModStore.sol`: primary sale of premium/consumable mods for POL with `requiredLevel` gates.
+- `PlayerProgress.sol`: live-state XP/levels (counters in game/marketplace/workshop, staking principal) + public username/NFT-avatar identity.
 - `/api/generate-sneaker`: server-only Gemini image generation for the mint studio.
 - `/api/subgraph`: server-only proxy for the `nuxgraph` Studio deployment.
 - `/api/pol-price`: server-only proxy for the Uniswap Trading API POL/USD quote.
@@ -84,13 +85,23 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Verify `claim` achievements check real on-chain requirements and enforce one claim per wallet per achievement.
 - Confirm `equip` escrows the mod (`equippedTo`), rejects consumables, enforces one mod per slot, and only the sneaker owner (or active renter via `rentalSource`) can equip.
 - Verify equipped mods cannot be burned, listed, or swapped while escrowed, and `unequip` returns the exact mod to its owner.
-- Confirm `useAbility` validates `consumable` + `aux` kind, spends the correct energy cost via `game.spendEnergy`, and ALWAYS burns the mod — no ability may be reusable.
+- Confirm `useAbility` validates `consumable` + `aux` kind (0/255 repair, 1 surge, 2 boost, 3 forge stone, 4 Overdrive 48h, 5 Stim refill, 6 Lucky repair), spends the correct energy cost via `game.spendEnergy`, and ALWAYS burns the mod — no ability may be reusable.
+- Verify the Stim pack (`refillEnergyFromWorkshop`) is workshop-only and reverts on a dead sneaker — free energy must never resurrect a worn-out sneaker.
 - Verify `tempBoostBps`/`boostExpiresAt` expire correctly and a new capsule refreshes rather than stacking indefinitely.
 - Confirm `forge` burns exactly `forgeCostPoints` veRUNE via `spendPoints` and that forge-stone free levels cannot be replayed.
 - Verify `SneakerSwap` is atomic: both NFTs (± POL) move in one transaction or the whole thing reverts; expired/counterparty-owned swaps cannot be accepted; escrow returns on `cancel`.
 - Confirm `ModRental` escrow cannot be withdrawn mid-rental by the owner, expiry lets anyone return the mod, and the renter's workshop equip rights die with the rental.
 - Verify `ModStore`/`VeSneakerStore` hold `MINTER_ROLE` only on their target collection and cannot mint outside their design catalog.
 - Confirm `workshop.setRentalSource`, `setWorkshop`, and `setBoosts` are admin-only — a wrong address would hijack equip rights or fake boosts.
+
+### Player progression (PlayerProgress + level gates)
+
+- Verify XP is derived from live reads only — no user-supplied values; selling NFTs or unstaking POL must lower `levelOf`.
+- Confirm the counters can't be gamed: `tradesCount` increments only on completed sales (not on list/cancel/expiry), `actionsCount` only on successful workshop actions, `lifetimeEarned` only on claimed points.
+- Verify `setUsername` enforces the 3–20 byte bound and `setNftAvatar` verifies `ownerOf` — no avatar pointer to tokens the caller does not own.
+- Confirm `setLevelThresholds` is admin-only, must start at 0, and be strictly increasing — a broken table would corrupt every level gate.
+- Verify level gates (`PlayerLevel` achievements, `requiredLevel` designs) read `levelOf` at action time and revert when `progress` is unset — a zero-address `progress` must fail closed, never open.
+- Confirm `setProgress` on mods/both stores is admin-only — a malicious progress contract would fake levels.
 
 ### veSneaker primary sale
 
@@ -128,7 +139,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 
 ### Wallet and frontend
 
-- Validate `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`, `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`, `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS`, `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`, `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS`, `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS`, `NEXT_PUBLIC_MOD_RENTAL_ADDRESS`, and `NEXT_PUBLIC_MOD_STORE_ADDRESS` with viem.
+- Validate `NEXT_PUBLIC_SNEAKER_MINT_ADDRESS`, `NEXT_PUBLIC_STAKING_VAULT_ADDRESS`, `NEXT_PUBLIC_SNEAKER_APPRAISER_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_GAME_ADDRESS`, `NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`, `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`, `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS`, `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS`, `NEXT_PUBLIC_MOD_RENTAL_ADDRESS`, `NEXT_PUBLIC_MOD_STORE_ADDRESS`, and `NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS` with viem.
 - Confirm the EIP-1193 connected wallet is the signer.
 - Check wrong chain, rejected signatures, insufficient POL, failed receipts, and stale UI state.
 - Confirm the UI never treats veRUNE or local-storage entries as on-chain ownership.

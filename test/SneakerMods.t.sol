@@ -52,7 +52,7 @@ contract SneakerModsTest is Test {
     function test_MintAuthorized_RevertInvalidSlot() public {
         vm.prank(admin);
         vm.expectRevert("SneakerMods: invalid slot");
-        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(6, 50, 1, 100, 255, false, MODP1));
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(7, 50, 1, 100, 255, false, MODP1));
     }
 
     function test_MintAuthorized_RevertDuplicateProof() public {

@@ -9,6 +9,17 @@ import {SneakerGame} from "../contracts/SneakerGame.sol";
 import {SneakerMods} from "../contracts/SneakerMods.sol";
 import {ModStore} from "../contracts/ModStore.sol";
 
+/// @dev Minimal PlayerProgress stub — only levelOf is consumed by ModStore.
+contract MockProgress {
+    mapping(address => uint8) public levels;
+    function setLevel(address user, uint8 level) external {
+        levels[user] = level;
+    }
+    function levelOf(address user) external view returns (uint8) {
+        return levels[user];
+    }
+}
+
 contract ModStoreTest is Test {
     SneakerMint nft;
     RENToken ren;
@@ -38,7 +49,7 @@ contract ModStoreTest is Test {
 
         vm.prank(admin);
         store.addDesign(ModStore.ModDesign(
-            "Swift Sole", URI, 0, 60, 1, 3_000, 255, false, 2 ether, 100, 0, false
+            "Swift Sole", URI, 0, 60, 1, 3_000, 255, false, 2 ether, 100, 0, 0, false
         ));
     }
 
@@ -84,8 +95,42 @@ contract ModStoreTest is Test {
         vm.prank(alice);
         vm.expectRevert();
         store.addDesign(ModStore.ModDesign(
-            "X", URI, 0, 60, 1, 3_000, 255, false, 2 ether, 100, 0, false
+            "X", URI, 0, 60, 1, 3_000, 255, false, 2 ether, 100, 0, 0, false
         ));
+    }
+
+    function test_Buy_RevertBelowRequiredLevel() public {
+        MockProgress progress = new MockProgress();
+        vm.startPrank(admin);
+        store.setProgress(address(progress));
+        // Skill design: level 3 required.
+        store.addDesign(ModStore.ModDesign(
+            "Overdrive", URI, 0, 80, 2, 5_000, 4, true, 1 ether, 100, 0, 3, false
+        ));
+        vm.stopPrank();
+
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        vm.expectRevert("ModStore: level required");
+        store.buy{value: 1 ether}(1);
+
+        // Reaching the level unlocks the purchase.
+        progress.setLevel(alice, 3);
+        vm.prank(alice);
+        uint256 modId = store.buy{value: 1 ether}(1);
+        SneakerMods.ModTraits memory t = mods.traitsOf(modId);
+        assertEq(t.aux, 4);
+        assertTrue(t.consumable);
+    }
+
+    function test_SetDesignRequiredLevel_AdminOnly() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setDesignRequiredLevel(0, 5);
+
+        vm.prank(admin);
+        store.setDesignRequiredLevel(0, 5);
+        assertEq(store.designs(0).requiredLevel, 5);
     }
 
     function test_WithdrawProceeds() public {

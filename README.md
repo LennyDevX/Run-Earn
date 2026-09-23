@@ -11,7 +11,8 @@ This release delivers the core contracts and base concepts of the game, develope
 - **veSneakers** (`SneakerMint`) — the core ERC-721s. Create them with the AI mint studio from a photo of your sneaker, or buy designs from the veSneaker store. Fully virtual, playable, upgradeable, tradable.
 - **Power · Health · Energy** (`SneakerGame`) — every veSneaker mines veRUNE at a power rate set by rarity, loses 1 health/day of real time (plus wear per activation), and spends energy on special abilities. A worn-out sneaker stops mining until repaired.
 - **Mods & badges** (`SneakerMods`) — a second ERC-721 collection of upgrade NFTs. Achievement badges are claimed by meeting on-chain conditions (streaks, lifetime veRUNE, collection size, POL staked); premium mods are sold by the store.
-- **Workshop** (`SneakerWorkshop`) — equip mods into six slots (sole, upper, lining, skin, core, boost) to cut wear, raise health and appraisal, auto-activate daily, and amplify staking APY. Consumable mod NFTs burn on use: repair kits restore health, surge triggers instant activation, boost capsules raise earn rate for 24h, and forge stones grant a free forge level — fueling a burn-driven economy.
+- **Workshop** (`SneakerWorkshop`) — equip mods into seven slots (sole, upper, lining, skin, core, boost, skill) to cut wear, raise health and appraisal, auto-activate daily, amplify staking APY, and run passive skill effects. Consumable mod NFTs burn on use: repair kits restore health, surge triggers instant activation, boost capsules and Overdrive raise earn rate for 24–48h, Stim packs refill energy, Lucky repairs heal and boost, and forge stones grant a free forge level — fueling a burn-driven economy.
+- **Player levels & skills** (`PlayerProgress`) — on-chain XP from sneakers, mods, trades, workshop actions, and staked POL drives a 10-level curve. Levels unlock skill NFTs: one free claim each, extra copies sold in the stores, equipped in the workshop's skill slot or burned as consumable abilities.
 - **Marketplace V2** (`SneakerMarketplace`) — one venue for every collection: fixed-price sales, English auctions, and escrowed POL offers on sneakers *and* mods.
 - **Trades & rentals** (`SneakerSwap`, `ModRental`) — atomic NFT↔NFT swaps (± POL) and time-boxed mod rentals.
 - **veRUNE → REN** — veRUNE is the in-game virtual currency earned by daily activation and spent on repairs and forging; it redeems for the REN token once the reward pool opens.
@@ -124,10 +125,11 @@ The current Solidity foundation is:
 - `contracts/VeSneakerStore.sol`
 - `contracts/ISneakerBoosts.sol` — shared boost interface read by game, staking, appraiser, and marketplace
 - `contracts/SneakerMods.sol` — ERC-721 upgrade/badge collection with on-chain achievement claims
-- `contracts/SneakerWorkshop.sol` — six-slot equip system, consumable ability NFTs, and the veRUNE forge
+- `contracts/SneakerWorkshop.sol` — seven-slot equip system, consumable ability NFTs, and the veRUNE forge
 - `contracts/SneakerSwap.sol` — atomic NFT↔NFT trades (± POL) across collections
 - `contracts/ModRental.sol` — time-boxed mod rentals paid in POL
-- `contracts/ModStore.sol` — primary sale of premium mod designs
+- `contracts/ModStore.sol` — primary sale of premium mod designs (incl. `requiredLevel` gates)
+- `contracts/PlayerProgress.sol` — live-state XP/levels plus public username/NFT-avatar identity
 
 `SneakerStaking` separates user POL principal from a funded POL reward reserve. SneakerMint NFTs can be manually locked to increase APY with rarity-based boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%) plus Boost-mod bonuses via the workshop. `SneakerAppraiser` provides on-chain POL value estimates for each NFT based on rarity, tier, forge level, and equipped Skin mods. `SneakerMarketplace` supports fixed-price sales, English auctions, and POL offers across approved collections — staked NFTs and sneakers with equipped mods cannot be listed. `SneakerGame` runs the mining loop — rarity-scaled power, daily health decay, and energy for consumable abilities — with virtual veRUNE points redeemable for REN and workshop effects (earn bonus, wear reduction, repair discount, auto-activation) applied on-chain. `VeSneakerStore` sells virtual sneakers (veSneakers) for POL on demand; `ModStore` does the same for premium upgrade mods. Tokenomics are documented in [`docs/veRune-tokenomics.md`](docs/veRune-tokenomics.md); contract boundaries, economics, and deployment order in [`docs/contract-architecture-plan.md`](docs/contract-architecture-plan.md) and [`docs/polygon-staking-model.md`](docs/polygon-staking-model.md).
 

@@ -15,10 +15,11 @@ Current foundation: Solidity 0.8.36, Hardhat 3, OpenZeppelin Contracts 5.6.
 | `VeSneakerStore` | `VeSneakerStore.sol` | On-demand primary sale of virtual sneakers (veSneakers) for POL |
 | `ISneakerBoosts` | `ISneakerBoosts.sol` | Shared boost interface implemented by the workshop and read by game/staking/appraiser/marketplace |
 | `SneakerMods` | `SneakerMods.sol` | ERC-721 upgrade/badge collection with on-chain achievement claims |
-| `SneakerWorkshop` | `SneakerWorkshop.sol` | Six-slot mod equipment, consumable repair kits, and the veRUNE forge |
+| `SneakerWorkshop` | `SneakerWorkshop.sol` | Seven-slot mod equipment (6 upgrade slots + passive skill slot), consumable abilities, and the veRUNE forge |
 | `SneakerSwap` | `SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across approved collections |
 | `ModRental` | `ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
 | `ModStore` | `ModStore.sol` | On-demand primary sale of premium mod designs for POL |
+| `PlayerProgress` | `PlayerProgress.sol` | On-chain player XP/levels across the protocol + public username/NFT-avatar identity |
 
 ## Current staking behavior
 
@@ -72,13 +73,14 @@ Every veSneaker has three live stats:
 
 ## Upgrade economy (v1.0)
 
-- **SneakerMods** — ERC-721 mods/badges with `ModTraits { slot, rarity, tier, effectBps, aux, consumable, proofHash }`. Six slots: 0 Sole (−wear), 1 Upper (+earn rate), 2 Lining (−repair cost), 3 Skin (+appraisal, cosmetic), 4 Core (auto-activation), 5 Boost (+staking APY). Consumable mods (repair kits) burn on use. Achievements are claimed on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked) — one claim per wallet each.
-- **SneakerWorkshop** — implements `ISneakerBoosts`. `equip`/`unequip` escrow one mod per slot; `forge` burns claimed veRUNE (`game.spendPoints`) for permanent +rarity/+earn levels. `useAbility(sneakerId, modId)` burns any consumable mod and applies its ability by `aux`: `0`/`255` repair kit (free full restore), `1` surge (instant activation, bypasses cooldown — 2⚡), `2` boost capsule (+`effectBps` earn for 24h — 1⚡), `3` forge stone (free forge level — 2⚡). Energy costs are enforced through `SneakerGame.spendEnergy`. The game, staking, appraiser, marketplace, and swap read effects through the shared interface.
+- **SneakerMods** — ERC-721 mods/badges with `ModTraits { slot, rarity, tier, effectBps, aux, consumable, proofHash }`. Seven slots: 0 Sole (−wear), 1 Upper (+earn rate), 2 Lining (−repair cost), 3 Skin (+appraisal, cosmetic), 4 Core (auto-activation), 5 Boost (+staking APY), 6 Skill (passive earn bonus from level-gated skill NFTs). Consumable mods burn on use. Achievements are claimed on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked, `ReqKind.PlayerLevel` via `PlayerProgress.levelOf`) — one claim per wallet each; level-gated claims are the free skill mint.
+- **SneakerWorkshop** — implements `ISneakerBoosts`. `equip`/`unequip` escrow one mod per slot; `forge` burns claimed veRUNE (`game.spendPoints`) for permanent +rarity/+earn levels. `useAbility(sneakerId, modId)` burns any consumable mod and applies its ability by `aux`: `0`/`255` repair kit (free full restore), `1` surge (instant activation, bypasses cooldown — 2⚡), `2` boost capsule (+`effectBps` earn for 24h — 1⚡), `3` forge stone (free forge level — 2⚡), `4` Overdrive (+`effectBps` earn for 48h — 3⚡), `5` Stim pack (instant energy refill — free, reverts on a dead sneaker), `6` Lucky repair (full restore + `effectBps` boost for 24h — 1⚡). Energy costs are enforced through `SneakerGame.spendEnergy`; the Stim pack refills through `SneakerGame.refillEnergyFromWorkshop`. `skillBonusBps` exposes the slot-6 passive contribution (already folded into `earnBonusBps`). The game, staking, appraiser, marketplace, and swap read effects through the shared interface.
 - **SneakerMarketplace (V2)** — collection-aware: `list(collection, tokenId, price)`, `createAuction(collection, ...)`, `makeOffer(collection, ...)`, locks keyed by `(collection, tokenId)`. `allowedCollections` gates which NFT contracts trade; sneakers with equipped mods cannot be listed or auctioned.
 - **SneakerSwap** — `createSwap` escrows the maker's NFT (+ optional POL) for a specific or open taker; `accept` settles both legs atomically; `cancel` returns escrow. Any approved collection pair.
 - **ModRental** — owners `list` a mod for `pricePerDay` POL; renters prepay for a fixed duration, equip via `equipRented` (custody stays in the rental contract), and `returnExpired` settles after expiry. Equipped mods cannot be listed.
-- **ModStore** — catalog of premium designs minted on demand through `SneakerMods.mintAuthorized` (the store holds `MINTER_ROLE`). Proceeds go to the treasury.
-- **Deployment order:** mint → staking → appraiser → marketplace → game → mods → workshop → swap → rental → modStore → veStore, then wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource`, `marketplace.setWorkshop/setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`.
+- **ModStore** — catalog of premium designs minted on demand through `SneakerMods.mintAuthorized` (the store holds `MINTER_ROLE`). Proceeds go to the treasury. `ModDesign.requiredLevel` gates purchases by `PlayerProgress.levelOf` — this is how extra copies of a claimed skill are sold at accessible POL prices. `VeSneakerStore.Design.requiredLevel` applies the same gate to exclusive sneaker drops; `setDesignRequiredLevel` / `setProgress` are admin-only.
+- **PlayerProgress** — aggregates verifiable activity into a 10-tier player level. XP signals: owned veSneakers (×100), owned mods (×40), lifetime claimed veRUNE (`SneakerGame.lifetimeEarned`, 10 XP per 1,000), completed marketplace trades (`SneakerMarketplace.tradesCount`, ×60 — both sides), workshop actions (`SneakerWorkshop.actionsCount`, ×30 — equip/unequip/forge/ability), and live POL staking principal (×20 per POL). Levels are derived from live state, so selling NFTs or withdrawing POL can lower them. Also hosts the public half of the hybrid profile: `setUsername` (3–20 bytes) and `setNftAvatar` (ownership-verified pointer); uploaded images stay client-side. Thresholds: `PROGRESS_LEVEL_THRESHOLDS`, default `0,300,800,1600,2800,4500,7000,10500,15000,21000`.
+- **Deployment order:** mint → staking → appraiser → marketplace → game → mods → workshop → swap → rental → modStore → veStore → progress, then wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource`, `marketplace.setWorkshop/setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress`, `modStore.setProgress`, `veStore.setProgress`.
 
 ## Frontend and subgraph
 
@@ -96,6 +98,7 @@ NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS=
 NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS=
 NEXT_PUBLIC_MOD_RENTAL_ADDRESS=
 NEXT_PUBLIC_MOD_STORE_ADDRESS=
+NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS=
 ```
 
 The deployed The Graph Studio project is `nuxgraph` version `0.1.0`. Configure its server-only query endpoint/API key for `/api/subgraph`; see [`docs/subgraph-integration.md`](../docs/subgraph-integration.md). The Graph deploy key is not a query API key and must never be committed.
@@ -130,6 +133,9 @@ DEPLOY_TARGET=VeSneakerStore SNEAKER_MINT_ADDRESS=0x... npx hardhat run scripts/
 
 # Fund native POL rewards from the configured wallet
 FUND_ASSET=POL FUND_AMOUNT=10 STAKING_VAULT_ADDRESS=0x... npx hardhat run scripts/fund-staking.ts --network amoy
+
+# Seed level-gated skill achievements + purchasable copies (idempotent)
+SNEAKER_MODS_ADDRESS=0x... MOD_STORE_ADDRESS=0x... npx hardhat run scripts/seed-skills.ts --network amoy
 ```
 
 `deploy.ts` verifies deployed source with Hardhat Verify when `POLYGONSCAN_API_KEY` is configured. `fund-staking.ts` validates the signer, network, admin role, balance, receipt, and reserve delta before completing. Set `FUNDING_PRIVATE_KEY` to fund from a personal wallet separate from the deployer.

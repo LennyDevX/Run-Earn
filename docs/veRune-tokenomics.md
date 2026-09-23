@@ -51,7 +51,7 @@ Each SneakerMint NFT behaves like a game item with three live stats — **power*
 2. **Streak bonus:** activating within 48h of the previous activation increments the streak. Each streak day adds +1% to the earn rate, capped at +50% (streak 51+). Missing more than 48h resets the streak to 1.
 3. **Health decay:** health ticks down 1 point per 24h of real time regardless of activity, plus `wearPerActivation` (1, reduced by Sole mods) on each activation. Accrual is capped at the sneaker's death timestamp (`lastDecayAt + remainingHealth × 24h`); at 0 health the sneaker stops earning and cannot activate.
 4. **Repair:** costs 50 veRUNE and restores full health plus a fresh decay clock — a point sink that recycles value. Equipped Lining mods discount the cost; consumable repair-kit mods restore health for free when burned.
-5. **Consumable abilities (`SneakerWorkshop.useAbility`):** burning a consumable mod NFT applies its `aux` ability — `0`/`255` repair kit (free), `1` surge = instant activation bypassing the cooldown (2⚡), `2` boost capsule = +`effectBps` earn rate for 24h (1⚡), `3` forge stone = free forge level (2⚡). Each burn destroys the NFT — a permanent demand driver for the mod economy.
+5. **Consumable abilities (`SneakerWorkshop.useAbility`):** burning a consumable mod NFT applies its `aux` ability — `0`/`255` repair kit (free), `1` surge = instant activation bypassing the cooldown (2⚡), `2` boost capsule = +`effectBps` earn rate for 24h (1⚡), `3` forge stone = free forge level (2⚡), `4` Overdrive = +`effectBps` earn for 48h (3⚡), `5` Stim pack = instant energy refill (free), `6` Lucky repair = full health + `effectBps` boost for 24h (1⚡). Each burn destroys the NFT — a permanent demand driver for the mod economy.
 6. **Forge:** `SneakerWorkshop.forge` burns claimed veRUNE (`250 × (level + 1)`) for permanent +5 rarity and +2.5% earn-rate per level — the second veRUNE sink.
 7. **Passive accrual:** points accrue per second while the sneaker is inside its 24h window (or permanently with a Core mod) and health > 0. Workshop mods raise the effective rate (`earnBonusBps`, including active boost capsules).
 
@@ -136,6 +136,21 @@ reserve and the veRUNE redemption pool without selling REN on the open market. E
 veSneaker sold also increases demand for the staking and game loops, since the asset only
 produces yield once it is locked or activated.
 
+## Player progression (PlayerProgress)
+
+`PlayerProgress.sol` aggregates live protocol activity into a 10-tier player
+level — owned veSneakers (×100 XP), mods (×40), lifetime claimed veRUNE (10 XP
+per 1,000), completed marketplace trades (×60), workshop actions (×30), and
+staked POL principal (×20 per POL). The level is live standing: selling NFTs or
+unstaking POL lowers it, which keeps skill gates honest.
+
+Levels unlock **skill NFTs** — free once via `SneakerMods` `PlayerLevel`
+achievements, with extra copies sold cheaply through `ModStore`/`VeSneakerStore`
+`requiredLevel` designs. Passive skills equip in the workshop's seventh slot
+(permanent `skillBonusBps` earn-rate bonus); consumable skills burn for
+Overdrive/Stim/Lucky-repair effects. See [`player-progression.md`](player-progression.md)
+for the full level curve, skill catalog, and seeding script.
+
 ## Value loops
 
 1. **Mint → Game:** activate daily → build streak → refill energy → earn veRUNE → repair to sustain health → redeem REN.
@@ -143,6 +158,7 @@ produces yield once it is locked or activated.
 3. **Mint → Marketplace:** appraiser valuation → sell, auction, or accept offers in POL.
 4. **Stake ↔ Marketplace tension:** staked sneakers earn APY but cannot be sold; the owner chooses between yield and liquidity.
 5. **Consumable burn loop:** health decay + energy costs create permanent demand for mod NFTs — every repair kit, surge, boost capsule, and forge stone is destroyed on use, recycling demand back into the primary mod store and the secondary marketplace.
+6. **Level → Skill loop:** playing earns XP → levels unlock skill NFTs (one free, extra copies cheap) → passive skills raise earn rate, consumable skills burn on use — feeding the same demand loop while gating the strongest boosts behind real activity.
 
 ## Sustainability guardrails
 

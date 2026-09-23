@@ -1,6 +1,6 @@
 ---
 name: runearn-upgrade-economy
-description: Build and extend Run-Earn's v1.0 upgrade economy — SneakerMods badges, the six-slot SneakerWorkshop, power/health/energy stats, consumable abilities, forge upgrades, SneakerSwap trades, ModRental, ModStore, and the multi-collection marketplace.
+description: Build and extend Run-Earn's v1.0 upgrade economy — SneakerMods badges, the seven-slot SneakerWorkshop (incl. passive skill slot), power/health/energy stats, consumable abilities, forge upgrades, SneakerSwap trades, ModRental, ModStore, PlayerProgress levels, and the multi-collection marketplace.
 ---
 
 # Run-Earn Upgrade Economy
@@ -23,7 +23,8 @@ SneakerMods (ERC-721) ──equip escrow──▶ SneakerWorkshop ──ISneaker
 | Contract | Role |
 | --- | --- |
 | `SneakerMods` | ERC-721 mod/badge NFTs with `ModTraits` + on-chain achievement claims |
-| `SneakerWorkshop` | Six-slot equip escrow, consumable `useAbility` burns, veRUNE `forge` |
+| `SneakerWorkshop` | Seven-slot equip escrow, consumable `useAbility` burns, veRUNE `forge` |
+| `PlayerProgress` | XP/levels from live protocol state + on-chain username/NFT-avatar identity |
 | `ISneakerBoosts` | Shared view interface: `earnBonusBps`, `wearReductionBps`, `repairDiscountBps`, `appraisalBonusBps`, `stakingBoostBps`, `autoActive`, `hasEquippedMods` |
 | `SneakerSwap` | Atomic NFT↔NFT offers ± POL top-up, open or targeted taker |
 | `ModRental` | Mod escrow rental paid per-day in POL; renter equips via `workshop.rentalSource` |
@@ -49,7 +50,7 @@ struct ModTraits {
 - `burnAuthorized` — workshop-only; burns a mod for `useAbility`.
 - `equippedTo[modId]` — nonzero while a mod is in workshop escrow; blocks burns/transfers paths that would strand custody.
 
-## Six slots (SneakerMods.SLOT_*)
+## Seven slots (SneakerMods.SLOT_*)
 
 | Slot | Name | Effect (read via `ISneakerBoosts`) |
 | --- | --- | --- |
@@ -59,6 +60,7 @@ struct ModTraits {
 | 3 | Skin | `appraisalBonusBps` + cosmetic override |
 | 4 | Core | `autoActive` — earning window never closes while equipped |
 | 5 | Boost | `stakingBoostBps` — APY bonus on locked sneakers |
+| 6 | Skill | `skillBonusBps` — passive earn bonus from level-gated skill NFTs (folded into `earnBonusBps`) |
 
 `equip(sneakerId, modId)` requires ERC-721 approval on SneakerMods, one mod per
 slot, ownership of the sneaker (or active renter). `unequip(sneakerId, slot)`
@@ -75,7 +77,8 @@ returns the mod. Consumables revert on equip — they only go through `useAbilit
   `activate` refills to max; surge does NOT refill (anti-exploit).
 
 Workshop-only game entry points: `activateFromWorkshop` (surge),
-`repairFromWorkshop`, `spendEnergy`, `spendPoints`. All revert for other callers.
+`repairFromWorkshop`, `refillEnergyFromWorkshop` (stim pack), `spendEnergy`,
+`spendPoints`. All revert for other callers.
 
 `sneakers(tokenId)` returns **8 fields**: `lastActivationAt`, `lastAccrualAt`,
 `streak`, `durability`, `pendingPoints`, `lifetimePoints`, `lastDecayAt`, `energy`.
@@ -90,9 +93,33 @@ Burns the mod every time. Kind = `traits.aux` (`mods.NO_AUX()` → repair):
 | 1 | Surge | 2 | `game.activateFromWorkshop` — instant activation, bypasses cooldown, no energy refill |
 | 2 | Boost capsule | 1 | `tempBoostBps` += `effectBps` for `BOOST_DURATION` (24h) — stacked into `earnBonusBps` until `boostExpiresAt` |
 | 3 | Forge stone | 2 | +1 `forgeLevel` without paying `forgeCostPoints` |
+| 4 | Overdrive | 3 | `tempBoostBps` += `effectBps` for `OVERDRIVE_DURATION` (48h) |
+| 5 | Stim pack | 0 | `game.refillEnergyFromWorkshop` — energy back to max; reverts on a dead sneaker |
+| 6 | Lucky repair | 1 | full health + `effectBps` temp boost for 24h |
 
 `forge(sneakerId)` burns `forgeCostPoints` veRUNE via `game.spendPoints` and
 raises `forgeLevel` → effective rarity (capped contribution to rarity 100).
+
+## PlayerProgress (levels + skill gating)
+
+`PlayerProgress(admin, nft, mods, game, marketplace, workshop, staking, thresholds)`
+aggregates live XP — sneaker balance ×100, mod balance ×40,
+`game.lifetimeEarned`/1000 ×10, `marketplace.tradesCount` ×60,
+`workshop.actionsCount` ×30, staking POL principal ×20. `levelOf` maps XP to the
+threshold table (default `0,300,800,1600,2800,4500,7000,10500,15000,21000` → L10).
+Level is **live** — selling NFTs or unstaking POL lowers it.
+
+Skill NFTs ride the existing rails, no new contracts:
+
+- `SneakerMods.ReqKind.PlayerLevel` — `claim` checks `progress.levelOf ≥ threshold`;
+  one free claim per wallet per achievement.
+- `ModStore.ModDesign.requiredLevel` + `VeSneakerStore.Design.requiredLevel` —
+  `buy`/`buyBatch` revert `*: level required` when `progress.levelOf < requiredLevel`
+  (`requiredLevel = 0` disables the gate; `setProgress` links the contract).
+- Slot 6 (`SLOT_SKILL`) equips a non-consumable skill NFT → `skillBonusBps`.
+
+Also hosts public identity: `setUsername` (3–20 bytes) + `setNftAvatar`
+(ownership-verified pointer; uploaded images stay client-side).
 
 ## SneakerSwap
 
@@ -162,6 +189,8 @@ UI gotchas:
 - `marketplace.setWorkshop(workshop)` + `setCollectionAllowed(mods, true)`
 - `swap.setCollectionAllowed(mods, true)`
 - `mods.grantRole(MINTER_ROLE, modStore)`
+- `mods.setProgress(progress)` + `modStore.setProgress(progress)` +
+  `veStore.setProgress(progress)` — required before any level-gated claim/buy
 
 ## Security invariants
 
@@ -178,6 +207,7 @@ UI gotchas:
 
 - Solidity: `test/SneakerMods.t.sol`, `test/SneakerWorkshop.t.sol`,
   `test/SneakerSwap.t.sol`, `test/ModRental.t.sol`, `test/ModStore.t.sol`,
+  `test/PlayerProgress.t.sol` (XP, levels, identity, level-gated claims),
   `test/SneakerMarketplace.t.sol` (multi-collection + equipped guard).
 - Mocha: `test/upgrade-economy.ts` covers the full loop end-to-end.
 - Trap: `mods.SLOT_SOLE()` as a `vm.prank`-scoped call argument consumes the

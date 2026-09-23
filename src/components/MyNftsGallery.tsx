@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { explorerTransactionUrl, usePolygonWallet } from "@/components/Providers";
 import { useMintedSneakers } from "@/hooks/useMintedSneakers";
+import { useProfile } from "@/hooks/useProfile";
 import { RARITIES } from "@/lib/sneaker-nft";
 
 export default function MyNftsGallery() {
   const wallet = usePolygonWallet();
   const { sneakers, isReady } = useMintedSneakers(wallet.address);
+  const { profile, setAvatarNft } = useProfile(wallet.address);
 
   if (!isReady) return null;
 
@@ -75,6 +77,24 @@ export default function MyNftsGallery() {
                 </p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setAvatarNft(sneaker.id)}
+              disabled={!wallet.isConnected}
+              className={`flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+                profile.avatarKind === "nft" && profile.avatarSneakerId === sneaker.id
+                  ? "border-mint/40 bg-mint/10 text-mint"
+                  : "border-foreground/15 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+              </svg>
+              {profile.avatarKind === "nft" && profile.avatarSneakerId === sneaker.id
+                ? "Your avatar"
+                : "Set as avatar"}
+            </button>
             <div className="flex items-center justify-between text-xs">
               <span className="font-mono text-foreground/40">
                 {new Date(sneaker.mintedAt).toLocaleDateString("en-US")}

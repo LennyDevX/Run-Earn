@@ -103,7 +103,7 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 ### `SneakerMods`
 
 - `mintAuthorized` takes a `ModTraits` struct (`slot`, `rarity`, `tier`, `effectBps`, `consumable`, `aux`, `proofHash`) — never positional trait args.
-- `claim` achievement path: on-chain requirements (streak, lifetimePoints, balance, staked POL), one claim per wallet per achievement, requirement-not-met reverts.
+- `claim` achievement path: on-chain requirements (streak, lifetimePoints, balance, staked POL, `PlayerLevel` via `progress.levelOf`), one claim per wallet per achievement, requirement-not-met reverts.
 - `burnAuthorized` reverts for non-workshop callers; `equippedTo` blocks burn of escrowed mods.
 - `setWorkshop` admin wiring.
 
@@ -111,10 +111,11 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 
 - `equip`: one mod per slot, escrow custody (`equippedTo`), owner-of-sneaker check (or renter via `rentalSource`), consumable mods rejected, approval required.
 - `unequip`: returns the mod, clears the slot bonus; staked/listed sneaker edge cases.
-- Bonus views per slot: Sole −wear, Upper +earn (`earnBonusBps` + `tempBoostBps` while unexpired), Lining −repair cost, Skin +appraisal, Core auto-activation, Boost +staking APY.
-- `useAbility` per `aux` kind: repair kit → `repairFromWorkshop` (0 energy), surge → `activateFromWorkshop` bypassing cooldown without energy refill (2⚡), boost capsule → `tempBoostBps`/`boostExpiresAt` 24h (1⚡), forge stone → free forge level (2⚡). Every use burns the mod; insufficient energy reverts.
+- Bonus views per slot: Sole −wear, Upper +earn (`earnBonusBps` + `tempBoostBps` while unexpired), Lining −repair cost, Skin +appraisal, Core auto-activation, Boost +staking APY, Skill passive earn (`skillBonusBps`, folded into `earnBonusBps`).
+- `useAbility` per `aux` kind: repair kit → `repairFromWorkshop` (0 energy), surge → `activateFromWorkshop` bypassing cooldown without energy refill (2⚡), boost capsule → `tempBoostBps`/`boostExpiresAt` 24h (1⚡), forge stone → free forge level (2⚡), Overdrive → 48h boost (3⚡), Stim pack → `refillEnergyFromWorkshop` (0⚡, reverts on dead sneaker), Lucky repair → full health + 24h boost (1⚡). Every use burns the mod; insufficient energy reverts.
 - `forge`: burns `forgeCostPoints` veRUNE via `game.spendPoints`, increments `forgeLevel`, raises effective rarity.
 - `hasEquippedMods` gating used by the marketplace.
+- `actionsCount` increments on each successful action — feeds `PlayerProgress` XP.
 
 ### `SneakerSwap`
 
@@ -130,9 +131,19 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 
 ### `ModStore`
 
-- `addDesign` takes a params struct (stack-too-deep pattern) — name/uri/slot/rarity/tier/effectBps/consumable/aux/price/supply.
+- `addDesign` takes a params struct (stack-too-deep pattern) — name/uri/slot/rarity/tier/effectBps/consumable/aux/price/supply/requiredLevel.
 - `buy` mints via `SneakerMods.mintAuthorized` (store needs `MINTER_ROLE`), charges `msg.value == price`, sends proceeds to treasury.
+- `requiredLevel` designs revert `"ModStore: level required"` when `progress.levelOf(buyer)` is below the gate (or `progress` unset) — test with a mock/real PlayerProgress.
 - Consumable designs mint usable ability mods; supply caps and inactive designs revert.
+
+### `PlayerProgress`
+
+- `xpOf`/`xpBreakdown` per signal: sneaker balance, mod balance, `lifetimeEarned` (only on `claimPoints`), `tradesCount` (both sides of a completed sale), `actionsCount`, staked POL principal.
+- `levelOf`/`progressOf` against the threshold table — boundary values (xp == threshold → level up) and `nextLevelXp == 0` at max.
+- Live-state behavior: selling NFTs / unstaking POL lowers the level.
+- `setUsername` 3–20 byte bounds; `setNftAvatar` ownership check + zero-address clear.
+- `setLevelThresholds` admin-only, must start at 0, strictly increasing.
+- `PlayerLevel` achievement claim gates on `levelOf`; slot-6 skill equip raises `earnRatePerSecond`.
 
 ## Subgraph/API checks
 

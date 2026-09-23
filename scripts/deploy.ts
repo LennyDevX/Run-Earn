@@ -10,6 +10,7 @@ import {
   gameParameters,
   marketplaceParameters,
   optionalEnv,
+  progressParameters,
   rentalParameters,
   saveDeployment,
   shouldVerify,
@@ -33,6 +34,7 @@ const TARGETS = new Set([
   "SneakerSwap",
   "ModRental",
   "ModStore",
+  "PlayerProgress",
 ]);
 
 type ContractName =
@@ -47,7 +49,8 @@ type ContractName =
   | "SneakerWorkshop"
   | "SneakerSwap"
   | "ModRental"
-  | "ModStore";
+  | "ModStore"
+  | "PlayerProgress";
 
 type Deployment = {
   name: ContractName;
@@ -333,6 +336,26 @@ async function main() {
     }
   }
 
+  if (target === "all" || target === "PlayerProgress") {
+    const sneakerAddress = requireAddress(resolveAddress(deployments, "SneakerMint", "SNEAKER_MINT_ADDRESS"), "SNEAKER_MINT_ADDRESS", "PlayerProgress");
+    const modsAddress = requireAddress(resolveAddress(deployments, "SneakerMods", "SNEAKER_MODS_ADDRESS"), "SNEAKER_MODS_ADDRESS", "PlayerProgress");
+    const gameAddress = requireAddress(resolveAddress(deployments, "SneakerGame", "SNEAKER_GAME_ADDRESS"), "SNEAKER_GAME_ADDRESS", "PlayerProgress");
+    const marketplaceAddress = requireAddress(resolveAddress(deployments, "SneakerMarketplace", "MARKETPLACE_ADDRESS"), "MARKETPLACE_ADDRESS", "PlayerProgress");
+    const workshopAddress = requireAddress(resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS"), "SNEAKER_WORKSHOP_ADDRESS", "PlayerProgress");
+    const stakingAddress = requireAddress(resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS"), "STAKING_VAULT_ADDRESS", "PlayerProgress");
+    const pp = progressParameters();
+    deployments.push(await deployContract(viem, "PlayerProgress", [
+      addressEnv("PROGRESS_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      modsAddress,
+      gameAddress,
+      marketplaceAddress,
+      workshopAddress,
+      stakingAddress,
+      pp.levelThresholds,
+    ]));
+  }
+
   // ─── Upgrade economy wiring ────────────────────────────────────
   // Link the workshop as the boost provider, authorize it on the game/mods,
   // connect the rental contract, and allow the mods collection on the
@@ -345,6 +368,9 @@ async function main() {
   const marketplaceAddress = resolveAddress(deployments, "SneakerMarketplace", "MARKETPLACE_ADDRESS");
   const swapAddress = resolveAddress(deployments, "SneakerSwap", "SNEAKER_SWAP_ADDRESS");
   const rentalAddress = resolveAddress(deployments, "ModRental", "MOD_RENTAL_ADDRESS");
+  const modStoreAddress = resolveAddress(deployments, "ModStore", "MOD_STORE_ADDRESS");
+  const veStoreAddress = resolveAddress(deployments, "VeSneakerStore", "VE_SNEAKER_STORE_ADDRESS");
+  const progressAddress = resolveAddress(deployments, "PlayerProgress", "PLAYER_PROGRESS_ADDRESS");
 
   async function wire(name: string, write: () => Promise<`0x${string}`>) {
     const hash = await write();
@@ -389,6 +415,23 @@ async function main() {
     if (swapAddress !== ZERO) {
       const swap = await viem.getContractAt("SneakerSwap", swapAddress);
       await wire("SneakerSwap.modsCollection", () => swap.write.setCollectionAllowed([modsAddress, true], { account: wallet.account }));
+    }
+  }
+
+  // ─── Player progression wiring ────────────────────────────────
+  // Level-gated claims and store designs read PlayerProgress.levelOf.
+  if (progressAddress !== ZERO) {
+    if (modsAddress !== ZERO) {
+      const mods = await viem.getContractAt("SneakerMods", modsAddress);
+      await wire("SneakerMods.progress", () => mods.write.setProgress([progressAddress], { account: wallet.account }));
+    }
+    if (modStoreAddress !== ZERO) {
+      const modStore = await viem.getContractAt("ModStore", modStoreAddress);
+      await wire("ModStore.progress", () => modStore.write.setProgress([progressAddress], { account: wallet.account }));
+    }
+    if (veStoreAddress !== ZERO) {
+      const veStore = await viem.getContractAt("VeSneakerStore", veStoreAddress);
+      await wire("VeSneakerStore.progress", () => veStore.write.setProgress([progressAddress], { account: wallet.account }));
     }
   }
 

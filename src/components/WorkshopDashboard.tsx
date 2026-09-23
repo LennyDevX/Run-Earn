@@ -7,6 +7,7 @@ import { useWorkshop } from "@/hooks/useWorkshop";
 import { useSneakerGame } from "@/hooks/useSneakerGame";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { modEffectLabel, NO_AUX, SLOTS, type OwnedMod } from "@/lib/mods";
+import { centerInScrollRow } from "@/lib/scroll-x";
 import { RARITIES } from "@/lib/sneaker-nft";
 import PixelSneaker from "@/components/PixelSneaker";
 
@@ -131,7 +132,10 @@ export default function WorkshopDashboard() {
                 <button
                   key={sneaker.tokenId.toString()}
                   type="button"
-                  onClick={() => workshop.setSelectedSneakerId(sneaker.tokenId)}
+                  onClick={(event) => {
+                    workshop.setSelectedSneakerId(sneaker.tokenId);
+                    centerInScrollRow(event.currentTarget);
+                  }}
                   className={`flex w-32 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-3xl border p-4 transition-all active:scale-95 ${
                     isSelected
                       ? "border-mint/50 bg-mint/10 shadow-md shadow-mint/10"
@@ -317,6 +321,7 @@ export default function WorkshopDashboard() {
                   ["Repair discount", bonuses ? `-${formatBps(bonuses.repairDiscountBps)}` : "—"],
                   ["Appraisal bonus", bonuses ? `+${formatBps(bonuses.appraisalBonusBps)}` : "—"],
                   ["Staking boost", bonuses ? `+${formatBps(bonuses.stakingBoostBps)}` : "—"],
+                  ["Skill bonus", bonuses ? `+${formatBps(bonuses.skillBonusBps)}` : "—"],
                   ["Forge level", bonuses ? `${bonuses.forgeLevel}` : "—"],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between border-b border-foreground/5 pb-2">
