@@ -128,7 +128,7 @@ export default function ProfileDashboard() {
   return (
     <div className="flex flex-col gap-8">
       {/* Identity card */}
-      <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
+      <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
           <div className="relative">
             {avatarUrl ? (
@@ -214,7 +214,7 @@ export default function ProfileDashboard() {
 
       {/* Level + stats */}
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+        <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
           <div className="flex items-center justify-between gap-3">
             <span className="font-pixel text-[9px] text-mint">PLAYER LEVEL</span>
             <span className="rounded-full border border-mint/20 bg-mint/10 px-3 py-1 font-pixel text-[9px] text-mint">
@@ -252,7 +252,7 @@ export default function ProfileDashboard() {
           )}
         </section>
 
-        <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+        <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
           <span className="font-pixel text-[9px] text-sky">STATS</span>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {stats.map((stat) => (
@@ -267,7 +267,7 @@ export default function ProfileDashboard() {
       </div>
 
       {/* Skills */}
-      <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="font-pixel text-[9px] text-mint">SKILLS</span>
@@ -314,7 +314,7 @@ export default function ProfileDashboard() {
       </section>
 
       {/* Avatar picker */}
-      <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="font-pixel text-[9px] text-magma">AVATAR</span>
@@ -413,7 +413,7 @@ export default function ProfileDashboard() {
       </section>
 
       {/* Activity */}
-      <section className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <section className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <span className="font-pixel text-[9px] text-sky">RECENT ACTIVITY</span>
         <div className="mt-4 flex flex-col divide-y divide-foreground/10">
           {activities.length > 0 || minted.length > 0 ? (

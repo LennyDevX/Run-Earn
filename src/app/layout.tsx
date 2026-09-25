@@ -29,15 +29,15 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0c" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f0fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#080b18" },
   ],
 };
 
 export const metadata: Metadata = {
-  title: "RUN&EARN — NFT Sneakers with DeFi Benefits",
+  title: "RUN&EARN — A Retro-Futuristic Sneaker Game",
   description:
-    "Collect NFT sneakers on Polygon with unique retro-futuristic styles and unlock DeFi benefits: staking, rarity-based yield, and governance.",
+    "Enter a pixel-art sneaker universe. Collect the Astra, Sol, and Luna virtual sneaker families, play, upgrade, stake, and trade on Polygon.",
   applicationName: "RUN&EARN",
   appleWebApp: {
     capable: true,

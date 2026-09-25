@@ -146,7 +146,7 @@ export default function SneakerMintStudio() {
   const totalOwned = wallet.address ? getMintedSneakers(wallet.address).length : 0;
 
   return (
-    <section className="rounded-[2.5rem] border border-foreground/8 bg-surface p-5 sm:p-8 md:p-10">
+    <section className="rounded-2xl border border-foreground/8 bg-surface p-5 sm:p-8 md:p-10">
       <div ref={stepsRowRef} className="scroll-x -mx-5 mb-8 flex gap-2 px-5 pb-1 sm:-mx-8 sm:px-8 md:mx-0 md:px-0">
         {STEPS.map((label, index) => (
           <button

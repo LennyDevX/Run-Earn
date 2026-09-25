@@ -152,7 +152,7 @@ export default function DefiPage() {
         </div>
 
         {/* CTA vault */}
-        <section className="mt-10 flex flex-col items-center gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface px-8 py-16 text-center">
+        <section className="mt-10 flex flex-col items-center gap-6 rounded-2xl border border-foreground/8 bg-surface px-8 py-16 text-center">
           <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance">
             The vault opens with the genesis collection
           </h2>

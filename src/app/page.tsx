@@ -5,16 +5,16 @@ import PolygonLogo from "@/components/PolygonLogo";
 import SneakerCarousel from "@/components/SneakerCarousel";
 
 const TRAITS = [
-  "Retro-future",
-  "On-chain",
-  "Staking rewards",
-  "Verifiable rarity",
-  "Yield by tier",
-  "Governance",
+  "Astra",
+  "Sol",
+  "Luna",
   "Pixel art",
+  "Virtual sneaker game",
+  "Level up",
+  "Equip skills",
+  "On-chain",
   "Polygon",
-  "Fees ~$0.002",
-  "EVM",
+  "Play to earn",
 ] as const;
 
 type Feature = {
@@ -26,25 +26,25 @@ type Feature = {
 
 const FEATURES = [
   {
-    accent: "bg-sky",
-    title: "Unique styles",
+    accent: "bg-astra",
+    title: "Three cosmic lines",
     description:
-      "Each pair is a 1/1 piece generated with retro-futuristic traits. No one else will have your sneakers.",
-    tag: "DESIGN",
+      "Start with Astra, Sol, and Luna — distinct pixel-art families designed for a shared virtual sneaker universe.",
+    tag: "COLLECTIONS",
   },
   {
-    accent: "bg-magma",
-    title: "DeFi benefits",
+    accent: "bg-sol",
+    title: "Play to progress",
     description:
-      "Stake your NFTs, earn yield based on rarity, and access exclusive community pools.",
-    tag: "DEFI",
+      "Activate veSneakers, build streaks, upgrade equipment, and unlock level-gated skill NFTs.",
+    tag: "GAMEPLAY",
   },
   {
-    accent: "bg-mint",
-    title: "On-chain rarity",
+    accent: "bg-luna",
+    title: "On-chain ownership",
     description:
-      "Every trait and its provenance lives on the blockchain. Transparent, verifiable scarcity.",
-    tag: "PROVENANCE",
+      "Your virtual sneakers remain ERC-721 assets with verifiable ownership, rarity, and trading history.",
+    tag: "POLYGON",
   },
 ] as const satisfies readonly Feature[];
 
@@ -80,7 +80,7 @@ type Stat = { value: string; label: string };
 const DEFI_STATS = [
   { value: "2.80%", label: "Base staking APY on POL" },
   { value: "4", label: "Rarity tiers with yield boost" },
-  { value: "9,000", label: "veSneakers in the virtual store" },
+  { value: "03", label: "Signature sneaker families" },
 ] as const satisfies readonly Stat[];
 
 export default function Home() {
@@ -89,32 +89,32 @@ export default function Home() {
       <Navbar />
 
       {/* Hero */}
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 sm:px-6">
         <section className="grid flex-1 items-center gap-10 py-12 sm:py-16 md:grid-cols-2 md:gap-16 md:py-24">
           <div className="flex flex-col items-start gap-6 sm:gap-8">
             <span
               className="animate-fade-up rounded-full border border-foreground/10 bg-surface px-4 py-1.5 text-xs font-semibold tracking-widest text-foreground/70 uppercase"
               style={{ animationDelay: "0ms" }}
             >
-              Genesis Collection · Polygon
+              Astra · Sol · Luna / Genesis Series
             </span>
             <h1
               className="animate-fade-up text-4xl leading-[1.05] font-bold tracking-tight text-balance sm:text-5xl md:text-6xl"
               style={{ animationDelay: "120ms" }}
             >
-              Walk.
+              Choose your
               <br />
-              <span className="text-sky">Collect.</span>
+              <span className="text-astra">orbit.</span>
               <br />
-              <span className="text-mint">Earn.</span>
+              <span className="text-sol">Run. Earn.</span>
             </h1>
             <p
               className="animate-fade-up max-w-md text-base leading-relaxed text-foreground/60 sm:text-lg"
               style={{ animationDelay: "240ms" }}
             >
-              NFT sneakers with retro-futuristic style and real utility: each
-              pair lives on Polygon and unlocks staking, rarity-based yield,
-              and a voice in ecosystem governance.
+              A virtual sneaker universe in pixel art. Collect Astra, Sol, or Luna;
+              level up your player, upgrade your veSneakers, and put each pair to
+              work in the game economy.
             </p>
             <div
               className="animate-fade-up flex w-full flex-wrap items-center gap-3 sm:w-auto sm:gap-4"
@@ -122,13 +122,13 @@ export default function Home() {
             >
               <Link
                 href="/collection"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-magma px-7 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-magma/30 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-astra px-7 text-sm font-bold text-paper dark:text-ink shadow-lg shadow-astra/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-astra/30 sm:flex-none sm:py-3.5"
               >
                 Explore collection
               </Link>
               <Link
                 href="/defi"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-foreground/15 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-foreground/30 hover:bg-foreground/5 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-astra/30 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-astra/60 hover:bg-astra/5 sm:flex-none sm:py-3.5"
               >
                 How it works
               </Link>
@@ -144,26 +144,26 @@ export default function Home() {
 
           {/* Sneaker visual */}
           <div className="relative flex items-center justify-center">
-            <div className="animate-glow absolute size-52 rounded-full bg-sky/25 blur-3xl sm:size-72" />
+            <div className="animate-glow absolute size-52 rounded-full bg-astra/25 blur-3xl sm:size-72" />
             <div
-              className="animate-glow absolute size-44 translate-x-16 translate-y-12 rounded-full bg-mint/25 blur-3xl sm:size-56 sm:translate-x-24 sm:translate-y-16"
+              className="animate-glow absolute size-44 translate-x-16 translate-y-12 rounded-full bg-sol/25 blur-3xl sm:size-56 sm:translate-x-24 sm:translate-y-16"
               style={{ animationDelay: "-3.5s" }}
             />
             <div
-              className="animate-glow absolute size-32 -translate-x-20 -translate-y-14 rounded-full bg-magma/20 blur-3xl sm:size-40 sm:-translate-x-28 sm:-translate-y-20"
+              className="animate-glow absolute size-32 -translate-x-20 -translate-y-14 rounded-full bg-luna/25 blur-3xl sm:size-40 sm:-translate-x-28 sm:-translate-y-20"
               style={{ animationDelay: "-1.8s" }}
             />
             <div className="animate-float relative">
               <SneakerCarousel className="w-full max-w-md drop-shadow-[0_24px_32px_rgba(10,10,12,0.18)]" />
             </div>
-            <div className="animate-float-slow absolute top-8 right-6 rounded-full border border-foreground/10 bg-surface/80 px-4 py-2 font-pixel text-[9px] backdrop-blur-sm">
-              #0001
+            <div className="animate-float-slow absolute top-8 right-6 rounded-sm border border-astra/25 bg-ink/80 px-4 py-2 font-pixel text-[9px] text-astra backdrop-blur-sm">
+              THREE LINES
             </div>
             <div
-              className="animate-float-slow absolute bottom-10 left-2 rounded-full border border-foreground/10 bg-surface/80 px-4 py-2 font-pixel text-[9px] text-mint backdrop-blur-sm"
+              className="animate-float-slow absolute bottom-10 left-2 rounded-sm border border-sol/25 bg-ink/80 px-4 py-2 font-pixel text-[9px] text-sol backdrop-blur-sm"
               style={{ animationDelay: "-4s" }}
             >
-              MYTHIC
+              VIRTUAL / ON-CHAIN
             </div>
           </div>
         </section>
@@ -191,7 +191,7 @@ export default function Home() {
             THE COLLECTION
           </span>
           <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-            More than a collectible, an asset
+            Built for your next run.
           </h2>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
@@ -219,7 +219,7 @@ export default function Home() {
 
       {/* DeFi band */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
-        <div className="rounded-[2.5rem] bg-linear-to-b from-ink to-ink-soft px-6 py-12 text-paper ring-1 ring-transparent sm:px-8 sm:py-16 md:px-16 dark:ring-paper/10">
+        <div className="rounded-2xl bg-linear-to-b from-ink to-ink-soft px-6 py-12 text-paper ring-1 ring-transparent sm:px-8 sm:py-16 md:px-16 dark:ring-paper/10">
           <div className="flex flex-col gap-4">
             <span className="font-pixel text-[10px] text-mint">
               MOTOR DEFI

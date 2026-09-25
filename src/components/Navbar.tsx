@@ -86,7 +86,7 @@ function ProfileButton() {
       aria-current={active ? "page" : undefined}
       className={`flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all active:scale-95 ${
         active
-          ? "border-mint/60 bg-mint/10 shadow-sm shadow-mint/20"
+          ? "border-astra/60 bg-astra/10 shadow-sm shadow-astra/20"
           : "border-foreground/15 bg-surface text-foreground/70 hover:border-foreground/30 hover:text-foreground"
       }`}
     >
@@ -148,10 +148,10 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-foreground/5 bg-background/85 pt-safe backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-astra/15 bg-background/85 pt-safe backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6 py-4 md:py-6">
-          <Link href="/" className="font-pixel text-sm tracking-tight">
-            RUN<span className="text-mint">&</span>EARN
+          <Link href="/" className="font-pixel text-xs tracking-tight sm:text-sm">
+            RUN<span className="text-astra">&</span>EARN
           </Link>
 
           {/* Desktop navigation */}
@@ -163,8 +163,8 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`transition-colors hover:text-foreground ${
-                    active ? "font-semibold text-foreground" : "text-foreground/60"
+                  className={`relative py-2 transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-astra after:transition-transform hover:text-foreground ${
+                    active ? "font-semibold text-foreground after:scale-x-100" : "text-foreground/60 after:scale-x-0 hover:after:scale-x-100"
                   }`}
                 >
                   {link.label}
@@ -201,7 +201,7 @@ export default function Navbar() {
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="animate-backdrop-in absolute right-0 top-full mt-4 w-72 rounded-2xl border border-foreground/10 bg-background/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
+                  className="animate-backdrop-in absolute right-0 top-full mt-4 w-72 rounded-2xl border border-astra/20 bg-surface/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
                 >
                   {MENU_GROUPS.map((group) => (
                     <div key={group.label} className="py-1 first:pt-0 last:pb-0">
@@ -218,11 +218,11 @@ export default function Navbar() {
                             aria-current={active ? "page" : undefined}
                             onClick={() => setMenuOpen(false)}
                             className={`flex flex-col rounded-xl px-3 py-2.5 transition-colors ${
-                              active ? "bg-mint/10" : "hover:bg-foreground/5"
+                              active ? "bg-astra/10" : "hover:bg-foreground/5"
                             }`}
                           >
                             <span
-                              className={`text-sm font-semibold ${active ? "text-mint" : "text-foreground"}`}
+                              className={`text-sm font-semibold ${active ? "text-astra" : "text-foreground"}`}
                             >
                               {link.label}
                             </span>

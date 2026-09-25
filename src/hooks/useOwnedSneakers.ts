@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Address, PublicClient } from "viem";
 import { sneakerMintAbi } from "@/lib/contracts";
+import { resolveSneakerArtwork, type ResolvedSneakerArtwork } from "@/lib/sneaker-artwork";
 
 export type OwnedSneaker = {
   tokenId: bigint;
   rarity: bigint;
   tier: bigint;
+  artwork: ResolvedSneakerArtwork;
 };
 
 type UseOwnedSneakersOptions = {
@@ -48,13 +50,26 @@ export function useOwnedSneakers({ owner, contractAddress, publicClient }: UseOw
       );
       const nextSneakers = await Promise.all(
         (tokenIds as bigint[]).map(async (tokenId) => {
-          const traits = await publicClient.readContract({
-            address: contractAddress,
-            abi: sneakerMintAbi,
-            functionName: "traitsOf",
-            args: [tokenId],
-          });
-          return { tokenId, rarity: BigInt(traits[0]), tier: BigInt(traits[1]) };
+          const [traits, tokenUri] = await Promise.all([
+            publicClient.readContract({
+              address: contractAddress,
+              abi: sneakerMintAbi,
+              functionName: "traitsOf",
+              args: [tokenId],
+            }),
+            publicClient.readContract({
+              address: contractAddress,
+              abi: sneakerMintAbi,
+              functionName: "tokenURI",
+              args: [tokenId],
+            }).catch(() => ""),
+          ]);
+          return {
+            tokenId,
+            rarity: BigInt(traits[0]),
+            tier: BigInt(traits[1]),
+            artwork: resolveSneakerArtwork(tokenUri as string),
+          };
         }),
       );
       setSneakers(nextSneakers);

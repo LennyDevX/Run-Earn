@@ -7,7 +7,7 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
 import { centerInScrollRow } from "@/lib/scroll-x";
-import PixelSneaker from "@/components/PixelSneaker";
+import SneakerArtwork from "@/components/SneakerArtwork";
 import { ModsMarketTab, RentalsTab, TradesTab } from "@/components/ModMarketTabs";
 
 type Tab = "list" | "auction" | "offers" | "mods" | "rentals" | "trades";
@@ -152,7 +152,7 @@ export default function MarketplaceDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         <div className="mb-8 flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
           <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1 md:mx-0 md:px-0 md:pb-0">
             {(
@@ -277,9 +277,9 @@ export default function MarketplaceDashboard() {
                           </span>
                         </div>
                         <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6">
-                          <PixelSneaker design={Number(sneaker.tokenId) % 7} className="w-28 h-auto" />
+                          <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-28" sizes="112px" />
                         </div>
-                        <h4 className="font-bold">RUN&EARN Sneaker #{sneaker.tokenId.toString()}</h4>
+                        <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
                         <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                           <span>Suggested price:</span>
                           <span className="font-mono font-bold text-sky">
@@ -465,7 +465,7 @@ export default function MarketplaceDashboard() {
       </div>
 
       {/* Activity feed */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
           <div>
             <span className="font-pixel text-[9px] text-mint">LIVE SUBGRAPH FEED</span>

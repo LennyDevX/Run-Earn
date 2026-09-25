@@ -3,17 +3,29 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #fafafa;
-  --surface: #ffffff;
-  --foreground: #0a0a0c;
-  --foreground-soft: #17171b;
+  --background: #f2f0fb;
+  --surface: #fbfaff;
+  --foreground: #17132b;
+  --foreground-soft: #302b4b;
+  --ambient-astra: rgb(145 100 255 / 9%);
+  --ambient-sol: rgb(255 177 47 / 7%);
+  --grid-line: rgb(62 49 109 / 7%);
+  --family-astra: #7835b8;
+  --family-sol: #875000;
+  --family-luna: #3f5c80;
 }
 
 .dark {
-  --background: #0a0a0c;
-  --surface: #141417;
-  --foreground: #fafafa;
-  --foreground-soft: #e4e4e7;
+  --background: #080b18;
+  --surface: #11172a;
+  --foreground: #f4f1ff;
+  --foreground-soft: #cbd2e8;
+  --ambient-astra: rgb(141 82 255 / 14%);
+  --ambient-sol: rgb(255 171 50 / 8%);
+  --grid-line: rgb(150 164 211 / 7%);
+  --family-astra: #c17aff;
+  --family-sol: #ffc84d;
+  --family-luna: #cfe4ff;
 }
 
 @theme inline {
@@ -21,16 +33,23 @@
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-foreground-soft: var(--foreground-soft);
+  --color-astra: var(--family-astra);
+  --color-sol: var(--family-sol);
+  --color-luna: var(--family-luna);
 }
 
 @theme {
-  --color-ink: #0a0a0c;
-  --color-ink-soft: #17171b;
-  --color-paper: #fafafa;
-  --color-sky: #38bdf8;
-  --color-magma: #ff4a2d;
-  --color-mint: #3ddc97;
-  --color-polygon-purple: #8247e5;
+  --color-ink: #080b18;
+  --color-ink-soft: #151b31;
+  --color-paper: #f4f1ff;
+  --color-sky: #5bdcf6;
+  --color-magma: #ff705e;
+  --color-mint: #4ce5c0;
+  --color-polygon-purple: #b28bff;
+
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.75rem;
 
   --font-pixel: var(--font-press-start), monospace;
 
@@ -135,7 +154,14 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse at 12% 0%, var(--ambient-astra), transparent 38rem),
+    radial-gradient(ellipse at 92% 16%, var(--ambient-sol), transparent 34rem),
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   transition:
@@ -144,8 +170,13 @@ body {
 }
 
 ::selection {
-  background: var(--color-mint);
+  background: var(--color-astra);
   color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sky);
+  outline-offset: 3px;
 }
 
 /* ─────────────────────────── Mobile foundations ───────────────────────────

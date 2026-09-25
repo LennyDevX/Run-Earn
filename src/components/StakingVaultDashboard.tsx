@@ -11,7 +11,7 @@ import { useWalletOverview } from "@/hooks/useWalletOverview";
 import { useNftAppraisal } from "@/hooks/useNftAppraisal";
 import { RARITIES } from "@/lib/sneaker-nft";
 import { centerInScrollRow } from "@/lib/scroll-x";
-import PixelSneaker from "@/components/PixelSneaker";
+import SneakerArtwork from "@/components/SneakerArtwork";
 
 type Tab = "deposit" | "claim" | "withdraw" | "model";
 
@@ -111,6 +111,7 @@ export default function StakingVaultDashboard() {
       tokenId: BigInt(s.tokenId ?? idx + 1),
       rarity: BigInt(s.rarity === "mitico" ? 85 : s.rarity === "epico" ? 65 : s.rarity === "raro" ? 45 : 20),
       tier: BigInt(s.rarity === "mitico" ? 3 : s.rarity === "epico" ? 2 : s.rarity === "raro" ? 1 : 0),
+      artwork: { src: s.imageDataUrl, alt: `${s.name} virtual sneaker artwork`, name: s.name, family: null },
     }));
   }, [staking.stats.ownedSneakers, localMinted.sneakers]);
 
@@ -322,7 +323,7 @@ export default function StakingVaultDashboard() {
       </div>
 
       {/* Main Interactive Terminal with Tabs */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         {/* Navigation Tabs */}
         <div className="mb-8 flex flex-col gap-4 border-b border-foreground/10 pb-6 md:flex-row md:items-center md:justify-between">
           <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1 md:mx-0 md:px-0 md:pb-0">
@@ -658,7 +659,7 @@ export default function StakingVaultDashboard() {
       </div>
 
       {/* Dedicated Sneaker NFT Boost Vault Section */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <span className="font-pixel text-[9px] text-mint">SNEAKER NFT BOOST VAULT</span>
@@ -706,11 +707,11 @@ export default function StakingVaultDashboard() {
 
                       {/* Pixel Art / Visual */}
                       <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6">
-                        <PixelSneaker design={Number(sneaker.tokenId) % 7} className="w-32 h-auto" />
+                        <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-32" sizes="128px" />
                       </div>
 
                       {/* Info */}
-                      <h4 className="font-bold">RUN&EARN Sneaker #{sneaker.tokenId.toString()}</h4>
+                      <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
                       <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                         <span>Rarity Score:</span>
                         <span className="font-mono font-bold text-foreground">{sneaker.rarity.toString()}/100</span>
@@ -774,7 +775,7 @@ export default function StakingVaultDashboard() {
       </div>
 
       {/* Live Recent Activity Feed (Subgraph) */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
           <div>
             <span className="font-pixel text-[9px] text-mint">LIVE SUBGRAPH FEED</span>

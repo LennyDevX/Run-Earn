@@ -32,7 +32,7 @@ interface ISneakerBoosts {
     /// @notice Whether a Core mod keeps the earn window always open.
     function autoActive(uint256 tokenId) external view returns (bool);
 
-    /// @notice PixelSneaker design index applied by a Skin mod (255 = none).
+    /// @notice veSneaker artwork design index applied by a Skin mod (255 = none).
     function skinOverride(uint256 tokenId) external view returns (uint8);
 
     /// @notice Whether the sneaker currently has any mod equipped.

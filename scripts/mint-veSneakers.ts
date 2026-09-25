@@ -153,7 +153,17 @@ async function main() {
     const existing = await store.read.designCount();
     console.log(`Existing designs on-chain: ${existing}`);
     if (existing > 0n) {
-      console.log("Designs already registered — skipping configuration (use updateDesign to change prices).");
+      console.log("Designs already registered — skipping registration.");
+      if (process.env.VE_UPDATE_DESIGN_URIS === "true") {
+        const updateCount = Math.min(Number(existing), designs.length);
+        for (let index = 0; index < updateCount; index++) {
+          const uri = veSneakerTokenUri(designs[index], index);
+          const hash = await store.write.updateDesignUri([BigInt(index), uri], { account: wallet.account });
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status !== "success") throw new Error(`updateDesignUri failed for ${designs[index].name} (${hash}).`);
+          console.log(`Updated artwork metadata URI for design ${index}: ${designs[index].name}`);
+        }
+      }
     } else {
       for (const [index, design] of designs.entries()) {
         const uri = veSneakerTokenUri(design, index);
@@ -182,9 +192,10 @@ async function main() {
       const treasury = await store.read.treasury();
       const recipient = getAddress(optionalEnv("VE_MINT_RECIPIENT", treasury) ?? treasury);
       const count = await store.read.designCount();
-      console.log(`\nReserving ${quantity} copies per design to ${recipient} (${count} designs)...`);
+      const familyCount = Math.min(Number(count), designs.length);
+      console.log(`\nReserving ${quantity} copies per family to ${recipient} (${familyCount} designs)...`);
 
-      for (let index = 0; index < Number(count); index++) {
+      for (let index = 0; index < familyCount; index++) {
         const design = await store.read.designs([BigInt(index)]);
         let remaining = quantity;
         while (remaining > 0) {

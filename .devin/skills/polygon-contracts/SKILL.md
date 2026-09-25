@@ -82,8 +82,8 @@ Current defaults are 2.80% base APY (sustainable rate), rarity-based tier boosts
 - `reserveMint(designIndex, to, quantity)` allocates copies to the treasury without payment, counting against the design supply.
 - Unique proof per copy: `keccak256(abi.encodePacked("vesneaker", designIndex, serial))`.
 - Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design. Tune with `VE_PRICE_*_USD` or pin `VE_PRICE_*_POL`.
-- The 9 genesis designs live in `veSneakerDesigns()` (`scripts/deployment-config.ts`) and are registered by `scripts/mint-veSneakers.ts` (`VE_MINT_MODE=configure|premint|both`).
-- The frontend catalog `VE_SNEAKER_CATALOG` (`src/lib/ve-sneakers.ts`) must stay in the **same index order** as `veSneakerDesigns()`.
+- The initial Astra/Sol/Luna family designs live in `veSneakerDesigns()` and are registered by `scripts/mint-veSneakers.ts`; set `VE_SNEAKER_ASSET_BASE_URL` to a public HTTPS origin before creating NFT metadata.
+- The frontend `VE_SNEAKER_CATALOG` must match the first three registered design indices. Existing stores retain legacy indices; never reorder them. `VE_UPDATE_DESIGN_URIS=true` explicitly refreshes those first three metadata URIs for future mints.
 
 ## Toolchain and commands
 

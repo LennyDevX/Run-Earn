@@ -33,7 +33,7 @@ export default function ThemeToggle() {
           mounted && dark ? "translate-x-11 md:translate-x-7" : "translate-x-0"
         }`}
       >
-        {mounted && dark ? "☾" : "☀"}
+        <span className={mounted && dark ? "text-luna" : "text-sol"}>{mounted && dark ? "☾" : "☀"}</span>
       </span>
     </button>
   );

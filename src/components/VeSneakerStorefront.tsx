@@ -8,20 +8,33 @@ import { useVeSneakerStore } from "@/hooks/useVeSneakerStore";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { usePolPrice } from "@/hooks/usePolPrice";
-import PixelSneaker from "@/components/PixelSneaker";
+import SneakerArtwork from "@/components/SneakerArtwork";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import {
   VE_FALLBACK_PRICE_POL,
   VE_MAX_SUPPLY_FALLBACK,
   VE_RARITY_STYLES,
   VE_SNEAKER_CATALOG,
+  VE_SNEAKER_FAMILIES,
   VE_TIER_BOOST,
   VE_TIER_LABEL,
+  type VeSneakerFamilyId,
 } from "@/lib/ve-sneakers";
 
-type Filter = "All" | "Common" | "Rare" | "Epic" | "Mythic";
+type Filter = "All" | VeSneakerFamilyId;
 
-const FILTERS: Filter[] = ["All", "Common", "Rare", "Epic", "Mythic"];
+const FILTERS: Filter[] = ["All", "astra", "sol", "luna"];
+const FILTER_LABELS: Record<Filter, string> = {
+  All: "All lines",
+  astra: "Astra",
+  sol: "Sol",
+  luna: "Luna",
+};
+const FILTER_STYLES: Record<VeSneakerFamilyId, string> = {
+  astra: "border-astra/40 bg-astra/10 text-astra",
+  sol: "border-sol/40 bg-sol/10 text-sol",
+  luna: "border-luna/40 bg-luna/10 text-luna",
+};
 
 function formatPol(value: bigint, maxDigits = 2) {
   const num = Number(formatEther(value));
@@ -47,6 +60,7 @@ export default function VeSneakerStorefront() {
     () =>
       VE_SNEAKER_CATALOG.map((entry, index) => {
         const onChain = store.designs[index];
+        const family = VE_SNEAKER_FAMILIES.find((item) => item.id === entry.family) ?? VE_SNEAKER_FAMILIES[0];
         const tier = Number(onChain?.tier ?? entry.tier);
         const rarity = Number(onChain?.rarity ?? entry.rarity);
         const price = onChain?.price ?? parseEther(VE_FALLBACK_PRICE_POL[tier] ?? "421");
@@ -54,9 +68,10 @@ export default function VeSneakerStorefront() {
         const minted = onChain?.minted ?? 0n;
         return {
           index,
-          name: onChain?.name ?? entry.name,
-          design: entry.design,
-          palette: entry.palette,
+          name: entry.name,
+          family: entry.family,
+          imageSrc: entry.imageSrc,
+          tagline: family.tagline,
           tier,
           rarity,
           price,
@@ -72,7 +87,7 @@ export default function VeSneakerStorefront() {
     [store.designs],
   );
 
-  const visible = filter === "All" ? rows : rows.filter((row) => row.label === filter);
+  const visible = filter === "All" ? rows : rows.filter((row) => row.family === filter);
 
   function setQuantity(index: number, next: number) {
     setQuantityByDesign((current) => ({ ...current, [index]: Math.max(1, Math.min(20, next)) }));
@@ -187,13 +202,15 @@ export default function VeSneakerStorefront() {
               setFilter(item);
               centerInScrollRow(event.currentTarget);
             }}
-            className={`min-h-11 shrink-0 cursor-pointer rounded-full px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
+            className={`min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
               filter === item
-                ? "bg-foreground text-background"
-                : "border border-foreground/10 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
+                ? item === "All"
+                  ? "border-sky/40 bg-sky/10 text-sky"
+                  : FILTER_STYLES[item]
+                : "border-foreground/10 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
             }`}
           >
-            {item}
+            {FILTER_LABELS[item]}
           </button>
         ))}
       </div>
@@ -203,22 +220,34 @@ export default function VeSneakerStorefront() {
         {visible.map((row, i) => {
           const quantity = quantityByDesign[row.index] ?? 1;
           const soldOut = row.remaining <= 0n;
+          const designMissing = isConfigured && row.index >= store.designs.length;
           const levelLocked =
             row.requiredLevel > 0 && (!progress.configured || playerLevel < row.requiredLevel);
-          const disabled = !isConfigured || !row.active || soldOut || levelLocked || store.isLoading;
+          const disabled = !isConfigured || designMissing || !row.active || soldOut || levelLocked || store.isLoading;
           return (
             <article
               key={row.name}
               className="group animate-fade-up flex flex-col gap-4 rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
               style={{ animationDelay: `${i * 70}ms` }}
             >
-              <div className="relative overflow-hidden rounded-2xl bg-background p-6">
-                <PixelSneaker
-                  design={row.design}
-                  palette={row.palette}
-                  className="w-full transition-transform duration-500 group-hover:scale-105"
+              <div className={`relative overflow-hidden rounded-2xl border border-foreground/10 bg-ink ${
+                row.family === "astra" ? "shadow-[0_0_36px_rgba(190,114,255,0.14)]" :
+                  row.family === "sol" ? "shadow-[0_0_36px_rgba(255,196,71,0.14)]" :
+                    "shadow-[0_0_36px_rgba(200,221,255,0.14)]"
+              }`}>
+                <SneakerArtwork
+                  src={row.imageSrc}
+                  alt={`${row.name} retro-futuristic pixel sneaker`}
+                  className="w-full transition-transform duration-500 group-hover:scale-[1.03]"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
-                <span className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase ${VE_RARITY_STYLES[row.label]}`}>
+                <span
+                  className="absolute top-3 left-3 rounded-sm bg-background/80 px-2.5 py-1 font-pixel text-[8px] tracking-widest uppercase backdrop-blur-sm"
+                  style={{ color: `var(--color-${row.family})` }}
+                >
+                  {row.name}
+                </span>
+                <span className={`absolute top-3 right-3 rounded-sm px-2.5 py-1 text-[10px] font-semibold tracking-wider uppercase ${VE_RARITY_STYLES[row.label]}`}>
                   {row.label}
                 </span>
                 {row.requiredLevel > 0 ? (
@@ -231,7 +260,8 @@ export default function VeSneakerStorefront() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-bold tracking-tight">{row.name}</h3>
-                  <span className="font-mono text-xs text-foreground/40">
+                  <p className="mt-1 max-w-[22ch] text-xs leading-relaxed text-foreground/55">{row.tagline}</p>
+                  <span className="mt-2 block font-mono text-xs text-foreground/40">
                     veSneaker #{String(row.index + 1).padStart(4, "0")}
                   </span>
                 </div>
@@ -286,9 +316,11 @@ export default function VeSneakerStorefront() {
                   onClick={() => void handleBuy(row.index, row.price, row.remaining)}
                   className="min-h-11 flex-1 cursor-pointer rounded-full bg-mint px-4 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {soldOut
-                    ? "Sold out"
-                    : levelLocked
+                  {designMissing
+                    ? "Not registered on-chain"
+                    : soldOut
+                      ? "Sold out"
+                      : levelLocked
                       ? `Requires level ${row.requiredLevel}`
                       : store.isLoading
                         ? "Confirming..."
@@ -304,7 +336,7 @@ export default function VeSneakerStorefront() {
       {actionError ? <p className="rounded-2xl bg-magma/15 px-4 py-3 text-xs font-semibold text-magma">{actionError}</p> : null}
 
       {/* Next steps */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <span className="font-pixel text-[9px] text-mint">AFTER YOU BUY</span>
         <h3 className="mt-2 text-xl font-bold tracking-tight">Put your veSneaker to work</h3>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">

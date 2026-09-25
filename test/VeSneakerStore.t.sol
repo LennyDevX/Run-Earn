@@ -32,7 +32,7 @@ contract VeSneakerStoreTest is Test {
         vm.prank(admin);
         nft.grantRole(minterRole, address(store));
 
-        // Register the four rarity designs used by the 9 genesis styles.
+        // Register four rarity tiers to exercise all store pricing paths.
         vm.startPrank(admin);
         store.addDesign("Ember Trail", URI, 20, 0, COMMON_PRICE, 1000);
         store.addDesign("Sky Drift", URI, 45, 1, RARE_PRICE, 1000);

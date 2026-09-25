@@ -117,9 +117,16 @@ or `VE_PRICE_*_POL` to pin an exact POL price. The live POL/USD rate is served b
 
 ### Supply
 
-- 9 genesis designs × 1,000 copies = **9,000 veSneakers** maximum (`VE_MAX_SUPPLY`).
+- The initial storefront has three family designs — Astra, Sol, and Luna — with a
+  default cap of 1,000 each: **3,000 initial veSneakers** for a fresh store
+  (`VE_MAX_SUPPLY`). The store remains extensible for future family variants.
+- An already configured store keeps its historical design slots and supply; the UI uses
+  the first three stable slots for the new families rather than deleting or reordering
+  on-chain designs.
 - Minted on demand: the buyer pays POL and `VeSneakerStore` mints through
   `SneakerMint.mintAuthorized`, so no upfront gas is needed for the whole collection.
+- Store NFT metadata uses the absolute public asset origin in `VE_SNEAKER_ASSET_BASE_URL`.
+  Updating a design URI affects future mints; existing token URIs remain as minted.
 - `reserveMint` lets the admin allocate copies to the treasury (airdrops, partnerships,
   marketplace seeding) while still counting against the design cap.
 

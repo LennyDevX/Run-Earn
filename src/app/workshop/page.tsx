@@ -5,7 +5,7 @@ import WorkshopDashboard from "@/components/WorkshopDashboard";
 
 export const metadata: Metadata = {
   title: "Workshop — RUN&EARN",
-  description: "Equip mod NFTs into six upgrade slots, burn consumable abilities, and forge your veSneakers with veRUNE for permanent stat boosts.",
+  description: "Equip mods across seven slots, burn consumable abilities, and forge veSneakers with veRUNE for permanent stat boosts."
 };
 
 export default function WorkshopPage() {

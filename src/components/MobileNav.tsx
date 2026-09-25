@@ -101,7 +101,7 @@ export default function MobileNav() {
   return (
     <nav
       aria-label="Primary"
-      className={`fixed inset-x-0 bottom-0 z-50 border-t border-foreground/10 bg-surface/95 pb-safe backdrop-blur-md transition-transform duration-300 ease-out md:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-50 border-t border-astra/20 bg-surface/95 pb-safe backdrop-blur-xl transition-transform duration-300 ease-out md:hidden ${
         hidden ? "translate-y-full" : "translate-y-0"
       }`}
     >
@@ -114,7 +114,7 @@ export default function MobileNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-colors active:scale-95 ${
-                  active ? "text-mint" : "text-foreground/55"
+                  active ? "text-astra" : "text-foreground/55"
                 }`}
               >
                 <svg
@@ -134,7 +134,7 @@ export default function MobileNav() {
                 </span>
                 <span
                   aria-hidden="true"
-                  className={`h-0.5 w-5 rounded-full transition-colors ${active ? "bg-mint" : "bg-transparent"}`}
+                  className={`h-0.5 w-5 rounded-full transition-colors ${active ? "bg-astra" : "bg-transparent"}`}
                 />
               </Link>
             </li>

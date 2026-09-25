@@ -106,6 +106,13 @@ the whole v1.0 set in dependency order and runs the post-deploy wiring:
    create/accept a swap (Trades tab). Confirm a sneaker with equipped mods cannot
    be listed until unequipped.
 
+## 5c. Sneaker family artwork
+
+1. Open Home and verify the hero rotates Astra → Sol → Luna without a blank frame. Use the previous/next and family controls, pause rotation, and verify reduced-motion mode keeps a static frame.
+2. Open `/collection`, filter each family, and confirm the first three store design indices map to Astra, Sol, Luna and that the purchase transaction still uses the matching index.
+3. Open `/game`, `/workshop`, `/marketplace`, and `/staking` with owned sneakers. Confirm each card resolves the artwork from `tokenURI`, not `tokenId`, and user-generated metadata artwork remains intact.
+4. Before registering a fresh store, set `VE_SNEAKER_ASSET_BASE_URL` to the public HTTPS origin serving the PNG files. On an already configured store, `VE_UPDATE_DESIGN_URIS=true` explicitly updates the first three design URIs for future mints; previously minted per-token URIs do not change.
+
 ## 6. Subgraph verification
 
 The `/api/subgraph?address=0x...` route introspects the configured `nuxgraph` schema and normalizes address-indexed activity. Test the route after setting the query endpoint. The subgraph should expose entities for POL deposits, withdrawals, reward claims, NFT stakes, and NFT unstakes.

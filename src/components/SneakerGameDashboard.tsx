@@ -6,7 +6,7 @@ import { NETWORK_LABEL, explorerTransactionUrl, usePolygonWallet } from "@/compo
 import { useSneakerGame } from "@/hooks/useSneakerGame";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
-import PixelSneaker from "@/components/PixelSneaker";
+import SneakerArtwork from "@/components/SneakerArtwork";
 
 function formatPoints(value: bigint, maxDigits = 2) {
   const num = Number(formatEther(value));
@@ -141,7 +141,7 @@ export default function SneakerGameDashboard() {
       </div>
 
       {/* Redemption panel */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <span className="font-pixel text-[9px] text-mint">VE RUNE REDEMPTION</span>
@@ -166,7 +166,7 @@ export default function SneakerGameDashboard() {
       </div>
 
       {/* Sneaker cards */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8 lg:p-10">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <span className="font-pixel text-[9px] text-mint">YOUR SNEAKER COLLECTION</span>
@@ -217,10 +217,10 @@ export default function SneakerGameDashboard() {
                       </div>
 
                       <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6">
-                        <PixelSneaker design={Number(sneaker.tokenId) % 7} className="w-28 h-auto" />
+                        <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-28" sizes="112px" />
                       </div>
 
-                      <h4 className="font-bold">RUN&EARN Sneaker #{sneaker.tokenId.toString()}</h4>
+                      <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
 
                       {/* Stats */}
                       <div className="mt-3 flex flex-col gap-1.5 text-xs text-foreground/60">
@@ -318,7 +318,7 @@ export default function SneakerGameDashboard() {
       </div>
 
       {/* Activity feed */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
           <div>
             <span className="font-pixel text-[9px] text-mint">LIVE SUBGRAPH FEED</span>

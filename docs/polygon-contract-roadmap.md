@@ -42,8 +42,9 @@ supply cap (default 1000). Prices are USD targets converted at `POL_USD_PRICE` â
 (Common) to $150 (Mythic), geometric progression, i.e. 410 / 635 / 993 / 1536 POL at POL
 = $0.09764. Proceeds go to the store treasury. `reserveMint` lets the
 admin allocate copies to the treasury for airdrops or marketplace listings without
-payment. The 9 genesis designs are configured and optionally pre-minted by
-`scripts/mint-veSneakers.ts`.
+payment. The initial Astra, Sol, and Luna family designs are registered and optionally
+pre-minted by `scripts/mint-veSneakers.ts`; future art variants append without changing
+existing design indices.
 
 ### 9. Upgrade economy â€” shipped in v1.0
 

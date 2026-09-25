@@ -89,12 +89,19 @@ address-indexed activity roots, and normalizes rows into `SubgraphActivity[]`. I
 exposed to the browser only through `/api/subgraph`. See
 [`subgraph-integration.md`](subgraph-integration.md).
 
-### Pixel art — `src/components/PixelSneaker.tsx`
+### Sneaker artwork — `src/components/SneakerArtwork.tsx`
 
-7 hand-authored pixel designs (`design={0..6}`), each with its own default palette.
-Props: `design`, `palette` (per-cell color overrides), `className`, `style`. Dashboards
-pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
-`PIXEL_SNEAKER_DESIGNS` for the count instead of hardcoding it.
+The initial art registry in `src/lib/ve-sneakers.ts` maps the Astra, Sol, and Luna
+families to `/veSneakerAstra.png`, `/veSneakerSol.png`, and `/veSneakerLuna.png`.
+`SneakerArtwork` renders these square PNGs with `next/image`, `object-contain`, and a
+reserved aspect ratio. Do not choose art from a token ID.
+
+`resolveSneakerArtwork` reads the NFT's `tokenURI`: it honors the `Collection` metadata
+trait for family assets, preserves embedded AI-generated image data for user-minted
+sneakers, and maps legacy `pixel://vesneaker/<design>` metadata to the closest initial
+family. `useOwnedSneakers` supplies this resolved artwork to `/workshop`, `/game`,
+`/marketplace`, and `/staking`. `PixelSneaker.tsx` remains a compatibility re-export;
+vector UI icons and the PWA icon are separate from sneaker artwork.
 
 ### Mobile shell — `MobileNav`, `MoreSheet`, `Navbar`
 
@@ -119,7 +126,7 @@ pick a design with `Number(tokenId) % 7` so every sneaker looks distinct. Export
 | --- | --- |
 | `usePolygonWallet` (in Providers) | Wallet state, chain guard, tx sending |
 | `useContractTransaction` | `execute({to, data, value})` → waits for receipt, tracks pending/error |
-| `useOwnedSneakers` | Reads the connected wallet's ERC-721 IDs + traits (`balanceOf`, `tokenOfOwnerByIndex`, `traitsOf`) |
+| `useOwnedSneakers` | Reads ERC-721 IDs, rarity/tier traits, and `tokenURI`; resolves Astra/Sol/Luna family art, legacy `pixel://` designs, or embedded AI artwork |
 | `useMintedSneakers` | Reads the local minted list; `notifyMintedSneakersUpdated()` broadcasts changes |
 | `useWalletOverview` | Native POL balance for the connected wallet |
 | `useNftAppraisal` | Batch `SneakerAppraiser.appraise(tokenId)` reads + global params |
@@ -151,9 +158,10 @@ Conventions every hook follows:
 ### `/` — Home
 
 - **Files:** `src/app/page.tsx`, `src/components/SneakerCarousel.tsx`, `src/components/PolygonTransferCard.tsx`.
-- **Purpose:** marketing landing page with the sneaker carousel and a POL transfer card.
+- **Purpose:** retro-futuristic landing page introducing the Astra, Sol, and Luna family lines, with a POL transfer card.
+- **Carousel:** `SneakerCarousel` crossfades the three family PNGs, has previous/next and family selectors plus a pause toggle, pauses on hover/focus, and stops automatic rotation for reduced-motion or when out of view.
 - **Contracts:** none (the transfer card uses `sendNative`).
-- **Notes:** fully static; safe to edit copy without touching hooks.
+- **Notes:** the page copy and family carousel are client-independent of store reads; the hero uses local public PNGs.
 
 ### `/mint` — AI mint studio
 
@@ -198,10 +206,10 @@ Conventions every hook follows:
 - **Contracts:** `VeSneakerStore` (`NEXT_PUBLIC_VE_SNEAKER_STORE_ADDRESS`) mints on demand
   through `SneakerMint.mintAuthorized`, so the store holds `MINTER_ROLE`.
 - **Hooks:** `useVeSneakerStore`, `useSubgraphActivity`, `usePolPrice`.
-- **Catalog:** `VE_SNEAKER_CATALOG` in `src/lib/ve-sneakers.ts` is the display source of
-  truth (name, pixel design, palette, rarity, tier). **Its order must match
-  `veSneakerDesigns()` in `scripts/deployment-config.ts`**, because the array position is
-  the on-chain `designIndex`.
+- **Catalog:** the initial `VE_SNEAKER_CATALOG` entries are Astra, Sol, Luna, in that
+  order. Each entry contains its family, art path, rarity, and tier. **Its order matches
+  the first three `veSneakerDesigns()` entries in `scripts/deployment-config.ts`** because
+  the array position is the on-chain `designIndex`; never reorder registered indices.
 - **Buy flow:** pick a quantity (1–20) → `buy(designIndex)` for one or
   `buyBatch(designIndex, quantity)` for many, sending exactly `price × quantity` POL.
   Proceeds go straight to the store treasury.
@@ -211,9 +219,16 @@ Conventions every hook follows:
   (default 1000) per design.
 - **Fallbacks:** when the store is not configured, the page renders the full catalog with
   the fallback prices and shows a demo-mode notice instead of crashing.
-- **Dev notes:** the on-chain design list wins over the static catalog for name, rarity,
-  tier, price, and supply. To add a design, register it on-chain **and** append to
-  `VE_SNEAKER_CATALOG` at the same index.
+- **Dev notes:** price, rarity, tier, and supply are read from the on-chain design at
+  the matching index; the initial family label and artwork come from the static catalog.
+  Fresh stores register three family designs (default 1,000 copies each). Existing stores
+  keep their historical indices; the storefront exposes the first three families and
+  does not delete or renumber legacy entries. Append future artwork designs at new indices.
+- **NFT metadata:** `veSneakerTokenUri` writes an absolute image URL using the public
+  `VE_SNEAKER_ASSET_BASE_URL` origin. For an already configured store, set
+  `VE_UPDATE_DESIGN_URIS=true` when running `scripts/mint-veSneakers.ts` to update the
+  first three design URIs for future mints. Existing minted token URIs are immutable and
+  are resolved in the app through `useOwnedSneakers`.
 - **Mod storefront:** `ModStorefront` (`src/components/ModStorefront.tsx`) renders the
   `ModStore` catalog on the same page — premium mod designs (including consumables)
   bought with POL via `useModEconomy.buyMod`.

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { encodeFunctionData, getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
-import { sneakerMarketplaceAbi } from "@/lib/contracts";
+import { sneakerMarketplaceAbi, sneakerMintAbi } from "@/lib/contracts";
+import { resolveSneakerArtwork } from "@/lib/sneaker-artwork";
 import { useContractTransaction } from "@/hooks/useContractTransaction";
 import { useOwnedSneakers, type OwnedSneaker } from "@/hooks/useOwnedSneakers";
 
@@ -139,24 +140,40 @@ export function useMarketplace() {
             .catch(() => null),
         ),
       );
-      const mine: MyListing[] = [];
-      listings.forEach((raw, idx) => {
-        if (!raw) return;
+      const mine = await Promise.all(listings.map(async (raw, idx): Promise<MyListing | null> => {
+        if (!raw) return null;
         const [seller, , tokenId, price, listedAt, active] = raw as readonly [Address, Address, bigint, bigint, bigint, boolean];
-        if (!active || seller.toLowerCase() !== wallet.address?.toLowerCase()) return;
-        const sneaker = owned.sneakers.find((s) => s.tokenId === tokenId);
-        mine.push({
+        if (!active || seller.toLowerCase() !== wallet.address?.toLowerCase()) return null;
+        const sneaker = owned.sneakers.find((item) => item.tokenId === tokenId);
+        const [traits, tokenUri] = sneaker
+          ? [null, null]
+          : await Promise.all([
+              wallet.publicClient.readContract({
+                address: sneakerAddress as Address,
+                abi: sneakerMintAbi,
+                functionName: "traitsOf",
+                args: [tokenId],
+              }).catch(() => null),
+              wallet.publicClient.readContract({
+                address: sneakerAddress as Address,
+                abi: sneakerMintAbi,
+                functionName: "tokenURI",
+                args: [tokenId],
+              }).catch(() => ""),
+            ]);
+        return {
           listingId: listingIds[idx],
           seller,
           tokenId,
           price,
           listedAt,
           active,
-          rarity: sneaker?.rarity ?? 0n,
-          tier: sneaker?.tier ?? 0n,
-        });
-      });
-      setMyListings(mine);
+          rarity: sneaker?.rarity ?? (traits ? BigInt(traits[0]) : 0n),
+          tier: sneaker?.tier ?? (traits ? BigInt(traits[1]) : 0n),
+          artwork: sneaker?.artwork ?? resolveSneakerArtwork(tokenUri as string),
+        };
+      }));
+      setMyListings(mine.filter((listing): listing is MyListing => listing !== null));
     } catch (cause) {
       setReadError(cause instanceof Error ? cause.message : "Could not read the marketplace.");
     } finally {

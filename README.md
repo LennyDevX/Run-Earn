@@ -8,7 +8,7 @@ This release delivers the core contracts and base concepts of the game, develope
 
 **What v1.0 includes:**
 
-- **veSneakers** (`SneakerMint`) — the core ERC-721s. Create them with the AI mint studio from a photo of your sneaker, or buy designs from the veSneaker store. Fully virtual, playable, upgradeable, tradable.
+- **veSneakers** (`SneakerMint`) — the core ERC-721s. Create them with the AI mint studio from a photo of your sneaker, or buy designs from the veSneaker store. The first pixel-art families are Astra, Sol, and Luna. Fully virtual, playable, upgradeable, tradable.
 - **Power · Health · Energy** (`SneakerGame`) — every veSneaker mines veRUNE at a power rate set by rarity, loses 1 health/day of real time (plus wear per activation), and spends energy on special abilities. A worn-out sneaker stops mining until repaired.
 - **Mods & badges** (`SneakerMods`) — a second ERC-721 collection of upgrade NFTs. Achievement badges are claimed by meeting on-chain conditions (streaks, lifetime veRUNE, collection size, POL staked); premium mods are sold by the store.
 - **Workshop** (`SneakerWorkshop`) — equip mods into seven slots (sole, upper, lining, skin, core, boost, skill) to cut wear, raise health and appraisal, auto-activate daily, amplify staking APY, and run passive skill effects. Consumable mod NFTs burn on use: repair kits restore health, surge triggers instant activation, boost capsules and Overdrive raise earn rate for 24–48h, Stim packs refill energy, Lucky repairs heal and boost, and forge stones grant a free forge level — fueling a burn-driven economy.

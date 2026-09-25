@@ -15,7 +15,7 @@ export default function MyNftsGallery() {
 
   if (!wallet.isConnected) {
     return (
-      <section className="flex flex-col items-center gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface px-8 py-16 text-center">
+      <section className="flex flex-col items-center gap-6 rounded-2xl border border-foreground/8 bg-surface px-8 py-16 text-center">
         <h2 className="max-w-xl text-2xl font-bold tracking-tight text-balance">
           Connect your wallet to view your collection
         </h2>
@@ -28,7 +28,7 @@ export default function MyNftsGallery() {
 
   if (sneakers.length === 0) {
     return (
-      <section className="flex flex-col items-center gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface px-8 py-16 text-center">
+      <section className="flex flex-col items-center gap-6 rounded-2xl border border-foreground/8 bg-surface px-8 py-16 text-center">
         <span className="font-pixel text-[10px] text-sky">EMPTY COLLECTION</span>
         <h2 className="max-w-xl text-2xl font-bold tracking-tight text-balance">
           You have not minted a sneaker yet

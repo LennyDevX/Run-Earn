@@ -54,7 +54,7 @@ npm run lint
 npm run typecheck
 npm run build
 npx hardhat compile
-npx hardhat test          # 375 tests (271 Solidity + 104 TypeScript)
+npx hardhat test          # 379 tests (271 Solidity + 108 TypeScript)
 ```
 
 ## Mobile

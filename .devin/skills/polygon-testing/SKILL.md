@@ -11,6 +11,7 @@ Use this skill whenever modifying contracts, deployment configuration, ABIs, wal
 
 - Solidity tests: `test/*.t.sol` using Hardhat 3's built-in Solidity test runner and `forge-std`.
 - TypeScript integration tests: `test/*.ts` using `@nomicfoundation/hardhat-mocha` and `@nomicfoundation/hardhat-viem`.
+- `test/sneaker-artwork.ts` covers the Astra/Sol/Luna catalog order, tokenURI family resolution, legacy `pixel://` mapping, and preservation of embedded user artwork.
 - Do not place new Solidity tests in the old `tests/` directory; Hardhat 3 discovers Solidity tests from `test/` by default.
 
 ## Hardhat 3 test patterns

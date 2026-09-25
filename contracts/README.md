@@ -69,7 +69,8 @@ Every veSneaker has three live stats:
 - `buy(designIndex)` / `buyBatch(designIndex, quantity)` mint on demand through `SneakerMint.mintAuthorized`; the store holds `MINTER_ROLE`.
 - Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design.
 - `reserveMint` allocates copies to the treasury without payment, counting against supply.
-- Configure the 9 genesis designs with `VE_MINT_MODE=configure|premint|both npx hardhat run scripts/mint-veSneakers.ts --network amoy`.
+- Configure the initial Astra, Sol, and Luna designs with `VE_MINT_MODE=configure npx hardhat run scripts/mint-veSneakers.ts --network amoy`; set `VE_SNEAKER_ASSET_BASE_URL` to the public HTTPS origin first so NFT metadata points to real PNGs.
+- For an existing store, `VE_UPDATE_DESIGN_URIS=true` opts into updating the first three design URIs; it affects future mints only because already minted token URIs are stored per token.
 
 ## Upgrade economy (v1.0)
 

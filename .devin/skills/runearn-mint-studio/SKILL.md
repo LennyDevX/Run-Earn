@@ -18,7 +18,9 @@ route handler, `src/lib/sneaker-nft.ts`, and the local minted-sneaker store.
 | `src/lib/sneaker-nft.ts` | Rarities, palettes, token URI/metadata, localStorage store |
 | `src/hooks/useMintedSneakers.ts` | React store for the local collection |
 | `src/components/MyNftsGallery.tsx` | `/my-nfts` gallery (reads the same store) |
-| `src/lib/contracts.ts` | `sneakerMintAbi` (mint, traits, enumerable reads) |
+| `src/components/SneakerArtwork.tsx` | Shared PNG artwork display for the Astra/Sol/Luna family designs |
+| `src/lib/sneaker-artwork.ts` | Resolves tokenURI metadata while preserving embedded AI artwork |
+| `src/lib/contracts.ts` | `sneakerMintAbi` (mint, traits, enumerable reads, `tokenURI`) |
 
 ## Pipeline
 
@@ -78,7 +80,9 @@ Keep the order stable; changing it silently re-prices every existing NFT.
   `runearn:nfts-updated`, which `useMintedSneakers` listens for (plus the `storage` event
   for cross-tab sync).
 - This store is a UX convenience, not ownership. On-chain ownership is
-  `useOwnedSneakers` (`balanceOf` + `tokenOfOwnerByIndex` + `traitsOf`).
+  `useOwnedSneakers` (`balanceOf` + `tokenOfOwnerByIndex` + `traitsOf` + `tokenURI`).
+  `resolveSneakerArtwork` preserves embedded AI-generated image data; it only substitutes
+  the Astra/Sol/Luna catalog art for family-tagged or legacy `pixel://vesneaker/` store NFTs.
 
 ## Failure modes to handle
 

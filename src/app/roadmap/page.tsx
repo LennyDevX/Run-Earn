@@ -194,7 +194,7 @@ export default function RoadmapPage() {
           {QUARTERS.map((quarter, qIndex) => (
             <section
               key={quarter.id}
-              className="animate-fade-up flex flex-col gap-6 rounded-[2.5rem] border border-foreground/8 bg-surface p-5 sm:p-8"
+              className="animate-fade-up flex flex-col gap-6 rounded-2xl border border-foreground/8 bg-surface p-5 sm:p-8"
               style={{ animationDelay: `${qIndex * 120}ms` }}
             >
               <div className={`flex flex-col gap-3 rounded-3xl ${quarter.highlight} p-6`}>

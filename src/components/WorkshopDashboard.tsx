@@ -9,7 +9,8 @@ import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { modEffectLabel, NO_AUX, SLOTS, type OwnedMod } from "@/lib/mods";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import { RARITIES } from "@/lib/sneaker-nft";
-import PixelSneaker from "@/components/PixelSneaker";
+import SneakerArtwork from "@/components/SneakerArtwork";
+import { veSneakerArtworkByDesign } from "@/lib/ve-sneakers";
 
 function formatBps(bps: bigint) {
   return `${(Number(bps) / 100).toFixed(1)}%`;
@@ -115,18 +116,21 @@ export default function WorkshopDashboard() {
           <h3 className="text-lg font-bold">Workshop not deployed yet</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-foreground/60">
             The SneakerWorkshop contract address is not configured for this network. Once the v1.0
-            contracts go live on Amoy, this page lets you equip mods into six upgrade slots.
+            contracts go live on Amoy, this page lets you equip mods across all seven workshop slots.
           </p>
         </div>
       ) : null}
 
       {/* Sneaker selector */}
-      <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+      <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <span className="font-pixel text-[9px] text-sky">1 · PICK A SNEAKER</span>
         {sneakers.length > 0 ? (
           <div className="scroll-x -mx-6 mt-4 flex gap-3 px-6 pb-1">
             {sneakers.map((sneaker) => {
               const isSelected = sneaker.tokenId === selectedId;
+              const skinArtwork = skinOverride != null && isSelected
+                ? veSneakerArtworkByDesign(skinOverride, true)
+                : null;
               const rarity = RARITIES[Number(sneaker.tier) % RARITIES.length];
               return (
                 <button
@@ -142,9 +146,11 @@ export default function WorkshopDashboard() {
                       : "border-foreground/10 bg-background hover:border-foreground/25"
                   }`}
                 >
-                  <PixelSneaker
-                    design={skinOverride != null && isSelected ? skinOverride : Number(sneaker.tokenId) % 7}
-                    className="h-auto w-16"
+                  <SneakerArtwork
+                    src={skinArtwork?.imageSrc ?? sneaker.artwork.src}
+                    alt={skinArtwork ? `${skinArtwork.name} virtual sneaker artwork` : sneaker.artwork.alt}
+                    className="w-16"
+                    sizes="64px"
                   />
                   <span className="text-xs font-bold">#{sneaker.tokenId.toString()}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${rarity?.accent ?? "bg-foreground/10"}`}>
@@ -166,7 +172,7 @@ export default function WorkshopDashboard() {
       {selected ? (
         <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
           {/* Slots grid */}
-          <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+          <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
             <span className="font-pixel text-[9px] text-mint">2 · UPGRADE SLOTS</span>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {SLOTS.map((slot) => {
@@ -266,7 +272,7 @@ export default function WorkshopDashboard() {
           {/* Effective stats + forge + consumables */}
           <div className="flex flex-col gap-6">
             {/* Vitals: Power / Health / Energy */}
-            <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+            <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
               <span className="font-pixel text-[9px] text-magma">VITALS</span>
               <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                 <div className="rounded-2xl bg-background p-3">
@@ -312,7 +318,7 @@ export default function WorkshopDashboard() {
               ) : null}
             </div>
 
-            <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+            <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
               <span className="font-pixel text-[9px] text-sky">EFFECTIVE STATS</span>
               <dl className="mt-4 flex flex-col gap-3 text-sm">
                 {[
@@ -360,7 +366,7 @@ export default function WorkshopDashboard() {
             </div>
 
             {/* Consumable ability NFTs */}
-            <div className="rounded-[2.5rem] border border-foreground/10 bg-surface p-6 sm:p-8">
+            <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
               <span className="font-pixel text-[9px] text-magma">CONSUMABLES</span>
               {consumables.length > 0 ? (
                 <div className="mt-4 flex flex-col gap-2">

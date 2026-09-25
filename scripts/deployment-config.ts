@@ -170,7 +170,9 @@ export function gameParameters() {
 /// Set `VE_PRICE_*_POL` to override an individual design price in POL directly.
 export type VeSneakerDesignConfig = {
   name: string;
-  design: number; // PixelSneaker design index (0..6)
+  family: "Astra" | "Sol" | "Luna";
+  design: number;
+  imagePath: string;
   rarity: number; // 0..100
   tier: number; // 0..3
   pricePol: bigint; // wei
@@ -203,15 +205,9 @@ export function veSneakerDesigns(): VeSneakerDesignConfig[] {
   const maxSupply = Number(bigintEnv("VE_MAX_SUPPLY", 1000n));
   const prices = veSneakerPricesPol();
   return [
-    { name: "Neon Runner", design: 0, rarity: 85, tier: 3, pricePol: prices.mythic, maxSupply },
-    { name: "Sky Drift", design: 1, rarity: 45, tier: 1, pricePol: prices.rare, maxSupply },
-    { name: "Magma Rush", design: 2, rarity: 65, tier: 2, pricePol: prices.epic, maxSupply },
-    { name: "Mint Circuit", design: 3, rarity: 45, tier: 1, pricePol: prices.rare, maxSupply },
-    { name: "Ghost Protocol", design: 2, rarity: 20, tier: 0, pricePol: prices.common, maxSupply },
-    { name: "Sol Surge", design: 1, rarity: 85, tier: 3, pricePol: prices.mythic, maxSupply },
-    { name: "Cyber Pulse", design: 4, rarity: 85, tier: 3, pricePol: prices.mythic, maxSupply },
-    { name: "Violet Haze", design: 5, rarity: 65, tier: 2, pricePol: prices.epic, maxSupply },
-    { name: "Ember Trail", design: 6, rarity: 20, tier: 0, pricePol: prices.common, maxSupply },
+    { name: "Astra", family: "Astra", design: 0, imagePath: "/veSneakerAstra.png", rarity: 85, tier: 3, pricePol: prices.mythic, maxSupply },
+    { name: "Sol", family: "Sol", design: 1, imagePath: "/veSneakerSol.png", rarity: 45, tier: 1, pricePol: prices.rare, maxSupply },
+    { name: "Luna", family: "Luna", design: 2, imagePath: "/veSneakerLuna.png", rarity: 65, tier: 2, pricePol: prices.epic, maxSupply },
   ];
 }
 
@@ -221,13 +217,26 @@ export const VE_TIER_BOOST_BPS = [50, 80, 150, 180] as const;
 /// Builds the base64 `data:application/json` token URI for a veSneaker design,
 /// matching the metadata shape used by the mint studio.
 export function veSneakerTokenUri(design: VeSneakerDesignConfig, index: number) {
+  const assetBaseUrl = new URL(requiredEnv("VE_SNEAKER_ASSET_BASE_URL"));
+  if (
+    !["https:", "http:"].includes(assetBaseUrl.protocol) ||
+    assetBaseUrl.username ||
+    assetBaseUrl.password ||
+    assetBaseUrl.pathname !== "/" ||
+    assetBaseUrl.search ||
+    assetBaseUrl.hash ||
+    (assetBaseUrl.protocol === "http:" && !["localhost", "127.0.0.1"].includes(assetBaseUrl.hostname))
+  ) {
+    throw new Error("VE_SNEAKER_ASSET_BASE_URL must be a public HTTPS origin (HTTP is allowed only for localhost).");
+  }
   const metadata = {
     name: `veSneaker — ${design.name}`,
     description:
       "RUN&EARN virtual sneaker (veSneaker). Buy it with POL, lock it in staking for a POL APY boost, " +
       "and activate it in the sneaker game to earn veRUNE points. No physical sneaker required.",
-    image: `pixel://vesneaker/${design.design}`,
+    image: `${assetBaseUrl.origin}${design.imagePath}`,
     attributes: [
+      { trait_type: "Collection", value: design.family },
       { trait_type: "Rarity", value: VE_TIER_LABEL[design.tier] },
       { trait_type: "Rarity Score", value: design.rarity },
       { trait_type: "Tier", value: design.tier },
