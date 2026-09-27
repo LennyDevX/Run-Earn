@@ -711,7 +711,7 @@ export default function StakingVaultDashboard() {
                       </div>
 
                       {/* Info */}
-                      <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
+                      <h4 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h4>
                       <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                         <span>Rarity Score:</span>
                         <span className="font-mono font-bold text-foreground">{sneaker.rarity.toString()}/100</span>
@@ -761,7 +761,7 @@ export default function StakingVaultDashboard() {
               </div>
               <h4 className="text-lg font-bold">No Sneaker NFTs Found</h4>
               <p className="max-w-md text-xs leading-relaxed text-foreground/60">
-                You don&apos;t have any RUN&EARN Sneaker NFTs in your wallet yet. Create a unique virtual sneaker with the AI studio to boost your staking APY (up to +1.8% per NFT) and get an on-chain POL valuation.
+                You don&apos;t have any Airen Sneaker NFTs in your wallet yet. Create a unique virtual sneaker with the AI studio to boost your staking APY (up to +1.8% per NFT) and get an on-chain POL valuation.
               </p>
               <Link
                 href="/mint"

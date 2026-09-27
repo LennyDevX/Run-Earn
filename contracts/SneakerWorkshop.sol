@@ -18,7 +18,7 @@ interface IModRental {
 }
 
 /// @title SneakerWorkshop — equip/unequip engine, repair kits, and veRUNE forge.
-/// @notice The workshop is the core of the RUN&EARN upgrade mini-game. Owners
+/// @notice The workshop is the core of the Airen upgrade mini-game. Owners
 ///      equip SneakerMods NFTs into one of seven slots on a veSneaker; equipped
 ///      mods are escrowed here (or stay in ModRental escrow when rented) and
 ///      their effects are exposed through ISneakerBoosts so the game, staking,

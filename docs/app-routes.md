@@ -1,4 +1,4 @@
-# RUN&EARN app routes — developer guide
+# Airen app routes — developer guide
 
 This document is the reference for every user-facing route in the Next.js App Router
 app under `src/app/`, plus the two API route handlers. Use it to understand what each
@@ -80,7 +80,7 @@ export the inferred type. `uint16` outputs are inferred as `number` by viem — 
 - `PALETTES` defines the four AI art palettes.
 - `buildTokenUri(metadata)` builds the base64 `data:application/json` token URI.
 - `getMintedSneakers` / `saveMintedSneaker` persist the user's minted list in
-  `localStorage` under `runearn:my-nfts:<address>`.
+  `localStorage` under `airen:my-nfts:<address>`.
 
 ### Subgraph client — `src/lib/subgraph.ts`
 
@@ -111,9 +111,12 @@ vector UI icons and the PWA icon are separate from sneaker artwork.
 - `MoreSheet` is the reusable bottom sheet (portal, scroll lock, focus trap, Escape,
   backdrop tap, safe-area padding). Used by the "More" menu and by the wallet dialogs on
   mobile.
-- `Navbar` uses the transparent `/LogoAiren.webp` Airen mark as its home link, keeps the
-  desktop links at `md+`, and exposes a 44px menu button below `md` that opens `MoreSheet`
-  with Staking, My NFTs, DeFi, Roadmap and the theme toggle.
+- `Navbar` uses the Airen chevron mark as its home link — `/LogoAirenBlack.webp` (black)
+  in light mode and `/LogoAiren.webp` (cyan) in dark mode — and keeps the desktop links
+  at `md+`. It exposes a 44px menu button below `md` that opens `MoreSheet` with Staking,
+  My NFTs, DeFi, Roadmap and the theme toggle.
+- `Footer` replaces the legacy Airen wordmark with the Airen wordmark —
+  `/AirenBlack.webp` (black) in light mode and `/AirenWhite.png` (white) in dark mode.
 - `Navbar` also mounts `ProfileButton` — a round avatar/user icon to the left of the
   desktop theme toggle (and next to the wallet button on mobile) linking to `/profile`.
   It renders the profile avatar image when one is set.
@@ -140,7 +143,7 @@ vector UI icons and the PWA icon are separate from sneaker artwork.
 | `useVeSneakerStore` | veSneaker catalog reads + `buy(designIndex, price, quantity)` |
 | `usePolPrice` | Live POL/USD from `/api/pol-price` (Uniswap proxy) for USD hints |
 | `useSubgraphActivity` | `/api/subgraph` feed + `addLocalActivity` optimistic entries |
-| `useProfile` | Local per-wallet profile (username, avatar: uploaded image or minted-NFT art) under `runearn:profile:<address>`; `PROFILE_UPDATED_EVENT` broadcasts changes |
+| `useProfile` | Local per-wallet profile (username, avatar: uploaded image or minted-NFT art) under `airen:profile:<address>`; `PROFILE_UPDATED_EVENT` broadcasts changes |
 | `usePlayerProgress` | On-chain `PlayerProgress` reads — `progressOf` (xp/level/thresholds), `xpBreakdown`, public username + NFT avatar pointer. `configured` false until `NEXT_PUBLIC_PLAYER_PROGRESS_ADDRESS` is set |
 
 Conventions every hook follows:
@@ -377,7 +380,7 @@ Conventions every hook follows:
 - **Purpose:** per-wallet identity — editable username, avatar (device upload or a
   minted sneaker's artwork), player level with XP bar, stats grid, and an activity
   feed combining indexed events with local mint history.
-- **Data source:** `localStorage` under `runearn:profile:<address>` (hybrid by design:
+- **Data source:** `localStorage` under `airen:profile:<address>` (hybrid by design:
   identity is local UX state today and migrates on-chain with `PlayerProgress`;
   uploaded images never leave the device). Owned counts come from `SneakerMint` /
   `SneakerMods` reads; activity from `useSubgraphActivity`.

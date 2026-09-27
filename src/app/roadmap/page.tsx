@@ -3,9 +3,9 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Roadmap — RUN&EARN",
+  title: "Roadmap — Airen",
   description:
-    "The RUN&EARN roadmap: the virtual sneaker game economy shipped its v1.0 contracts — mods, badges, workshop, swaps, and rentals — with the Amoy beta launch and the REN token next.",
+    "The Airen roadmap: the virtual sneaker game economy shipped its v1.0 contracts — mods, badges, workshop, swaps, and rentals — with the Amoy beta launch and the REN token next.",
 };
 
 type Status = "done" | "active" | "next" | "planned";
@@ -55,7 +55,7 @@ const QUARTERS = [
         month: "Jul",
         title: "Project kickoff",
         description:
-          "RUN&EARN is founded. Brand, tokenomics direction, and the Polygon-first tech stack are defined.",
+          "Airen is founded. Brand, tokenomics direction, and the Polygon-first tech stack are defined.",
         status: "done",
       },
       {
@@ -101,7 +101,7 @@ const QUARTERS = [
         month: "Oct",
         title: "Beta launch",
         description:
-          "Public beta of RUN&EARN. Mint studio, marketplace, sneaker game, and staking open to early users on Polygon Amoy.",
+          "Public beta of Airen. Mint studio, marketplace, sneaker game, and staking open to early users on Polygon Amoy.",
         status: "next",
       },
       {
@@ -171,7 +171,7 @@ export default function RoadmapPage() {
             className="animate-fade-up max-w-lg leading-relaxed text-foreground/60"
             style={{ animationDelay: "240ms" }}
           >
-            A quarter-by-quarter view of where RUN&EARN is today and where it is
+            A quarter-by-quarter view of where Airen is today and where it is
             heading on Polygon. We are closing Q3 2026 with the full contract
             suite and web app shipped.
           </p>

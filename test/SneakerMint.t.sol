@@ -15,7 +15,7 @@ contract SneakerMintTest is Test {
     string constant URI = "data:application/json;base64,eyJuYW1lIjoiVGVzdCJ9";
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
     }
 
     // ─────────── Constructor ───────────

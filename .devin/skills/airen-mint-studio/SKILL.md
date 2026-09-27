@@ -1,9 +1,9 @@
 ---
-name: runearn-mint-studio
-description: Build and debug Run-Earn's AI mint studio — the photo → Gemini artwork → metadata → SneakerMint NFT pipeline on /mint, the /api/generate-sneaker route, proof hashing, rarity→tier mapping, and the local minted-sneaker collection store.
+name: airen-mint-studio
+description: Build and debug Airen's AI mint studio — the photo → Gemini artwork → metadata → SneakerMint NFT pipeline on /mint, the /api/generate-sneaker route, proof hashing, rarity→tier mapping, and the local minted-sneaker collection store.
 ---
 
-# Run-Earn AI Mint Studio
+# Airen AI Mint Studio
 
 Use this skill for the `/mint` route, `SneakerMintStudio`, the `/api/generate-sneaker`
 route handler, `src/lib/sneaker-nft.ts`, and the local minted-sneaker store.
@@ -75,9 +75,9 @@ Keep the order stable; changing it silently re-prices every existing NFT.
 
 ## Local collection store
 
-- Key: `runearn:my-nfts:<lowercased address>` (or `guest`), JSON array of `MintedSneaker`.
+- Key: `airen:my-nfts:<lowercased address>` (or `guest`), JSON array of `MintedSneaker`.
 - `saveMintedSneaker` prepends and writes; `notifyMintedSneakersUpdated()` dispatches
-  `runearn:nfts-updated`, which `useMintedSneakers` listens for (plus the `storage` event
+  `airen:nfts-updated`, which `useMintedSneakers` listens for (plus the `storage` event
   for cross-tab sync).
 - This store is a UX convenience, not ownership. On-chain ownership is
   `useOwnedSneakers` (`balanceOf` + `tokenOfOwnerByIndex` + `traitsOf` + `tokenURI`).

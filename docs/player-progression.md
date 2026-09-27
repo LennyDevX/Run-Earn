@@ -54,7 +54,7 @@ strictly increasing. `MAX_LEVEL` is 10.
 - `setNftAvatar(collection, tokenId)` — avatar pointer to an NFT the caller
   owns (`ownerOf` verified); zero address clears it.
 - Uploaded avatar images stay **client-side** (`localStorage` under
-  `runearn:profile:<address>`) — only verifiable references go on-chain. See
+  `airen:profile:<address>`) — only verifiable references go on-chain. See
   `src/lib/profile.ts` and the `/profile` route in `app-routes.md`.
 
 ## Skill NFTs

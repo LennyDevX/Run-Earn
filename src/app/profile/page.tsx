@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import ProfileDashboard from "@/components/ProfileDashboard";
 
 export const metadata: Metadata = {
-  title: "Profile — RUN&EARN",
+  title: "Profile — Airen",
   description: "Your runner identity: customizable username, avatar from uploads or minted NFTs, player level, and activity across the virtual sneaker economy.",
 };
 

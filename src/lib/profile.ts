@@ -20,8 +20,8 @@ export type UserProfile = {
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
 
-const PROFILE_PREFIX = "runearn:profile:";
-export const PROFILE_UPDATED_EVENT = "runearn:profile-updated";
+const PROFILE_PREFIX = "airen:profile:";
+export const PROFILE_UPDATED_EVENT = "airen:profile-updated";
 
 export function defaultUsername(address: string | null) {
   return `Runner #${(address ?? "0000").slice(-4).toUpperCase()}`;

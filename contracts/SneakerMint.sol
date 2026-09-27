@@ -7,7 +7,7 @@ import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/// @title SneakerMint — RUN&EARN sneaker NFT collection.
+/// @title SneakerMint — Airen sneaker NFT collection.
 /// @notice Mints ERC-721 tokens from AI-generated sneaker artwork.
 /// @dev Users create NFTs via the /mint route: they upload a photo of their
 ///      sneaker, the AI agent generates a unique retro-futuristic virtual

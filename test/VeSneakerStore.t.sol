@@ -23,7 +23,7 @@ contract VeSneakerStoreTest is Test {
     uint256 constant MYTHIC_PRICE = 1536 ether;
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         store = new VeSneakerStore(admin, address(nft), payable(treasury));
 
         // Grant the store MINTER_ROLE so it can mint on demand.

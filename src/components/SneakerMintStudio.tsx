@@ -101,7 +101,7 @@ export default function SneakerMintStudio() {
     setIsMinting(true);
     try {
       const metadata = {
-        name: name.trim() || "Sneaker RUN&EARN",
+        name: name.trim() || "Sneaker Airen",
         description: description.trim() || DEFAULT_SNEAKER_DESCRIPTION,
         rarity,
         palette,
@@ -233,7 +233,7 @@ export default function SneakerMintStudio() {
           <div className="flex flex-col gap-5">
             <label className="flex flex-col gap-2 text-sm font-semibold">
               Name
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Sneaker RUN&EARN" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky" />
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Sneaker Airen" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky" />
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold">
               Description

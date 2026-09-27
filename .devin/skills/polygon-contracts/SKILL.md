@@ -1,9 +1,9 @@
 ---
 name: polygon-contracts
-description: Design, implement, test, and integrate Run-Earn Solidity contracts for Polygon with Hardhat 3, OpenZeppelin, ERC-20 REN rewards, ERC-721 sneaker + mod NFTs, native POL staking, the upgrade workshop, and NFT APY boosts.
+description: Design, implement, test, and integrate Airen Solidity contracts for Polygon with Hardhat 3, OpenZeppelin, ERC-20 REN rewards, ERC-721 sneaker + mod NFTs, native POL staking, the upgrade workshop, and NFT APY boosts.
 ---
 
-# Run-Earn Polygon Contracts
+# Airen Polygon Contracts
 
 Use this skill for EVM contract design, Solidity implementation, Hardhat 3 configuration, deployment preparation, ABI integration, and viem contract workflows.
 
@@ -27,8 +27,8 @@ Use this skill for EVM contract design, Solidity implementation, Hardhat 3 confi
 | `PlayerProgress` | `contracts/PlayerProgress.sol` | Live-state XP/levels across the protocol + public username/NFT-avatar identity |
 
 For the upgrade-economy internals (slots, traits, ability kinds, energy costs,
-stats) see the `runearn-upgrade-economy` skill. For XP sources, the level curve,
-skill gating, and the hybrid profile see the `runearn-player-progression` skill.
+stats) see the `airen-upgrade-economy` skill. For XP sources, the level curve,
+skill gating, and the hybrid profile see the `airen-player-progression` skill.
 
 Do not reintroduce `SneakerCollection`, `SneakerRewards`, `LaceToken`, or `RuneToken` in new code, tests, docs, environment variables, or deployment scripts. The ERC-20 symbol is `REN` (not `RUNE`); veRUNE is the virtual point balance in SneakerGame.
 

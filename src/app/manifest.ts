@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 /// Served automatically at /manifest.webmanifest by the App Router.
-/// Makes RUN&EARN installable and removes browser chrome in standalone mode.
+/// Makes Airen installable and removes browser chrome in standalone mode.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Airen — A Retro-Futuristic Platform for build NFT",

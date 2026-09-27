@@ -69,7 +69,7 @@ function fromFamily(familyId: VeSneakerFamilyId, name: string | null): ResolvedS
 export function resolveSneakerArtwork(tokenUri: string | null | undefined): ResolvedSneakerArtwork {
   const fallback: ResolvedSneakerArtwork = {
     src: VE_SNEAKER_FAMILIES[0].imageSrc,
-    alt: "RUN&EARN virtual sneaker artwork",
+    alt: "Airen virtual sneaker artwork",
     name: null,
     family: null,
   };

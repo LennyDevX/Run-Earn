@@ -24,7 +24,7 @@ export const PALETTES = [
 export type PaletteId = (typeof PALETTES)[number]["id"];
 
 export const DEFAULT_SNEAKER_DESCRIPTION =
-  "RUN&EARN virtual sneaker (veSneaker) created by its owner. " +
+  "Airen virtual sneaker (veSneaker) created by its owner. " +
   "AI-generated artwork converted into a unique digital asset on Polygon " +
   "with verifiable rarity and style on-chain — playable, upgradeable, and tradable.";
 
@@ -41,7 +41,7 @@ export type MintedSneaker = {
   tokenId?: string;
 };
 
-const STORAGE_PREFIX = "runearn:my-nfts:";
+const STORAGE_PREFIX = "airen:my-nfts:";
 
 export function getMintedSneakers(owner: string | null): MintedSneaker[] {
   if (typeof window === "undefined") return [];

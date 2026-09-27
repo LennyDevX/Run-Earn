@@ -1,4 +1,4 @@
-# RUN&EARN Contract Architecture Plan
+# Airen Contract Architecture Plan
 
 > Current architecture — August 2026
 > Target: Polygon Amoy (testnet) → Polygon Mainnet

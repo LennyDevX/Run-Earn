@@ -279,7 +279,7 @@ export default function MarketplaceDashboard() {
                         <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6">
                           <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-28" sizes="112px" />
                         </div>
-                        <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
+                        <h4 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h4>
                         <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                           <span>Suggested price:</span>
                           <span className="font-mono font-bold text-sky">

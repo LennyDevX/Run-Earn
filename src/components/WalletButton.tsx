@@ -114,7 +114,7 @@ export default function WalletButton() {
 
         <div className="flex items-center justify-between rounded-2xl bg-background px-4 py-3">
           <div>
-            <span className="block text-[10px] text-foreground/45">NFTs RUN&EARN</span>
+            <span className="block text-[10px] text-foreground/45">NFTs Airen</span>
             <span className="block text-xs font-semibold text-polygon-purple">
               {overview.isLoading
                 ? "…"

@@ -1,4 +1,4 @@
-# RUN&EARN Subgraph integration
+# Airen Subgraph integration
 
 ## Current deployment
 

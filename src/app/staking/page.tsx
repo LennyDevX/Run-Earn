@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import StakingVaultDashboard from "@/components/StakingVaultDashboard";
 
 export const metadata: Metadata = {
-  title: "Staking Dashboard — RUN&EARN",
+  title: "Staking Dashboard — Airen",
   description: "Deposit POL, track accumulated rewards, earn sustainable yield, and boost APY up to 8.00% by locking SneakerMint NFTs.",
 };
 

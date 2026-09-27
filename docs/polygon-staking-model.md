@@ -1,4 +1,4 @@
-# RUN&EARN Polygon POL staking model
+# Airen Polygon POL staking model
 
 This document describes the current EVM implementation for Polygon Amoy. It is not a mainnet deployment approval or a promise of financial returns.
 

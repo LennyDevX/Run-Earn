@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import SneakerMintStudio from "@/components/SneakerMintStudio";
 
 export const metadata: Metadata = {
-  title: "AI Mint — RUN&EARN",
+  title: "AI Mint — Airen",
   description:
     "Photograph your sneaker, let AI create unique virtual artwork, and mint it as a playable NFT on Polygon.",
 };

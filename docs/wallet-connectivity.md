@@ -1,4 +1,4 @@
-# RUN&EARN wallet connectivity
+# Airen wallet connectivity
 
 ## Supported environments
 

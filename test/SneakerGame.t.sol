@@ -27,7 +27,7 @@ contract SneakerGameTest is Test {
     uint256 redemptionRate = 100 ether; // 100 veRUNE = 1 REN
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         ren = new RENToken(admin, admin);
         game = new SneakerGame(
             admin,

@@ -5,9 +5,9 @@ import VeSneakerStorefront from "@/components/VeSneakerStorefront";
 import ModStorefront from "@/components/ModStorefront";
 
 export const metadata: Metadata = {
-  title: "Astra · Sol · Luna — RUN&EARN veSneakers",
+  title: "Astra · Sol · Luna — Airen veSneakers",
   description:
-    "Explore Astra, Sol, and Luna: three pixel-art sneaker families in RUN&EARN's virtual on-chain game."
+    "Explore Astra, Sol, and Luna: three pixel-art sneaker families in Airen's virtual on-chain game."
 };
 
 export default function CollectionPage() {
@@ -32,7 +32,7 @@ export default function CollectionPage() {
             style={{ animationDelay: "240ms" }}
           >
             Meet Astra, Sol, and Luna — the first three pixel-art families in the
-            RUN&EARN sneaker universe. Each family keeps its own on-chain design index
+            Airen sneaker universe. Each family keeps its own on-chain design index
             and purchase rules; collect one, then stake it, play, upgrade, and trade.
           </p>
         </section>

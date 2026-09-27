@@ -28,11 +28,11 @@ contract ModRentalTest is Test {
     uint256 constant FEE_BPS = 250; // 2.5%
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         ren = new RENToken(admin, admin);
         staking = new SneakerStaking(admin, address(nft), address(ren), 1000 ether, 280, 0, 800, [uint64(50), 80, 150, 180], 30 days);
         game = new SneakerGame(admin, address(nft), address(ren), tierBase, 100, 10, 1, 50 ether, 100 ether);
-        mods = new SneakerMods("RUN&EARN Mods", "RMOD", admin, address(nft), address(game), address(staking));
+        mods = new SneakerMods("Airen Mods", "AMOD", admin, address(nft), address(game), address(staking));
         workshop = new SneakerWorkshop(admin, address(nft), address(mods), address(game), address(staking), 250 ether, 5, 250, 10);
         rental = new ModRental(admin, address(mods), address(workshop), FEE_BPS, admin);
 

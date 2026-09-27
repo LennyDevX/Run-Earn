@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMintedSneakers, type MintedSneaker } from "@/lib/sneaker-nft";
 
-const EVENT_NAME = "runearn:nfts-updated";
+const EVENT_NAME = "airen:nfts-updated";
 
 export function notifyMintedSneakersUpdated() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT_NAME));

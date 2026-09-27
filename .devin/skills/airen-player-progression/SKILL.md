@@ -1,9 +1,9 @@
 ---
-name: runearn-player-progression
-description: Build and extend Run-Earn's player progression — PlayerProgress XP/levels, the hybrid on-chain + local profile, level-gated skill NFTs (claims, store copies, skill slot, consumable abilities), and the /profile and /badges surfaces.
+name: airen-player-progression
+description: Build and extend Airen's player progression — PlayerProgress XP/levels, the hybrid on-chain + local profile, level-gated skill NFTs (claims, store copies, skill slot, consumable abilities), and the /profile and /badges surfaces.
 ---
 
-# Run-Earn Player Progression
+# Airen Player Progression
 
 Use this skill for anything involving player levels, XP, the `/profile` route,
 skill NFTs, or level gating: `PlayerProgress.sol`, `src/lib/profile.ts`,
@@ -44,7 +44,7 @@ strictly increasing). Deploy env: `PROGRESS_LEVEL_THRESHOLDS`,
 
 - **On-chain** (`PlayerProgress`): `setUsername` (3–20 **bytes**),
   `setNftAvatar(collection, tokenId)` — `ownerOf` verified, zero address clears.
-- **Local** (`src/lib/profile.ts`, key `runearn:profile:<address>`): uploaded
+- **Local** (`src/lib/profile.ts`, key `airen:profile:<address>`): uploaded
   avatar (square-cropped 256px JPEG data URL, never leaves the device), avatar
   source selection, local mint history.
 - `useProfile` syncs via `PROFILE_UPDATED_EVENT` + `storage` events;
@@ -95,5 +95,5 @@ Distribution paths:
 - Tests: `test/PlayerProgress.t.sol` covers XP signals, level boundaries,
   thresholds validation, username/avatar, skill claim + skill-slot earn bonus.
 
-Related: `runearn-upgrade-economy` (slots/abilities internals),
+Related: `airen-upgrade-economy` (slots/abilities internals),
 `polygon-frontend-evm` (route/hook conventions), `polygon-testing` (matrices).

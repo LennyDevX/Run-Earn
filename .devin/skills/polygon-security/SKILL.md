@@ -1,9 +1,9 @@
 ---
 name: polygon-security
-description: Review Run-Earn Polygon contracts, native POL staking, REN rewards, NFT boosts, the mod workshop economy, subgraph activity, and wallet flows for custody, arithmetic, and deployment risks.
+description: Review Airen Polygon contracts, native POL staking, REN rewards, NFT boosts, the mod workshop economy, subgraph activity, and wallet flows for custody, arithmetic, and deployment risks.
 ---
 
-# Run-Earn Polygon Security
+# Airen Polygon Security
 
 Use this skill before merging or deploying any EVM contract, NFT mint flow, native POL staking flow, REN reward distribution, marketplace escrow, game point accounting, mod/workshop upgrade mechanic, subgraph integration, or wallet transaction change.
 

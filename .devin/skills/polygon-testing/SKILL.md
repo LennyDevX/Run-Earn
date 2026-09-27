@@ -1,9 +1,9 @@
 ---
 name: polygon-testing
-description: Test Run-Earn's Hardhat 3 Solidity contracts, native POL staking, SneakerMint NFT boosts, RENToken rewards, the mod workshop economy (SneakerMods/SneakerWorkshop/SneakerSwap/ModRental/ModStore), viem integrations, and subgraph activity.
+description: Test Airen's Hardhat 3 Solidity contracts, native POL staking, SneakerMint NFT boosts, RENToken rewards, the mod workshop economy (SneakerMods/SneakerWorkshop/SneakerSwap/ModRental/ModStore), viem integrations, and subgraph activity.
 ---
 
-# Run-Earn Polygon Contract Testing
+# Airen Polygon Contract Testing
 
 Use this skill whenever modifying contracts, deployment configuration, ABIs, wallet flows, minting, native POL staking, REN rewards, NFT boosts, the mod upgrade economy, or subgraph activity.
 

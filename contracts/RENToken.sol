@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-/// @title RENToken — RUN&EARN ERC-20 reward token.
+/// @title RENToken — Airen ERC-20 reward token.
 /// @notice REN is the reward token distributed by the SneakerStaking vault.
 ///      Virtual veRUNE points earned in SneakerGame can later be redeemed for REN.
 /// @dev Minting is limited to the MINTER_ROLE (staking vault or treasury).

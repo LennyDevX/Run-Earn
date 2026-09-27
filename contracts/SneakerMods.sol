@@ -15,7 +15,7 @@ interface IPlayerProgressView {
     function levelOf(address user) external view returns (uint8);
 }
 
-/// @title SneakerMods — upgrade and badge NFTs for RUN&EARN veSneakers.
+/// @title SneakerMods — upgrade and badge NFTs for Airen veSneakers.
 /// @notice Mods are ERC-721 tokens that improve a veSneaker when equipped in
 ///      SneakerWorkshop. Each mod occupies one of seven slots:
 ///        0 Sole   — reduces durability wear per activation

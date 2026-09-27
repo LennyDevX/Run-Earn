@@ -34,7 +34,7 @@ describe("Upgrade economy (TypeScript integration)", () => {
   });
 
   async function deployStack() {
-    const nft = await viem.deployContract("SneakerMint", ["RUN&EARN Sneakers", "RSNEAK", admin.account.address]);
+    const nft = await viem.deployContract("SneakerMint", ["Airen Sneakers", "ASNEAK", admin.account.address]);
     const ren = await viem.deployContract("RENToken", [admin.account.address, admin.account.address]);
     const staking = await viem.deployContract("SneakerStaking", [
       admin.account.address, nft.address, ren.address,
@@ -46,7 +46,7 @@ describe("Upgrade economy (TypeScript integration)", () => {
       100n, 10, 1, 50n * 10n ** 18n, 100n * 10n ** 18n,
     ]);
     const mods = await viem.deployContract("SneakerMods", [
-      "RUN&EARN Mods", "RMOD", admin.account.address, nft.address, game.address, staking.address,
+      "Airen Mods", "AMOD", admin.account.address, nft.address, game.address, staking.address,
     ]);
     const workshop = await viem.deployContract("SneakerWorkshop", [
       admin.account.address, nft.address, mods.address, game.address, staking.address,

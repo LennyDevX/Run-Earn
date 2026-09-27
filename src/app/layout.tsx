@@ -26,13 +26,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "RUN&EARN — A Retro-Futuristic Sneaker Game",
+  title: "Airen — A Retro-Futuristic Sneaker Game",
   description:
     "Enter a pixel-art sneaker universe. Collect the Astra, Sol, and Luna virtual sneaker families, play, upgrade, stake, and trade on Polygon.",
-  applicationName: "RUN&EARN",
+  applicationName: "Airen",
   appleWebApp: {
     capable: true,
-    title: "RUN&EARN",
+    title: "Airen",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false, email: false, address: false },

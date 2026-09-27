@@ -220,7 +220,7 @@ export default function SneakerGameDashboard() {
                         <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-28" sizes="112px" />
                       </div>
 
-                      <h4 className="font-bold">{sneaker.artwork.name ?? "RUN&EARN Sneaker"} · #{sneaker.tokenId.toString()}</h4>
+                      <h4 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h4>
 
                       {/* Stats */}
                       <div className="mt-3 flex flex-col gap-1.5 text-xs text-foreground/60">

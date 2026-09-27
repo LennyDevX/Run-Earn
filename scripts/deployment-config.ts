@@ -232,7 +232,7 @@ export function veSneakerTokenUri(design: VeSneakerDesignConfig, index: number) 
   const metadata = {
     name: `veSneaker — ${design.name}`,
     description:
-      "RUN&EARN virtual sneaker (veSneaker). Buy it with POL, lock it in staking for a POL APY boost, " +
+      "Airen virtual sneaker (veSneaker). Buy it with POL, lock it in staking for a POL APY boost, " +
       "and activate it in the sneaker game to earn veRUNE points. No physical sneaker required.",
     image: `${assetBaseUrl.origin}${design.imagePath}`,
     attributes: [

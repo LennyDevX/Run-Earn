@@ -28,7 +28,7 @@ export default function SneakerArtwork({
     <div className={`relative aspect-square ${className}`} style={style}>
       <Image
         src={imageSrc}
-        alt={alt ?? "RUN&EARN virtual sneaker artwork"}
+        alt={alt ?? "Airen virtual sneaker artwork"}
         fill
         sizes={sizes}
         unoptimized={isDataImage}

@@ -5,7 +5,7 @@ import PolygonTransferCard from "@/components/PolygonTransferCard";
 import StakingVaultDashboard from "@/components/StakingVaultDashboard";
 
 export const metadata: Metadata = {
-  title: "DeFi — RUN&EARN",
+  title: "DeFi — Airen",
   description:
     "NFT sneaker staking, rarity-based yield, and REN rewards on Polygon.",
 };

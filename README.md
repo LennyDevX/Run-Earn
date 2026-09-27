@@ -1,6 +1,6 @@
-# RUN&EARN
+# Airen
 
-RUN&EARN is a virtual sneaker game economy on Polygon: AI-minted sneaker NFTs (veSneakers) that you upgrade, trade, rent, and put to work — with native POL staking, virtual veRUNE points, and the REN token on the horizon.
+Airen is a virtual sneaker game economy on Polygon: AI-minted sneaker NFTs (veSneakers) that you upgrade, trade, rent, and put to work — with native POL staking, virtual veRUNE points, and the REN token on the horizon.
 
 ## v1.0 — Virtual sneaker game economy
 
@@ -17,11 +17,11 @@ This release delivers the core contracts and base concepts of the game, develope
 - **Trades & rentals** (`SneakerSwap`, `ModRental`) — atomic NFT↔NFT swaps (± POL) and time-boxed mod rentals.
 - **veRUNE → REN** — veRUNE is the in-game virtual currency earned by daily activation and spent on repairs and forging; it redeems for the REN token once the reward pool opens.
 
-The earlier physical-store and physical-redemption direction is no longer part of the product — RUN&EARN is a purely virtual economy.
+The earlier physical-store and physical-redemption direction is no longer part of the product — Airen is a purely virtual economy.
 
 ## Development
 
-The executable project root is this directory (`Run-Earn`), the directory containing `package.json`.
+The executable project root is this directory (`Airen`), the directory containing `package.json`.
 
 ```bash
 npm install
@@ -109,8 +109,8 @@ developer docs live in [`docs/app-routes.md`](docs/app-routes.md).
 ## Agent tooling
 
 Project-specific skills live under `.devin/skills/`: `polygon-contracts`,
-`polygon-frontend-evm`, `polygon-testing`, `polygon-security`, `runearn-mint-studio`,
-and `runearn-subgraph-activity`.
+`polygon-frontend-evm`, `polygon-testing`, `polygon-security`, `airen-mint-studio`,
+and `airen-subgraph-activity`.
 
 ## Contracts
 

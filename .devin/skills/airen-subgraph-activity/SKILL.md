@@ -1,9 +1,9 @@
 ---
-name: runearn-subgraph-activity
-description: Work with Run-Earn's The Graph activity feed — the nuxgraph Studio deployment, the server-only /api/subgraph proxy, dynamic schema introspection, the field allowlist, address matching, and the useSubgraphActivity hook used by the staking, marketplace, game, workshop, and badges dashboards.
+name: airen-subgraph-activity
+description: Work with Airen's The Graph activity feed — the nuxgraph Studio deployment, the server-only /api/subgraph proxy, dynamic schema introspection, the field allowlist, address matching, and the useSubgraphActivity hook used by the staking, marketplace, game, workshop, and badges dashboards.
 ---
 
-# Run-Earn Subgraph Activity
+# Airen Subgraph Activity
 
 Use this skill for `/api/subgraph`, `src/lib/subgraph.ts`, `src/hooks/useSubgraphActivity.ts`,
 and the "Recent activity" feeds in `StakingVaultDashboard`, `MarketplaceDashboard`,

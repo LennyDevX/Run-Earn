@@ -1,6 +1,6 @@
-# RUN&EARN Polygon contract roadmap
+# Airen Polygon contract roadmap
 
-RUN&EARN targets Polygon with standard EVM tooling. The current foundation is a Hardhat 3 / Solidity 0.8.36 project for Polygon Amoy first.
+Airen targets Polygon with standard EVM tooling. The current foundation is a Hardhat 3 / Solidity 0.8.36 project for Polygon Amoy first.
 
 ## Current foundation (shipped Q3 2026)
 

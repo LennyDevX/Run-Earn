@@ -12,7 +12,7 @@ import {SneakerStaking} from "./SneakerStaking.sol";
 import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 
 /// @title SneakerMarketplace — fixed-price sales, English auctions, and POL offers
-///      for every RUN&EARN NFT collection (veSneakers and mods).
+///      for every Airen NFT collection (veSneakers and mods).
 /// @notice Users may list, sell, auction, and make offers on NFTs published by
 ///      other users from any admin-approved collection. A sneaker that is
 ///      locked in SneakerStaking — or that still has mods equipped in

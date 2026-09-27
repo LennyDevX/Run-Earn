@@ -20,13 +20,13 @@ describe("SneakerMint (TypeScript integration)", () => {
   });
 
   async function deployNft() {
-    return viem.deployContract("SneakerMint", ["RUN&EARN Sneakers", "RSNEAK", admin.account.address]);
+    return viem.deployContract("SneakerMint", ["Airen Sneakers", "ASNEAK", admin.account.address]);
   }
 
   it("sets name and symbol", async () => {
     const nft = await deployNft();
-    assert.equal(await nft.read.name(), "RUN&EARN Sneakers");
-    assert.equal(await nft.read.symbol(), "RSNEAK");
+    assert.equal(await nft.read.name(), "Airen Sneakers");
+    assert.equal(await nft.read.symbol(), "ASNEAK");
   });
 
   it("mints via mintAuthorized with MINTER_ROLE", async () => {

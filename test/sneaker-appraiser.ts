@@ -25,7 +25,7 @@ describe("SneakerAppraiser (TypeScript integration)", () => {
   });
 
   async function deployStack() {
-    const nft = await viem.deployContract("SneakerMint", ["RUN&EARN Sneakers", "RSNEAK", admin.account.address]);
+    const nft = await viem.deployContract("SneakerMint", ["Airen Sneakers", "ASNEAK", admin.account.address]);
     const appraiser = await viem.deployContract("SneakerAppraiser", [
       admin.account.address,
       nft.address,

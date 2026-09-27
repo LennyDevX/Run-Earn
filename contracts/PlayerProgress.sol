@@ -31,7 +31,7 @@ interface ISneakerStakingProgress {
 }
 
 /// @title PlayerProgress — on-chain player identity, XP, and levels.
-/// @notice Aggregates verifiable activity across the RUN&EARN protocol into a
+/// @notice Aggregates verifiable activity across the Airen protocol into a
 ///      deterministic XP score and a 10-tier player level. Levels gate skill
 ///      NFTs: `SneakerMods` achievements and `ModStore` designs require
 ///      `levelOf(user)` to reach their configured level.

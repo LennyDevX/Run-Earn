@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import SneakerGameDashboard from "@/components/SneakerGameDashboard";
 
 export const metadata: Metadata = {
-  title: "Sneaker Game — RUN&EARN",
+  title: "Sneaker Game — Airen",
   description: "Activate your sneaker NFTs every 24 hours, build daily streaks, manage health and energy, and earn virtual veRUNE points redeemable for REN.",
 };
 

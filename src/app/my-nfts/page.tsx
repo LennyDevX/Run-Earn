@@ -5,7 +5,7 @@ import MyNftsGallery from "@/components/MyNftsGallery";
 import MyModsGallery from "@/components/MyModsGallery";
 
 export const metadata: Metadata = {
-  title: "My NFTs — RUN&EARN",
+  title: "My NFTs — Airen",
   description: "Your personal collection of sneakers minted on Polygon.",
 };
 

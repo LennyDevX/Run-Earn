@@ -1,4 +1,4 @@
-# RUN&EARN tokenomics — 100M REN and veRUNE points
+# Airen tokenomics — 100M REN and veRUNE points
 
 This document describes the economic design for the REN reward token (ERC-20, symbol `REN`, 18 decimals, 100M hard cap) and the virtual veRUNE points earned through the SneakerGame gamification system. It is a design proposal, not a promise of returns. Mainnet launch requires economic review and multisig controls.
 

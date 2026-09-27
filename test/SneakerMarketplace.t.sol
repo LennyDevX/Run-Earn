@@ -29,7 +29,7 @@ contract SneakerMarketplaceTest is Test {
     uint256 constant PREMIUM_BPS = 12_000; // 1.2x appraiser value
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         ren = new RENToken(admin, admin);
         staking = new SneakerStaking(
             admin,

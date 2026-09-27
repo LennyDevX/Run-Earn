@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import BadgesDashboard from "@/components/BadgesDashboard";
 
 export const metadata: Metadata = {
-  title: "Badges — RUN&EARN",
+  title: "Badges — Airen",
   description: "Claim achievement badges minted as NFT mods — streaks, lifetime veRUNE, collection size, and POL staked all unlock equipable badges.",
 };
 

@@ -1,6 +1,6 @@
 # Mobile experience
 
-How RUN&EARN behaves on phones: the bottom navigation, safe-area handling, touch
+How Airen behaves on phones: the bottom navigation, safe-area handling, touch
 ergonomics, and the PWA shell. Read this before adding a route or a new interactive
 component.
 
@@ -14,6 +14,7 @@ Related: [`app-routes.md`](app-routes.md) for per-route detail,
 | Bottom navigation (5 destinations) | `src/components/MobileNav.tsx` (mounted once in `src/app/layout.tsx`) |
 | Overflow routes + theme | "More" sheet (mobile) / dropdown menu (desktop) in `src/components/Navbar.tsx` |
 | Profile shortcut | `ProfileButton` in `src/components/Navbar.tsx` (left of the theme toggle) |
+| Brand marks | Navbar chevron (`/LogoAirenBlack.webp` light, `/LogoAiren.webp` dark) and Footer wordmark (`/AirenBlack.webp` light, `/AirenWhite.png` dark) |
 | Reusable bottom sheet | `src/components/MoreSheet.tsx` |
 | Safe-area tokens, reduced motion, touch hygiene, pixel-grid visual tokens | `src/app/globals.css` |
 | `viewport-fit=cover`, theme color, `appleWebApp` | `src/app/layout.tsx` (`export const viewport`) |
@@ -194,7 +195,7 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 | **Draft persistence for the mint wizard** | Keep the photo, generated artwork, and form values in `localStorage` so a wallet handoff (which reloads the page) does not lose progress. |
 | **Background sync for pending transactions** | Do not lose a signed-but-unconfirmed transaction when the user switches apps. |
 | **In-app wallet browser detection** | Deep-link users into OKX/MetaMask in-app browsers instead of the SDK handoff when possible. |
-| **Deep links** | `runearn://`-style or `?utm` links from notifications straight to `/game`. |
+| **Deep links** | `airen://`-style or `?utm` links from notifications straight to `/game`. |
 | **Referral links with share** | Combine Web Share with the planned referral contract. |
 
 ## Performance

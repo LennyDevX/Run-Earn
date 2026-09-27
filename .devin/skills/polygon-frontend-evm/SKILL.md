@@ -1,9 +1,9 @@
 ---
 name: polygon-frontend-evm
-description: Build Run-Earn's Polygon frontend with viem, EIP-1193/EIP-6963 wallet discovery, MetaMask Connect, OKX Universal Provider, native POL staking, SneakerMint NFT minting, REN reads, the mod workshop economy, subgraph activity, and Amoy-first defaults.
+description: Build Airen's Polygon frontend with viem, EIP-1193/EIP-6963 wallet discovery, MetaMask Connect, OKX Universal Provider, native POL staking, SneakerMint NFT minting, REN reads, the mod workshop economy, subgraph activity, and Amoy-first defaults.
 ---
 
-# Run-Earn Polygon Frontend
+# Airen Polygon Frontend
 
 Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT minting, REN reads, the mod/workshop upgrade economy, subgraph activity, and cross-platform EVM wallet integrations.
 
@@ -37,8 +37,8 @@ Full route documentation: `docs/app-routes.md`.
 - Swap: `SneakerSwap` at `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS` — Trades tab at `/marketplace`.
 - Mod rental: `ModRental` at `NEXT_PUBLIC_MOD_RENTAL_ADDRESS` — Rentals tab at `/marketplace`.
 - Mod store: `ModStore` at `NEXT_PUBLIC_MOD_STORE_ADDRESS` — premium mods at `/collection`.
-- Subgraph proxy: `/api/subgraph?address=0x...` (see the `runearn-subgraph-activity` skill).
-- AI mint route: `/api/generate-sneaker` (see the `runearn-mint-studio` skill).
+- Subgraph proxy: `/api/subgraph?address=0x...` (see the `airen-subgraph-activity` skill).
+- AI mint route: `/api/generate-sneaker` (see the `airen-mint-studio` skill).
 - POL price feed: `/api/pol-price` (Uniswap Trading API proxy) — see
   [`docs/uniswap-price-feed.md`](../../docs/uniswap-price-feed.md). Server-only key; the
   browser must never call Uniswap directly (no CORS on the Trading API). Use the
@@ -84,10 +84,12 @@ that skips it.
   Resolve each owned NFT from its `tokenURI` via `useOwnedSneakers`; never derive artwork
   from `tokenId`. Preserve embedded AI-minted image data and map legacy `pixel://` metadata
   through `resolveSneakerArtwork`.
-- Shared shell: `Navbar` uses the transparent `/LogoAiren.webp` mark; `Footer`, `ThemeToggle`,
-  `WalletButton`, `MobileNav`, and `MoreSheet` follow its midnight/cyan visual language.
-  Keep the dark/light surface tokens, cyan accent, and restrained pixel-grid backdrop
-  centralized in `src/app/globals.css`.
+- Shared shell: `Navbar` uses the Airen chevron mark — `/LogoAirenBlack.webp` (black) in
+  light mode and `/LogoAiren.webp` (cyan) in dark mode; `Footer` uses the Airen wordmark —
+  `/AirenBlack.webp` (black) in light mode and `/AirenWhite.png` (white) in dark mode.
+  `ThemeToggle`, `WalletButton`, `MobileNav`, and `MoreSheet` follow the midnight/cyan
+  visual language. Keep the dark/light surface tokens, cyan accent, and restrained
+  pixel-grid backdrop centralized in `src/app/globals.css`.
 - Chakra Petch is the global typeface for body, headings, stats, and short labels, loaded
   through `next/font/google` with `display: "swap"`. Do not reintroduce Geist or Press Start 2P.
 - Reuse the existing card/tab/KPI patterns from the dashboards instead of inventing new ones.
@@ -168,7 +170,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 5. Offers: `makeOffer(collection, tokenId, duration)` with `value` escrows POL; the NFT stays with its owner until `acceptOffer(offerId)`.
 6. Staked NFTs cannot be listed or auctioned — surface the "unstake first" error. Sneakers with equipped workshop mods cannot be listed — surface the "unequip first" error.
 7. `valueRecommendations(tokenId)` returns 4 on-chain tips; show them as guidance text.
-8. Mod economy tabs (`ModMarketTabs` + `useModEconomy`): mod listings under Mods, `ModRental` list/rent/return under Rentals, `SneakerSwap` create/accept/cancel under Trades. See the `runearn-upgrade-economy` skill for the full flow map.
+8. Mod economy tabs (`ModMarketTabs` + `useModEconomy`): mod listings under Mods, `ModRental` list/rent/return under Rentals, `SneakerSwap` create/accept/cancel under Trades. See the `airen-upgrade-economy` skill for the full flow map.
 
 ## Game UI flow (`/game`, `useSneakerGame` hook)
 
@@ -182,7 +184,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 
 ## Workshop UI flow (`/workshop`, `useWorkshop` hook)
 
-1. Sneaker selector → seven equip slots (Sole/Upper/Lining/Skin/Core/Boost/Skill), effective-stats panel, forge card, consumables section. Full mechanics: `runearn-upgrade-economy` skill.
+1. Sneaker selector → seven equip slots (Sole/Upper/Lining/Skin/Core/Boost/Skill), effective-stats panel, forge card, consumables section. Full mechanics: `airen-upgrade-economy` skill.
 2. Equip is two transactions: `approve(workshop, modId)` on SneakerMods, then `equip(sneakerId, modId)` — the mod goes into workshop escrow. `unequip(sneakerId, slot)` returns it.
 3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), forge stone (2⚡), Overdrive (3⚡, 48h), Stim pack (0⚡ refill), Lucky repair (1⚡, heal + boost).
 4. Forge burns `forgeCostPoints` veRUNE per level — show `forgeLevel` and the rarity/effective-earn bump.
@@ -195,7 +197,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 - The dynamic adapter introspects the schema and finds address-indexed activity entities.
 - If the schema does not expose new POL events, show RPC state and an empty indexed activity state rather than inventing history.
 - Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace (list/buy/auction/offer), game (activate/repair/redeem), and upgrade-economy events (mod mint/burn, equip/unequip, ability use, forge, swap, rental, mod purchases).
-- Full detail lives in the `runearn-subgraph-activity` skill.
+- Full detail lives in the `airen-subgraph-activity` skill.
 
 ## Required approach
 

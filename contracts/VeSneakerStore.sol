@@ -12,7 +12,7 @@ interface IPlayerProgressView {
 }
 
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
-/// @notice veSneakers are the playable NFTs of the RUN&EARN virtual sneaker
+/// @notice veSneakers are the playable NFTs of the Airen virtual sneaker
 ///      economy. Anyone can buy them with native POL — fully virtual assets. Once
 ///      owned, a veSneaker behaves exactly like a minted SneakerMint NFT: it can be
 ///      locked in SneakerStaking for a POL APY boost, activated in SneakerGame to

@@ -295,7 +295,7 @@ export default function Navbar() {
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
         title="MORE"
-        description="Everything else in RUN&EARN."
+        description="Everything else in Airen."
       >
         <div className="flex flex-col gap-2">
           {SECONDARY_LINKS.map((link) => {

@@ -10,7 +10,7 @@ import {SneakerMint} from "./SneakerMint.sol";
 import {SneakerStaking} from "./SneakerStaking.sol";
 import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 
-/// @title SneakerSwap — atomic NFT-for-NFT trades between RUN&EARN collections.
+/// @title SneakerSwap — atomic NFT-for-NFT trades between Airen collections.
 /// @notice A maker escrows one NFT (plus an optional POL top-up) and names the
 ///      NFT they want. Any holder of the wanted token — or a specific taker —
 ///      can accept: the wanted NFT moves to the maker, the offered NFT and POL

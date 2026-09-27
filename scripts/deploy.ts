@@ -138,8 +138,8 @@ async function main() {
   }
 
   if (target === "all" || target === "SneakerMint") {
-    const name = optionalEnv("SNEAKER_NFT_NAME", "RUN&EARN Sneakers");
-    const symbol = optionalEnv("SNEAKER_NFT_SYMBOL", "RSNEAK");
+    const name = optionalEnv("SNEAKER_NFT_NAME", "Airen Sneakers");
+    const symbol = optionalEnv("SNEAKER_NFT_SYMBOL", "ASNEAK");
     deployments.push(await deployContract(viem, "SneakerMint", [name, symbol, admin]));
   }
 
@@ -234,8 +234,8 @@ async function main() {
     const sneakerAddress = requireAddress(resolveAddress(deployments, "SneakerMint", "SNEAKER_MINT_ADDRESS"), "SNEAKER_MINT_ADDRESS", "SneakerMods");
     const gameAddress = requireAddress(resolveAddress(deployments, "SneakerGame", "SNEAKER_GAME_ADDRESS"), "SNEAKER_GAME_ADDRESS", "SneakerMods");
     const stakingAddress = requireAddress(resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS"), "STAKING_VAULT_ADDRESS", "SneakerMods");
-    const name = optionalEnv("MODS_NFT_NAME", "RUN&EARN Mods");
-    const symbol = optionalEnv("MODS_NFT_SYMBOL", "RMOD");
+    const name = optionalEnv("MODS_NFT_NAME", "Airen Mods");
+    const symbol = optionalEnv("MODS_NFT_SYMBOL", "AMOD");
     deployments.push(await deployContract(viem, "SneakerMods", [
       name,
       symbol,

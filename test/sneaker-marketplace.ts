@@ -28,7 +28,7 @@ describe("SneakerMarketplace (TypeScript integration)", () => {
   });
 
   async function deployStack() {
-    const nft = await viem.deployContract("SneakerMint", ["RUN&EARN Sneakers", "RSNEAK", admin.account.address]);
+    const nft = await viem.deployContract("SneakerMint", ["Airen Sneakers", "ASNEAK", admin.account.address]);
     const ren = await viem.deployContract("RENToken", [admin.account.address, admin.account.address]);
     const staking = await viem.deployContract("SneakerStaking", [
       admin.account.address,

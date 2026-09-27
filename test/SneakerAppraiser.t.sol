@@ -24,7 +24,7 @@ contract SneakerAppraiserTest is Test {
     uint256 globalMultiplierBps = 10_000;
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         appraiser = new SneakerAppraiser(
             admin,
             address(nft),

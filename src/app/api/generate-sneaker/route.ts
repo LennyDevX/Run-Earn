@@ -8,7 +8,7 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MODEL = "gemini-3.1-flash-image";
 
 const BASE_PROMPT = [
-  "Transform this sneaker photo into a premium collectible NFT artwork for the RUN&EARN sneaker universe.",
+  "Transform this sneaker photo into a premium collectible NFT artwork for the Airen sneaker universe.",
   "Style: retro-futuristic sneakerhead poster art, bold cel-shaded illustration, neon rim lighting,",
   "clean vector-like shapes, dark moody studio background with soft purple and mint glow.",
   "Keep the sneaker's exact silhouette, colorway and recognizable details. Centered composition,",

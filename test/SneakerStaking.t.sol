@@ -29,7 +29,7 @@ contract SneakerStakingTest is Test {
     uint256 minLockSeconds = 30 days;
 
     function setUp() public {
-        nft = new SneakerMint("RUN&EARN Sneakers", "RSNEAK", admin);
+        nft = new SneakerMint("Airen Sneakers", "ASNEAK", admin);
         rune = new RENToken(admin, admin); // admin is minter for testing
         staking = new SneakerStaking(
             admin,

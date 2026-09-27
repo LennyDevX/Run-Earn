@@ -1,4 +1,4 @@
-// Generates the RUN&EARN app icons (PNG + ICO) with no external dependencies.
+// Generates the Airen app icons (PNG + ICO) with no external dependencies.
 //
 //   node scripts/generate-icons.mjs
 //
@@ -150,7 +150,7 @@ function write(relativePath, buffer) {
   console.log(`  ${relativePath} (${buffer.length} bytes)`);
 }
 
-console.log("Generating RUN&EARN icons...");
+console.log("Generating Airen icons...");
 write("src/app/favicon.ico", encodeIco(48));
 write("src/app/apple-icon.png", encodePng(180));
 write("public/icon-192.png", encodePng(192));

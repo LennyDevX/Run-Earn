@@ -1,6 +1,6 @@
-# RUN&EARN documentation index
+# Airen documentation index
 
-Entry point for developers working on the RUN&EARN Polygon dApp. Start with
+Entry point for developers working on the Airen Polygon dApp. Start with
 [`app-routes.md`](app-routes.md) if you are touching the frontend, or
 [`contract-architecture-plan.md`](contract-architecture-plan.md) if you are touching
 Solidity.
@@ -37,10 +37,10 @@ matches a task.
 | `polygon-frontend-evm` | Wallet UX, RPC reads, route/hook work, viem integration |
 | `polygon-testing` | Solidity + TypeScript test matrices for all contracts |
 | `polygon-security` | Custody, arithmetic, escrow, and deployment risk review |
-| `runearn-upgrade-economy` | The mod/badge economy: SneakerMods, Workshop slots, consumable abilities, swaps, rentals, ModStore, power/health/energy stats |
-| `runearn-player-progression` | PlayerProgress XP/levels, the `/profile` hybrid identity, level-gated skill NFTs, and the seed-skills script |
-| `runearn-mint-studio` | The AI photo → artwork → mint pipeline and local collection storage |
-| `runearn-subgraph-activity` | Activity indexing, schema introspection, the subgraph proxy |
+| `airen-upgrade-economy` | The mod/badge economy: SneakerMods, Workshop slots, consumable abilities, swaps, rentals, ModStore, power/health/energy stats |
+| `airen-player-progression` | PlayerProgress XP/levels, the `/profile` hybrid identity, level-gated skill NFTs, and the seed-skills script |
+| `airen-mint-studio` | The AI photo → artwork → mint pipeline and local collection storage |
+| `airen-subgraph-activity` | Activity indexing, schema introspection, the subgraph proxy |
 | `swap-integration` (Uniswap) | Official Uniswap Trading API / Universal Router reference — quotes, swaps, Permit2, UniswapX, error codes |
 | `viem-integration` (Uniswap) | Official EVM/viem integration patterns |
 

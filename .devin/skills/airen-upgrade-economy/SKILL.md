@@ -1,9 +1,9 @@
 ---
-name: runearn-upgrade-economy
-description: Build and extend Run-Earn's v1.0 upgrade economy — SneakerMods badges, the seven-slot SneakerWorkshop (incl. passive skill slot), power/health/energy stats, consumable abilities, forge upgrades, SneakerSwap trades, ModRental, ModStore, PlayerProgress levels, and the multi-collection marketplace.
+name: airen-upgrade-economy
+description: Build and extend Airen's v1.0 upgrade economy — SneakerMods badges, the seven-slot SneakerWorkshop (incl. passive skill slot), power/health/energy stats, consumable abilities, forge upgrades, SneakerSwap trades, ModRental, ModStore, PlayerProgress levels, and the multi-collection marketplace.
 ---
 
-# Run-Earn Upgrade Economy
+# Airen Upgrade Economy
 
 Use this skill for anything under the mod/upgrade game loop: `SneakerMods`,
 `SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, `ISneakerBoosts`, the
@@ -218,4 +218,4 @@ UI gotchas:
 
 Related skills: `polygon-contracts` (base architecture), `polygon-testing`
 (test matrix), `polygon-security` (review checklist), `polygon-frontend-evm`
-(route/hook conventions), `runearn-subgraph-activity` (event feeds).
+(route/hook conventions), `airen-subgraph-activity` (event feeds).

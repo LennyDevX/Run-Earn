@@ -6,7 +6,7 @@ export type BrowserEvmProvider = {
   removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
 };
 
-const APP_NAME = "RUN&EARN";
+const APP_NAME = "Airen";
 
 type MetaMaskProvider = {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;

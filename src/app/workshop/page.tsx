@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import WorkshopDashboard from "@/components/WorkshopDashboard";
 
 export const metadata: Metadata = {
-  title: "Workshop — RUN&EARN",
+  title: "Workshop — Airen",
   description: "Equip mods across seven slots, burn consumable abilities, and forge veSneakers with veRUNE for permanent stat boosts."
 };
 

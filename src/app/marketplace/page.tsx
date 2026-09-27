@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import MarketplaceDashboard from "@/components/MarketplaceDashboard";
 
 export const metadata: Metadata = {
-  title: "Marketplace — RUN&EARN",
+  title: "Marketplace — Airen",
   description: "Buy, sell, auction, and make POL offers on SneakerMint NFTs. On-chain appraiser valuations and value-improvement recommendations.",
 };
 
