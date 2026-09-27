@@ -122,40 +122,44 @@ export default function VeSneakerStorefront() {
   return (
     <div className="flex flex-col gap-8">
       {/* Store status */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-foreground/10 bg-surface px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex size-3">
+      <div className="grid gap-4 rounded-2xl border border-brand/15 bg-surface p-4 sm:p-5 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:items-center">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative flex size-3 shrink-0">
             <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${isConfigured ? "bg-mint" : "bg-foreground/30"}`} />
             <span className={`relative inline-flex size-3 rounded-full ${isConfigured ? "bg-mint" : "bg-foreground/40"}`} />
           </div>
-          <div>
-            <span className={`font-pixel text-[9px] ${isConfigured ? "text-mint" : "text-foreground/50"}`}>
-              {isConfigured ? "VE SNEAKER STORE LIVE" : "STORE NOT CONFIGURED"}
+          <div className="min-w-0">
+            <span className={`font-pixel text-[11px] font-semibold tracking-[0.06em] ${isConfigured ? "text-mint" : "text-foreground/60"}`}>
+              {isConfigured ? "STORE ONLINE" : "STORE NOT CONFIGURED"}
             </span>
-            <p className="text-xs font-semibold text-foreground/80">
-              Buy with POL · purely virtual game NFTs
+            <p className="mt-1 text-sm font-medium leading-snug text-foreground/75">
+              Buy with POL · virtual sneaker families
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-mint/20 bg-mint/10 px-3 py-1 font-pixel text-[9px] text-mint">
+        <div className="grid min-w-0 grid-cols-2 gap-2">
+          <span className="flex min-h-10 items-center justify-center rounded-md border border-mint/20 bg-mint/10 px-2 text-center text-[11px] font-semibold tracking-wide text-mint">
             POL APY BOOST
           </span>
-          <span className="rounded-full border border-polygon-purple/20 bg-polygon-purple/10 px-3 py-1 font-pixel text-[9px] text-polygon-purple">
-            VERUNE EARNINGS
+          <span className="flex min-h-10 items-center justify-center rounded-md border border-polygon-purple/20 bg-polygon-purple/10 px-2 text-center text-[11px] font-semibold tracking-wide text-polygon-purple">
+            veRUNE EARNINGS
           </span>
-          <span className="rounded-full border border-foreground/10 bg-background px-3 py-1 text-xs font-semibold text-foreground/60">
+          <span className="flex min-h-10 items-center justify-center rounded-md border border-foreground/10 bg-background px-2 text-center text-xs font-semibold text-foreground/65">
             {VE_MAX_SUPPLY_FALLBACK.toString()} max / design
           </span>
           <button
             type="button"
             onClick={() => void polPrice.refresh(true)}
             title={polPrice.error ?? "POL/USD via Uniswap Trading API"}
-            className="min-h-9 cursor-pointer rounded-full border border-sky/20 bg-sky/10 px-3 py-2 font-pixel text-[9px] text-sky transition-colors active:scale-95 hover:bg-sky/20"
+            aria-label={`Refresh POL/USD price; current quote ${polPrice.price.usd.toFixed(4)} dollars`}
+            className="flex min-h-10 min-w-0 cursor-pointer flex-col items-center justify-center rounded-md border border-brand/25 bg-brand/10 px-2 text-brand transition-colors active:scale-95 hover:bg-brand/15"
           >
-            {polPrice.isLoading
-              ? "POL PRICE…"
-              : `POL $${polPrice.price.usd.toFixed(4)}${polPrice.price.source === "uniswap" ? "" : " (fallback)"}`}
+            <span className="text-xs font-semibold leading-tight">
+              {polPrice.isLoading ? "UPDATING…" : `POL $${polPrice.price.usd.toFixed(4)}`}
+            </span>
+            <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wider text-brand/75">
+              {polPrice.price.source === "uniswap" ? "Live quote" : "Fallback quote"}
+            </span>
           </button>
         </div>
       </div>
@@ -193,7 +197,7 @@ export default function VeSneakerStorefront() {
       </div>
 
       {/* Filters — horizontal scroll keeps them on one row on narrow screens */}
-      <div className="scroll-x -mx-6 flex gap-2 px-6 pb-1">
+      <div className="scroll-x -mx-4 flex gap-2 px-4 pb-1 sm:-mx-6 sm:px-6">
         {FILTERS.map((item) => (
           <button
             key={item}
@@ -205,7 +209,7 @@ export default function VeSneakerStorefront() {
             className={`min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
               filter === item
                 ? item === "All"
-                  ? "border-sky/40 bg-sky/10 text-sky"
+                  ? "border-brand/40 bg-brand/10 text-brand"
                   : FILTER_STYLES[item]
                 : "border-foreground/10 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
             }`}
@@ -257,17 +261,17 @@ export default function VeSneakerStorefront() {
                 ) : null}
               </div>
 
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold tracking-tight">{row.name}</h3>
-                  <p className="mt-1 max-w-[22ch] text-xs leading-relaxed text-foreground/55">{row.tagline}</p>
-                  <span className="mt-2 block font-mono text-xs text-foreground/40">
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold tracking-tight">{row.name}</h3>
+                  <p className="mt-1 line-clamp-2 max-w-[22ch] text-xs leading-relaxed text-foreground/55">{row.tagline}</p>
+                  <span className="mt-2 block font-mono text-[11px] text-foreground/40">
                     veSneaker #{String(row.index + 1).padStart(4, "0")}
                   </span>
                 </div>
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <div className="font-mono text-sm font-bold text-mint">{formatPol(row.price)} POL</div>
-                  <div className="text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.price)) * polPrice.price.usd).toFixed(2)}</div>
+                  <div className="mt-1 text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.price)) * polPrice.price.usd).toFixed(2)}</div>
                 </div>
               </div>
 

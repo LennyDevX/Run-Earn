@@ -20,7 +20,7 @@ export default function StakingPage() {
             <span className="animate-fade-up rounded-full border border-mint/20 bg-mint/10 px-3.5 py-1.5 font-pixel text-[10px] text-mint">
               STAKING ENGINE V2
             </span>
-            <span className="animate-fade-up rounded-full border border-sky/20 bg-sky/10 px-3.5 py-1.5 font-pixel text-[10px] text-sky" style={{ animationDelay: "60ms" }}>
+            <span className="animate-fade-up rounded-full border border-brand/20 bg-brand/10 px-3.5 py-1.5 font-pixel text-[10px] text-brand" style={{ animationDelay: "60ms" }}>
               30-DAY LOCK CYCLE
             </span>
           </div>

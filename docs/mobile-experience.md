@@ -68,10 +68,11 @@ bottom bar sits under the home indicator on notched iPhones.
 `body` reserves `calc(var(--mobile-nav-height) + var(--safe-bottom))` at the bottom and
 zeroes it at `md`. **This is why new pages do not need their own bottom padding.**
 
-The shared identity is a cosmic pixel-art universe: midnight surfaces, a restrained
-pixel grid, and Astra/Sol/Luna accent colors are defined centrally in `globals.css`.
-Light mode remains supported; keep body copy in Geist and reserve Press Start 2P for
-short labels so mobile text stays readable.
+The shared identity is a cosmic pixel-art universe: midnight surfaces, Airen cyan as
+the primary accent, a restrained pixel grid, and Astra/Sol/Luna family accents are
+defined centrally in `globals.css`. Chakra Petch now supplies the complete type system
+across body copy, headings, labels, and numeric readouts, with weight and tracking creating
+the hierarchy instead of switching to a low-legibility pixel font.
 
 ## Touch ergonomics
 
@@ -108,14 +109,13 @@ Components that animate on a timer must also opt out in JS:
 ## PWA shell
 
 - `src/app/manifest.ts` serves `/manifest.webmanifest` with `display: "standalone"`,
-  `orientation: "portrait"`, and 192/512 icons (512 also maskable). It still has the
-  legacy `theme_color` `#0a0a0c`; align it with the redesigned dark/light viewport colors
-  in `src/app/layout.tsx` before the next PWA release.
+  `orientation: "portrait"`, and 192/512 icons (512 also maskable). Its midnight
+  `theme_color` matches the dark brand surface; `src/app/layout.tsx` provides the
+  corresponding light/dark browser theme colors.
 - `metadata.appleWebApp` enables iOS full-screen mode with a translucent status bar.
-- The manifest expects `/icon-192.png` and `/icon-512.png`. These generated outputs are
-  absent from the current working tree; run `node scripts/generate-icons.mjs` before
-  claiming installability or passing the PWA endpoint check. The generator uses only Node
-  built-ins (`zlib` + a hand-rolled PNG/ICO encoder).
+- `/icon-192.png`, `/icon-512.png`, `/favicon.ico`, and `/apple-icon.png` are generated
+  from the Airen chevron pixel mark by `scripts/generate-icons.mjs`, using only Node
+  built-ins (`zlib` + a hand-rolled PNG/ICO encoder). Regenerate after changing that mark.
 - Before `/manifest.ts` and `favicon.ico` existed, `/favicon.ico`, `/apple-icon.png` and
   `/manifest.webmanifest` all returned 404.
 
@@ -208,7 +208,7 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 | **Route-level `loading.tsx` + prefetch** | Instant skeletons on navigation and prefetch on viewport entry for the bottom-nav targets. |
 | **Dynamic-import heavy dashboards** | Keep the initial bundle small; load each dashboard chunk on demand. |
 | **`next/image` for user artwork** | Serve AVIF/WebP with `sizes` and blur placeholders instead of raw base64 `<img>`. |
-| **Font strategy** | Keep `Press Start 2P` for labels only; ensure `display: swap` and no layout shift from font metrics. |
+| **Font strategy** | Chakra Petch now covers body, display, labels, and numeric readouts; keep `display: swap`, restrained pixel-grid details, and no layout shift from font metrics. |
 | **Lighthouse mobile budget in CI** | Track performance, accessibility, and best-practices scores per route and fail on regression. |
 | **Bundle analysis** | Add `@next/bundle-analyzer` and watch the client bundle per route. |
 

@@ -16,7 +16,7 @@ export default function WorkshopPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
         <section className="flex flex-col gap-5 py-12 md:py-16">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="animate-fade-up rounded-full border border-mint/20 bg-mint/10 px-3.5 py-1.5 font-pixel text-[10px] text-mint">
+            <span className="animate-fade-up rounded-full border border-brand/20 bg-brand/10 px-3.5 py-1.5 font-pixel text-[10px] text-brand">
               WORKSHOP
             </span>
             <span className="animate-fade-up rounded-full border border-magma/20 bg-magma/10 px-3.5 py-1.5 font-pixel text-[10px] text-magma" style={{ animationDelay: "60ms" }}>

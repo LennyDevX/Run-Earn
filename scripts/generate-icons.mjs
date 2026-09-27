@@ -8,8 +8,8 @@
 //   public/icon-192.png        -> manifest icon
 //   public/icon-512.png        -> manifest icon (also maskable)
 //
-// The artwork is a 16x16 pixel-art sneaker scaled with nearest-neighbour
-// sampling so the edges stay crisp, matching the PixelSneaker brand.
+// The artwork is a 16x16 pixel rendition of the Airen chevron mark, scaled with
+// nearest-neighbour sampling to keep the cyan-white edges crisp.
 
 import { deflateSync } from "node:zlib";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -18,21 +18,21 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// ── Pixel art ────────────────────────────────────────────────────────────────
-// K = outline, W = body, S = accent, M = sole, . = background
+// ── Pixel mark ───────────────────────────────────────────────────────────────
+// W = ice-white core, S = cyan edge, . = midnight background
 const PATTERN = [
   "................",
+  ".......WS.......",
+  "......SWWS......",
+  ".....SW..WS.....",
+  "....SW....WS....",
+  "...SW......WS...",
+  "..SW........WS..",
+  ".SW..........WS.",
+  "SW............WS",
+  "WW............WW",
   "................",
-  ".......KKKK.....",
-  "......KWWWWK....",
-  "......KWWSSWK...",
-  ".....KWWSSSWWK..",
-  ".....KWWSSSWWWK.",
-  "....KWWWWSSWWWWK",
-  "....KWWWWWWWWWWK",
-  "..KWWWWWWWWWWWWK",
-  "..KMMMMMMMMMMMMK",
-  ".KKKKKKKKKKKKKKK",
+  "................",
   "................",
   "................",
   "................",
@@ -40,11 +40,9 @@ const PATTERN = [
 ];
 
 const COLORS = {
-  K: [0x0a, 0x0a, 0x0c, 0xff], // ink outline
-  W: [0xfa, 0xfa, 0xfa, 0xff], // paper body
-  S: [0x38, 0xbd, 0xf8, 0xff], // sky accent
-  M: [0x3d, 0xdc, 0x97, 0xff], // mint sole
-  ".": [0x0a, 0x0a, 0x0c, 0xff], // dark background
+  W: [0xf4, 0xfb, 0xff, 0xff], // ice-white core
+  S: [0x45, 0xca, 0xff, 0xff], // Airen cyan
+  ".": [0x06, 0x0d, 0x17, 0xff], // midnight background
 };
 
 const SOURCE = PATTERN.length; // 16

@@ -15,10 +15,10 @@ export default function CollectionPage() {
     <div className="flex flex-1 flex-col">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-20 sm:px-6 sm:pb-24">
         {/* Header */}
-        <section className="flex flex-col gap-4 py-16">
-          <span className="animate-fade-up font-pixel text-[10px] text-sky">
+        <section className="flex flex-col gap-4 py-10 sm:py-14">
+          <span className="animate-fade-up font-pixel text-[10px] text-brand">
             THREE LINES · ONE UNIVERSE
           </span>
           <h1
@@ -39,7 +39,7 @@ export default function CollectionPage() {
 
         <VeSneakerStorefront />
 
-        <div className="mt-16">
+        <div className="mt-12 sm:mt-16">
           <ModStorefront />
         </div>
       </main>

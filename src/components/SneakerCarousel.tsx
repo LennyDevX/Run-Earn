@@ -110,7 +110,7 @@ export default function SneakerCarousel({ className }: { className?: string }) {
           type="button"
           aria-label="Previous sneaker family"
           onClick={() => moveBy(-1)}
-          className="flex size-11 shrink-0 cursor-pointer items-center justify-center border border-foreground/15 bg-surface text-lg text-foreground transition-colors active:scale-95 hover:border-astra/50 hover:text-astra"
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center border border-foreground/15 bg-surface text-lg text-foreground transition-colors active:scale-95 hover:border-brand/50 hover:text-brand"
         >
           ‹
         </button>

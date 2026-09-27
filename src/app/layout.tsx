@@ -1,23 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
+import { Chakra_Petch } from "next/font/google";
 import Providers from "@/components/Providers";
 import MobileNav from "@/components/MobileNav";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const chakraPetch = Chakra_Petch({
+  variable: "--font-chakra-petch",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const pressStart = Press_Start_2P({
-  variable: "--font-press-start",
-  weight: "400",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 /// `viewportFit: "cover"` is what makes `env(safe-area-inset-*)` resolve, so the
@@ -29,8 +20,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f0fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#080b18" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f7fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#060d17" },
   ],
 };
 
@@ -51,7 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${pressStart.variable} h-full antialiased`}
+      className={`${chakraPetch.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

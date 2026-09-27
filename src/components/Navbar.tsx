@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -86,7 +87,7 @@ function ProfileButton() {
       aria-current={active ? "page" : undefined}
       className={`flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all active:scale-95 ${
         active
-          ? "border-astra/60 bg-astra/10 shadow-sm shadow-astra/20"
+          ? "border-brand/60 bg-brand/10 shadow-sm shadow-brand/20"
           : "border-foreground/15 bg-surface text-foreground/70 hover:border-foreground/30 hover:text-foreground"
       }`}
     >
@@ -148,10 +149,29 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-astra/15 bg-background/85 pt-safe backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-brand/15 bg-background/85 pt-safe backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6 py-4 md:py-6">
-          <Link href="/" className="font-pixel text-xs tracking-tight sm:text-sm">
-            RUN<span className="text-astra">&</span>EARN
+          <Link
+            href="/"
+            aria-label="Airen home"
+            className="group relative flex h-10 w-[4.5rem] shrink-0 items-center justify-center overflow-hidden sm:w-[5.5rem]"
+          >
+            <Image
+              src="/LogoAirenBlack.webp"
+              alt=""
+              fill
+              sizes="96px"
+              loading="eager"
+              className="scale-[2.45] object-cover object-[50%_42%] transition-transform duration-700 ease-out group-hover:scale-[2.55] dark:hidden"
+            />
+            <Image
+              src="/LogoAiren.webp"
+              alt=""
+              fill
+              sizes="96px"
+              loading="eager"
+              className="hidden scale-[2.45] object-cover object-[50%_42%] drop-shadow-[0_0_8px_rgba(72,213,255,0.38)] transition-transform duration-700 ease-out group-hover:scale-[2.55] dark:block"
+            />
           </Link>
 
           {/* Desktop navigation */}
@@ -163,7 +183,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative py-2 transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-astra after:transition-transform hover:text-foreground ${
+                  className={`relative py-2 transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:bg-brand after:transition-transform hover:text-foreground ${
                     active ? "font-semibold text-foreground after:scale-x-100" : "text-foreground/60 after:scale-x-0 hover:after:scale-x-100"
                   }`}
                 >
@@ -201,7 +221,7 @@ export default function Navbar() {
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="animate-backdrop-in absolute right-0 top-full mt-4 w-72 rounded-2xl border border-astra/20 bg-surface/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
+                  className="animate-backdrop-in absolute right-0 top-full mt-4 w-72 rounded-2xl border border-brand/20 bg-surface/95 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl"
                 >
                   {MENU_GROUPS.map((group) => (
                     <div key={group.label} className="py-1 first:pt-0 last:pb-0">
@@ -218,11 +238,11 @@ export default function Navbar() {
                             aria-current={active ? "page" : undefined}
                             onClick={() => setMenuOpen(false)}
                             className={`flex flex-col rounded-xl px-3 py-2.5 transition-colors ${
-                              active ? "bg-astra/10" : "hover:bg-foreground/5"
+                              active ? "bg-brand/10" : "hover:bg-foreground/5"
                             }`}
                           >
                             <span
-                              className={`text-sm font-semibold ${active ? "text-astra" : "text-foreground"}`}
+                              className={`text-sm font-semibold ${active ? "text-brand" : "text-foreground"}`}
                             >
                               {link.label}
                             </span>

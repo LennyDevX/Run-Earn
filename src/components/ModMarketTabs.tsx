@@ -319,7 +319,7 @@ export function RentalsTab({ runAction }: { runAction: ActionRunner }) {
           <input type="text" inputMode="decimal" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
             placeholder="0.00" value={rentTotalInput} onChange={(e) => setRentTotalInput(e.target.value)} className={inputClass} />
           <button type="button" disabled={economy.isLoading || !rentalIdInput || !rentTotalInput} onClick={handleRent}
-            className="min-h-11 cursor-pointer rounded-full bg-sky px-6 text-sm font-bold text-ink shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
+            className="min-h-11 cursor-pointer rounded-full bg-sky px-6 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink">
             Pay &amp; rent
           </button>
           <div className="grid gap-3 border-t border-foreground/10 pt-4">

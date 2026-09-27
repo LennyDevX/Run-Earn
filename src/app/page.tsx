@@ -104,9 +104,9 @@ export default function Home() {
             >
               Choose your
               <br />
-              <span className="text-astra">orbit.</span>
+              <span className="text-brand">orbit.</span>
               <br />
-              <span className="text-sol">Run. Earn.</span>
+              <span className="text-luna">Run. Earn.</span>
             </h1>
             <p
               className="animate-fade-up max-w-md text-base leading-relaxed text-foreground/60 sm:text-lg"
@@ -122,13 +122,13 @@ export default function Home() {
             >
               <Link
                 href="/collection"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-astra px-7 text-sm font-bold text-paper dark:text-ink shadow-lg shadow-astra/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-astra/30 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-brand px-7 text-sm font-bold text-paper dark:text-ink shadow-lg shadow-brand/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-brand/30 sm:flex-none sm:py-3.5"
               >
                 Explore collection
               </Link>
               <Link
                 href="/defi"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-astra/30 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-astra/60 hover:bg-astra/5 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-brand/30 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-brand/60 hover:bg-brand/5 sm:flex-none sm:py-3.5"
               >
                 How it works
               </Link>
@@ -138,13 +138,13 @@ export default function Home() {
               style={{ animationDelay: "480ms" }}
             >
               PRESS START
-              <span className="animate-blink text-magma">_</span>
+              <span className="animate-blink text-brand">_</span>
             </p>
           </div>
 
           {/* Sneaker visual */}
           <div className="relative flex items-center justify-center">
-            <div className="animate-glow absolute size-52 rounded-full bg-astra/25 blur-3xl sm:size-72" />
+            <div className="animate-glow absolute size-52 rounded-full bg-brand/20 blur-3xl sm:size-72" />
             <div
               className="animate-glow absolute size-44 translate-x-16 translate-y-12 rounded-full bg-sol/25 blur-3xl sm:size-56 sm:translate-x-24 sm:translate-y-16"
               style={{ animationDelay: "-3.5s" }}
@@ -155,15 +155,6 @@ export default function Home() {
             />
             <div className="animate-float relative">
               <SneakerCarousel className="w-full max-w-md drop-shadow-[0_24px_32px_rgba(10,10,12,0.18)]" />
-            </div>
-            <div className="animate-float-slow absolute top-8 right-6 rounded-sm border border-astra/25 bg-ink/80 px-4 py-2 font-pixel text-[9px] text-astra backdrop-blur-sm">
-              THREE LINES
-            </div>
-            <div
-              className="animate-float-slow absolute bottom-10 left-2 rounded-sm border border-sol/25 bg-ink/80 px-4 py-2 font-pixel text-[9px] text-sol backdrop-blur-sm"
-              style={{ animationDelay: "-4s" }}
-            >
-              VIRTUAL / ON-CHAIN
             </div>
           </div>
         </section>
@@ -187,7 +178,7 @@ export default function Home() {
       {/* Features */}
       <section className="mx-auto w-full max-w-6xl px-6 py-16 md:py-24">
         <div className="mb-10 flex flex-col gap-4 md:mb-14">
-          <span className="font-pixel text-[10px] text-magma">
+          <span className="font-pixel text-[10px] text-brand">
             THE COLLECTION
           </span>
           <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
@@ -219,15 +210,15 @@ export default function Home() {
 
       {/* DeFi band */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
-        <div className="rounded-2xl bg-linear-to-b from-ink to-ink-soft px-6 py-12 text-paper ring-1 ring-transparent sm:px-8 sm:py-16 md:px-16 dark:ring-paper/10">
+        <div className="rounded-2xl border border-foreground/8 bg-surface px-6 py-12 sm:px-8 sm:py-16 md:px-16 dark:bg-linear-to-b dark:from-ink dark:to-ink-soft dark:text-paper dark:ring-paper/10">
           <div className="flex flex-col gap-4">
-            <span className="font-pixel text-[10px] text-mint">
+            <span className="font-pixel text-[10px] text-brand">
               MOTOR DEFI
             </span>
             <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
               Your sneakers work while you walk
             </h2>
-            <p className="max-w-lg leading-relaxed text-paper/60">
+            <p className="max-w-lg leading-relaxed text-foreground/60 dark:text-paper/60">
               Lock your pairs in the vault, accumulate REN based on rarity
               tier, and participate in protocol decisions.
             </p>
@@ -236,12 +227,12 @@ export default function Home() {
             {DEFI_STATS.map((stat) => (
               <div
                 key={stat.label}
-                className="flex flex-col gap-2 rounded-3xl border border-paper/10 bg-paper/5 p-6 transition-colors duration-300 hover:border-mint/40"
+                className="flex flex-col gap-2 rounded-2xl border border-foreground/10 bg-background p-6 transition-colors duration-300 hover:border-brand/40 dark:border-paper/10 dark:bg-paper/5 dark:hover:border-mint/40"
               >
-                <span className="text-3xl font-bold tracking-tight text-mint">
+                <span className="text-3xl font-bold tracking-tight text-brand dark:text-mint">
                   {stat.value}
                 </span>
-                <span className="text-sm text-paper/60">{stat.label}</span>
+                <span className="text-sm text-foreground/60 dark:text-paper/60">{stat.label}</span>
               </div>
             ))}
           </div>
@@ -252,7 +243,7 @@ export default function Home() {
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
         <div className="flex flex-col items-center gap-6 text-center">
           <PolygonLogo className="animate-float-slow w-20 sm:w-24" />
-          <span className="font-pixel text-[10px] text-polygon-purple">
+          <span className="font-pixel text-[10px] text-brand dark:text-polygon-purple">
             POWERED BY POLYGON
           </span>
           <h2 className="max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
@@ -269,7 +260,7 @@ export default function Home() {
               key={feature.title}
               className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
-              <span className="bg-linear-to-r from-polygon-purple to-mint bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+              <span className="bg-linear-to-r from-brand to-mint bg-clip-text text-3xl font-bold tracking-tight text-transparent">
                 {feature.stat}
               </span>
               <h3 className="text-lg font-bold tracking-tight">

@@ -4,16 +4,16 @@ import type { MetadataRoute } from "next";
 /// Makes RUN&EARN installable and removes browser chrome in standalone mode.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "RUN&EARN — NFT Sneakers with DeFi Benefits",
-    short_name: "RUN&EARN",
+    name: "Airen — A Retro-Futuristic Platform for build NFT",
+    short_name: "AIREN",
     description:
-      "Collect NFT sneakers on Polygon with retro-futuristic style and real utility: POL staking, rarity-based yield, veRUNE rewards, and a marketplace.",
+      "Collect Astra, Sol, and Luna virtual sneaker families in a pixel-art game on Polygon.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0a0a0c",
-    theme_color: "#0a0a0c",
+    background_color: "#060d17",
+    theme_color: "#060d17",
     categories: ["finance", "games", "shopping"],
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

@@ -111,9 +111,9 @@ vector UI icons and the PWA icon are separate from sneaker artwork.
 - `MoreSheet` is the reusable bottom sheet (portal, scroll lock, focus trap, Escape,
   backdrop tap, safe-area padding). Used by the "More" menu and by the wallet dialogs on
   mobile.
-- `Navbar` keeps the desktop links at `md+`, is `sticky` with a translucent backdrop, and
-  exposes a 44px menu button below `md` that opens `MoreSheet` with Staking, My NFTs,
-  DeFi, Roadmap and the theme toggle.
+- `Navbar` uses the transparent `/LogoAiren.webp` Airen mark as its home link, keeps the
+  desktop links at `md+`, and exposes a 44px menu button below `md` that opens `MoreSheet`
+  with Staking, My NFTs, DeFi, Roadmap and the theme toggle.
 - `Navbar` also mounts `ProfileButton` — a round avatar/user icon to the left of the
   desktop theme toggle (and next to the wallet button on mobile) linking to `/profile`.
   It renders the profile avatar image when one is set.

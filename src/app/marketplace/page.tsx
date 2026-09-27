@@ -17,7 +17,7 @@ export default function MarketplacePage() {
         {/* Header Hero Section */}
         <section className="flex flex-col gap-5 py-12 md:py-16">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="animate-fade-up rounded-full border border-sky/20 bg-sky/10 px-3.5 py-1.5 font-pixel text-[10px] text-sky">
+            <span className="animate-fade-up rounded-full border border-brand/20 bg-brand/10 px-3.5 py-1.5 font-pixel text-[10px] text-brand">
               SNEAKER MARKETPLACE
             </span>
             <span className="animate-fade-up rounded-full border border-mint/20 bg-mint/10 px-3.5 py-1.5 font-pixel text-[10px] text-mint" style={{ animationDelay: "60ms" }}>

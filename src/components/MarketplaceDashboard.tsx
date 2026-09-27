@@ -424,7 +424,7 @@ export default function MarketplaceDashboard() {
                 type="button"
                 disabled={market.isLoading || !offerAmountInput || !offerTokenId}
                 onClick={handleMakeOffer}
-                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
               >
                 {market.isLoading ? "Sending offer..." : "Place offer"}
               </button>

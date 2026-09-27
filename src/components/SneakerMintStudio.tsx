@@ -209,7 +209,7 @@ export default function SneakerMintStudio() {
               type="button"
               onClick={() => void generateArtwork()}
               disabled={isGenerating}
-              className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-ink transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-sky/20 disabled:cursor-wait disabled:opacity-60"
+              className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-sky/20 disabled:cursor-wait disabled:opacity-60 dark:text-ink"
             >
               {isGenerating ? "Generating artwork..." : "Generate NFT artwork with AI"}
             </button>

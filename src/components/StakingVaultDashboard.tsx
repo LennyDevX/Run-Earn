@@ -601,7 +601,7 @@ export default function StakingVaultDashboard() {
                 type="button"
                 disabled={staking.isLoading || isLockActive || !withdrawInput || Number(withdrawInput) <= 0}
                 onClick={() => void handleWithdraw()}
-                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
               >
                 {staking.isLoading ? "Processing Withdrawal..." : isLockActive ? `Locked (${remainingLockDays}d remaining)` : "Withdraw POL to Wallet"}
               </button>

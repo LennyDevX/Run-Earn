@@ -26,7 +26,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      className="relative flex h-11 w-20 cursor-pointer items-center rounded-full border border-foreground/15 bg-surface px-1 transition-colors duration-300 hover:border-foreground/30 md:h-9 md:w-16"
+      className="relative flex h-11 w-20 cursor-pointer items-center rounded-full border border-foreground/15 bg-surface px-1 transition-colors duration-300 hover:border-brand/50 md:h-9 md:w-16"
     >
       <span
         className={`flex size-7 items-center justify-center rounded-full bg-foreground text-xs text-background transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${

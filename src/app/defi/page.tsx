@@ -32,8 +32,8 @@ const TIERS = [
     name: "Rare",
     apy: "3.60%",
     boost: "+0.8% APY",
-    accent: "text-sky",
-    bar: "bg-sky",
+    accent: "text-brand",
+    bar: "bg-brand",
     width: "w-2/5",
   },
   {
@@ -48,8 +48,8 @@ const TIERS = [
     name: "Mythic",
     apy: "4.60%",
     boost: "+1.8% APY",
-    accent: "text-mint",
-    bar: "bg-mint",
+    accent: "text-brand dark:text-mint",
+    bar: "bg-brand dark:bg-mint",
     width: "w-4/5",
   },
 ] as const satisfies readonly Tier[];
@@ -82,7 +82,7 @@ export default function DefiPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 pb-24">
         {/* Header */}
         <section className="flex flex-col gap-4 py-12 md:py-16">
-          <span className="animate-fade-up font-pixel text-[10px] text-mint">
+          <span className="animate-fade-up font-pixel text-[10px] text-brand dark:text-mint">
             DEFI ENGINE
           </span>
           <h1
@@ -125,18 +125,18 @@ export default function DefiPage() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-6 rounded-3xl bg-linear-to-br from-ink to-ink-soft p-6 text-paper ring-1 ring-transparent sm:p-8 dark:ring-paper/10">
-            <span className="font-pixel text-[9px] text-mint">
+          <div className="flex flex-col gap-6 rounded-2xl border border-foreground/8 bg-surface p-6 sm:p-8 dark:border-transparent dark:bg-linear-to-br dark:from-ink dark:to-ink-soft dark:text-paper dark:ring-paper/10">
+            <span className="font-pixel text-[9px] text-brand dark:text-mint">
               HOW IT WORKS
             </span>
             {STEPS.map((step, i) => (
               <div key={step.title} className="flex gap-4">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-paper/10 font-pixel text-[9px] text-mint">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 font-pixel text-[9px] text-brand dark:bg-paper/10 dark:text-mint">
                   {i + 1}
                 </span>
                 <div>
                   <h3 className="font-semibold">{step.title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-paper/60">
+                  <p className="mt-1 text-sm leading-relaxed text-foreground/60 dark:text-paper/60">
                     {step.description}
                   </p>
                 </div>
@@ -160,7 +160,7 @@ export default function DefiPage() {
             Connect your wallet for early access and a welcome boost on your
             first staking deposit.
           </p>
-          <span className="rounded-full bg-mint/15 px-5 py-2.5 text-sm font-semibold text-mint">
+          <span className="rounded-full bg-brand/10 px-5 py-2.5 text-sm font-semibold text-brand dark:bg-mint/15 dark:text-mint">
             Polygon mainnet · claims available after contract deployment
           </span>
         </section>

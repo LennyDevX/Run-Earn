@@ -3,26 +3,28 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f2f0fb;
-  --surface: #fbfaff;
-  --foreground: #17132b;
-  --foreground-soft: #302b4b;
-  --ambient-astra: rgb(145 100 255 / 9%);
-  --ambient-sol: rgb(255 177 47 / 7%);
-  --grid-line: rgb(62 49 109 / 7%);
+  --background: #f2f7fa;
+  --surface: #fbfdff;
+  --foreground: #101c29;
+  --foreground-soft: #2b3c4d;
+  --brand-cyan: #007b9e;
+  --ambient-astra: rgb(39 178 224 / 8%);
+  --ambient-sol: rgb(64 145 190 / 5%);
+  --grid-line: rgb(43 102 137 / 7%);
   --family-astra: #7835b8;
   --family-sol: #875000;
   --family-luna: #3f5c80;
 }
 
 .dark {
-  --background: #080b18;
-  --surface: #11172a;
-  --foreground: #f4f1ff;
-  --foreground-soft: #cbd2e8;
-  --ambient-astra: rgb(141 82 255 / 14%);
-  --ambient-sol: rgb(255 171 50 / 8%);
-  --grid-line: rgb(150 164 211 / 7%);
+  --background: #060d17;
+  --surface: #0d1927;
+  --foreground: #edf6fb;
+  --foreground-soft: #bbcbd9;
+  --brand-cyan: #48d5ff;
+  --ambient-astra: rgb(39 178 224 / 12%);
+  --ambient-sol: rgb(80 179 224 / 5%);
+  --grid-line: rgb(112 166 196 / 6%);
   --family-astra: #c17aff;
   --family-sol: #ffc84d;
   --family-luna: #cfe4ff;
@@ -33,16 +35,20 @@
   --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --color-foreground-soft: var(--foreground-soft);
+  --color-brand: var(--brand-cyan);
+  --color-sky: var(--brand-cyan);
   --color-astra: var(--family-astra);
   --color-sol: var(--family-sol);
   --color-luna: var(--family-luna);
+  --font-sans: var(--font-chakra-petch), system-ui, sans-serif;
+  --font-mono: var(--font-chakra-petch), ui-monospace, monospace;
+  --font-pixel: var(--font-chakra-petch), sans-serif;
 }
 
 @theme {
-  --color-ink: #080b18;
-  --color-ink-soft: #151b31;
-  --color-paper: #f4f1ff;
-  --color-sky: #5bdcf6;
+  --color-ink: #060d17;
+  --color-ink-soft: #112033;
+  --color-paper: #f2f8fc;
   --color-magma: #ff705e;
   --color-mint: #4ce5c0;
   --color-polygon-purple: #b28bff;
@@ -50,8 +56,6 @@
   --radius-xl: 0.375rem;
   --radius-2xl: 0.5rem;
   --radius-3xl: 0.75rem;
-
-  --font-pixel: var(--font-press-start), monospace;
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-float-slow: float 9s ease-in-out infinite;
@@ -163,19 +167,19 @@ body {
   background-size: auto, auto, 32px 32px, 32px 32px;
   background-attachment: fixed;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-chakra-petch), system-ui, sans-serif;
   transition:
     background-color 0.4s ease,
     color 0.4s ease;
 }
 
 ::selection {
-  background: var(--color-astra);
-  color: var(--color-ink);
+  background: var(--color-brand);
+  color: var(--color-paper);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-sky);
+  outline: 2px solid var(--color-brand);
   outline-offset: 3px;
 }
 

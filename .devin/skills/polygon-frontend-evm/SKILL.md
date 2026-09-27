@@ -84,9 +84,12 @@ that skips it.
   Resolve each owned NFT from its `tokenURI` via `useOwnedSneakers`; never derive artwork
   from `tokenId`. Preserve embedded AI-minted image data and map legacy `pixel://` metadata
   through `resolveSneakerArtwork`.
-- Shared shell: `Navbar`, `Footer`, `ThemeToggle`, `WalletButton`, `MobileNav`, `MoreSheet`;
-  the palette, dark/light surface tokens, and pixel-grid backdrop are centralized in
-  `src/app/globals.css`.
+- Shared shell: `Navbar` uses the transparent `/LogoAiren.webp` mark; `Footer`, `ThemeToggle`,
+  `WalletButton`, `MobileNav`, and `MoreSheet` follow its midnight/cyan visual language.
+  Keep the dark/light surface tokens, cyan accent, and restrained pixel-grid backdrop
+  centralized in `src/app/globals.css`.
+- Chakra Petch is the global typeface for body, headings, stats, and short labels, loaded
+  through `next/font/google` with `display: "swap"`. Do not reintroduce Geist or Press Start 2P.
 - Reuse the existing card/tab/KPI patterns from the dashboards instead of inventing new ones.
 - Rarity copy must match the contracts: Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%;
   base staking APY 2.80%. The ERC-20 symbol is `REN`.
