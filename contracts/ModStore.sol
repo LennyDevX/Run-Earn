@@ -11,6 +11,11 @@ interface IPlayerProgressView {
     function levelOf(address user) external view returns (uint8);
 }
 
+/// @dev Minimal view of SneakerVault needed for perk discounts.
+interface IVaultDiscountView {
+    function bestDiscountBps(address user) external view returns (uint16);
+}
+
 /// @title ModStore — primary sale of premium upgrade mods for POL.
 /// @notice The store mints SneakerMods on demand: the buyer pays POL and the
 ///      store calls SneakerMods.mintAuthorized, so no copies are pre-minted.
@@ -18,6 +23,7 @@ interface IPlayerProgressView {
 ///      its own slot, effect, price, and supply cap. All proceeds go to the
 ///      treasury. Achievement badges stay free — this store sells power.
 contract ModStore is Pausable, AccessControl, ReentrancyGuard {
+    uint256 public constant BASIS_POINTS = 10_000;
     uint16 public constant MAX_BATCH = 20;
 
     struct ModDesign {
@@ -44,6 +50,10 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
     ///      disables gating — level-gated designs become unpurchasable.
     address public progress;
 
+    /// @notice SneakerVault consulted for perk discounts. Zero address
+    ///      disables discounts — every buyer pays full price.
+    address public vault;
+
     ModDesign[] private _designs;
 
     event ModDesignAdded(uint256 indexed designIndex, string name, uint8 slot, uint8 tier, uint16 effectBps, uint256 price, uint16 maxSupply);
@@ -51,6 +61,7 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
     event ModPurchased(uint256 indexed designIndex, address indexed buyer, uint256 quantity, uint256 totalPaid, uint256 firstTokenId);
     event TreasuryUpdated(address indexed treasury);
     event ProgressUpdated(address indexed progress);
+    event VaultUpdated(address indexed vault);
     event ProceedsWithdrawn(address indexed to, uint256 amount);
 
     constructor(address admin, address modsAddress, address payable treasury_) {
@@ -132,6 +143,13 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         emit ProgressUpdated(progress_);
     }
 
+    /// @notice Link SneakerVault for perk discounts. Zero address disables
+    ///      discounts — every buyer pays full price.
+    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        vault = vault_;
+        emit VaultUpdated(vault_);
+    }
+
     function setTreasury(address payable treasury_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(treasury_ != address(0), "ModStore: zero treasury");
         treasury = treasury_;
@@ -188,10 +206,12 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         return design.active && design.minted < design.maxSupply;
     }
 
-    /// @notice Total POL required to buy `quantity` copies of a design.
+    /// @notice Total POL required to buy `quantity` copies of a design,
+    ///      applying the buyer's best vault discount when one is linked.
     function quote(uint256 designIndex, uint16 quantity) external view returns (uint256) {
         require(quantity > 0, "ModStore: invalid quantity");
-        return _requireDesign(designIndex).price * quantity;
+        uint256 total = _requireDesign(designIndex).price * quantity;
+        return _applyDiscount(msg.sender, total);
     }
 
     // ─────────────────────────── Internal ────────────────────────
@@ -211,7 +231,7 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
                 "ModStore: level required"
             );
         }
-        uint256 total = design.price * quantity;
+        uint256 total = _applyDiscount(buyer, design.price * quantity);
         require(msg.value == total, "ModStore: wrong payment");
 
         for (uint16 i = 0; i < quantity; i++) {
@@ -236,6 +256,18 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         (bool sent, ) = treasury.call{value: total}("");
         require(sent, "ModStore: treasury transfer failed");
         emit ModPurchased(designIndex, buyer, quantity, total, firstTokenId);
+    }
+
+    /// @notice Apply the buyer's best vault discount. Zero vault address or a
+    ///      zero discount both mean full price — the discount can never make
+    ///      the payable amount zero.
+    function _applyDiscount(address buyer, uint256 total) internal view returns (uint256) {
+        if (vault == address(0)) return total;
+        uint16 discountBps = IVaultDiscountView(vault).bestDiscountBps(buyer);
+        if (discountBps == 0) return total;
+        uint256 discounted = (total * (BASIS_POINTS - discountBps)) / BASIS_POINTS;
+        require(discounted > 0, "ModStore: discount underflow");
+        return discounted;
     }
 
     receive() external payable {

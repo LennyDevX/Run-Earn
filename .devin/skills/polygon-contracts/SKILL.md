@@ -25,6 +25,8 @@ Use this skill for EVM contract design, Solidity implementation, Hardhat 3 confi
 | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL; custody stays in escrow, renter equips via workshop |
 | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs for POL, including consumables and `requiredLevel` gates |
 | `PlayerProgress` | `contracts/PlayerProgress.sol` | Live-state XP/levels across the protocol + public username/NFT-avatar identity |
+| `FeeSplitter` | `contracts/FeeSplitter.sol` | Pro-rata distribution of protocol fees (marketplace/rental) to weighted recipients in native POL |
+| `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/forge/POL/level/mod signals |
 
 For the upgrade-economy internals (slots, traits, ability kinds, energy costs,
 stats) see the `airen-upgrade-economy` skill. For XP sources, the level curve,
@@ -103,8 +105,8 @@ Use `hre.network.create()` and `connection.viem` in Hardhat 3 tests. Use `viem.d
 
 ## Deployment and funding scripts
 
-- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|ModRental|ModStore|PlayerProgress` and writes an ignored deployment manifest.
-- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`.
+- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|ModRental|ModStore|PlayerProgress|FeeSplitter|SneakerVault` and writes an ignored deployment manifest.
+- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`, `modStore.setVault(vault)`, `veStore.setVault(vault)`.
 - `scripts/seed-skills.ts` seeds the level-gated skill catalog (free `PlayerLevel` achievements + `requiredLevel` store copies) — idempotent, run after the progress wiring.
 - Single-target deploys read dependency addresses from `*_ADDRESS` env vars, so partial redeploys can re-wire against existing contracts.
 - Deploy with `npx hardhat run scripts/deploy.ts --network amoy` or `--network polygon`.

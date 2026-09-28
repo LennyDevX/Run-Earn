@@ -146,6 +146,21 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - `setLevelThresholds` admin-only, must start at 0, strictly increasing.
 - `PlayerLevel` achievement claim gates on `levelOf`; slot-6 skill equip raises `earnRatePerSecond`.
 
+### `FeeSplitter`
+
+- `setRecipients` weights sum exactly to 10_000; rejects zero addresses, zero weights, empty lists, and non-admin calls.
+- `distribute()` pro-rata exact: 1 ETH across 40/30/20/10 pays 0.4/0.3/0.2/0.1; dust stays for the next round.
+- `shareOf` last recipient absorbs division dust; `distribute` with zero balance reverts; pause blocks distribution.
+- `receive()` accumulates balance; `pendingFees` reflects the contract POL balance.
+
+### `SneakerVault`
+
+- `setPerk` validates kind (0=discount, 1=access), discount range (1–5000 bps), tier ≤ 3; admin-only.
+- `discountBps`/`bestDiscountBps` per gate: tier via `traitsOf`, forge via `rarityBonus`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf` — gates are additive.
+- Inactive perk or failed gate returns 0 (full price); `bestDiscountBps` picks the highest eligible discount.
+- `claimPerk` (access kind) succeeds once per wallet, reverts on inactive/discount-kind/requirements-not-met/already-claimed.
+- Store integration: `quote` applies the buyer's best discount; `buy` with the discounted value succeeds, full value reverts; zero vault address means full price.
+
 ## Subgraph/API checks
 
 - Configure a real query endpoint/API key server-side; never use the Graph deploy key in frontend code.

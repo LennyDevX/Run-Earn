@@ -35,6 +35,8 @@ const TARGETS = new Set([
   "ModRental",
   "ModStore",
   "PlayerProgress",
+  "FeeSplitter",
+  "SneakerVault",
 ]);
 
 type ContractName =
@@ -50,7 +52,9 @@ type ContractName =
   | "SneakerSwap"
   | "ModRental"
   | "ModStore"
-  | "PlayerProgress";
+  | "PlayerProgress"
+  | "FeeSplitter"
+  | "SneakerVault";
 
 type Deployment = {
   name: ContractName;
@@ -356,6 +360,27 @@ async function main() {
     ]));
   }
 
+  if (target === "all" || target === "FeeSplitter") {
+    deployments.push(await deployContract(viem, "FeeSplitter", [addressEnv("FEE_SPLITTER_ADMIN_ADDRESS", admin)]));
+  }
+
+  if (target === "all" || target === "SneakerVault") {
+    const sneakerAddress = requireAddress(resolveAddress(deployments, "SneakerMint", "SNEAKER_MINT_ADDRESS"), "SNEAKER_MINT_ADDRESS", "SneakerVault");
+    const modsAddress = requireAddress(resolveAddress(deployments, "SneakerMods", "SNEAKER_MODS_ADDRESS"), "SNEAKER_MODS_ADDRESS", "SneakerVault");
+    const workshopAddress = requireAddress(resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS"), "SNEAKER_WORKSHOP_ADDRESS", "SneakerVault");
+    const stakingAddress = requireAddress(resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS"), "STAKING_VAULT_ADDRESS", "SneakerVault");
+    const progressAddress = requireAddress(resolveAddress(deployments, "PlayerProgress", "PLAYER_PROGRESS_ADDRESS"), "PLAYER_PROGRESS_ADDRESS", "SneakerVault");
+    deployments.push(await deployContract(viem, "SneakerVault", [
+      addressEnv("VAULT_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      modsAddress,
+      sneakerAddress, // sneakerTraits = SneakerMint.traitsOf
+      workshopAddress,
+      stakingAddress,
+      progressAddress,
+    ]));
+  }
+
   // ─── Upgrade economy wiring ────────────────────────────────────
   // Link the workshop as the boost provider, authorize it on the game/mods,
   // connect the rental contract, and allow the mods collection on the
@@ -432,6 +457,20 @@ async function main() {
     if (veStoreAddress !== ZERO) {
       const veStore = await viem.getContractAt("VeSneakerStore", veStoreAddress);
       await wire("VeSneakerStore.progress", () => veStore.write.setProgress([progressAddress], { account: wallet.account }));
+    }
+  }
+
+  // ─── Vault discount wiring ────────────────────────────────────
+  // Stores apply the buyer's best vault discount at purchase time.
+  const vaultAddress = resolveAddress(deployments, "SneakerVault", "SNEAKER_VAULT_ADDRESS");
+  if (vaultAddress !== ZERO) {
+    if (modStoreAddress !== ZERO) {
+      const modStore = await viem.getContractAt("ModStore", modStoreAddress);
+      await wire("ModStore.vault", () => modStore.write.setVault([vaultAddress], { account: wallet.account }));
+    }
+    if (veStoreAddress !== ZERO) {
+      const veStore = await viem.getContractAt("VeSneakerStore", veStoreAddress);
+      await wire("VeSneakerStore.vault", () => veStore.write.setVault([vaultAddress], { account: wallet.account }));
     }
   }
 

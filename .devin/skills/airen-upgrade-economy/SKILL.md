@@ -29,6 +29,8 @@ SneakerMods (ERC-721) ──equip escrow──▶ SneakerWorkshop ──ISneaker
 | `SneakerSwap` | Atomic NFT↔NFT offers ± POL top-up, open or targeted taker |
 | `ModRental` | Mod escrow rental paid per-day in POL; renter equips via `workshop.rentalSource` |
 | `ModStore` | Primary sale of premium/consumable mod designs (`addDesign(ModDesign)` struct, `buy`/`buyBatch`) |
+| `SneakerVault` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims; linked via `setVault` |
+| `FeeSplitter` | Pro-rata POL fee distribution (marketplace/rental fees) to weighted recipients |
 
 ## SneakerMods
 
@@ -191,6 +193,7 @@ UI gotchas:
 - `mods.grantRole(MINTER_ROLE, modStore)`
 - `mods.setProgress(progress)` + `modStore.setProgress(progress)` +
   `veStore.setProgress(progress)` — required before any level-gated claim/buy
+- `modStore.setVault(vault)` + `veStore.setVault(vault)` — enables perk discounts at purchase time (zero address = full price)
 
 ## Security invariants
 

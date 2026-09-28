@@ -11,6 +11,11 @@ interface IPlayerProgressView {
     function levelOf(address user) external view returns (uint8);
 }
 
+/// @dev Minimal view of SneakerVault needed for perk discounts.
+interface IVaultDiscountView {
+    function bestDiscountBps(address user) external view returns (uint16);
+}
+
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
 /// @notice veSneakers are the playable NFTs of the Airen virtual sneaker
 ///      economy. Anyone can buy them with native POL — fully virtual assets. Once
@@ -45,6 +50,10 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     ///      disables gating — level-gated designs become unpurchasable.
     address public progress;
 
+    /// @notice SneakerVault consulted for perk discounts. Zero address
+    ///      disables discounts — every buyer pays full price.
+    address public vault;
+
     Design[] private _designs;
 
     event DesignAdded(uint256 indexed designIndex, string name, uint8 rarity, uint8 tier, uint256 price, uint16 maxSupply);
@@ -54,6 +63,7 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     event VeSneakerReserved(uint256 indexed designIndex, address indexed recipient, uint256 quantity, uint256 firstTokenId);
     event TreasuryUpdated(address indexed treasury);
     event ProgressUpdated(address indexed progress);
+    event VaultUpdated(address indexed vault);
     event ProceedsWithdrawn(address indexed to, uint256 amount);
 
     constructor(address admin, address nftAddress, address payable treasury_) {
@@ -138,6 +148,14 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         emit ProgressUpdated(progress_);
     }
 
+    /// @notice Link SneakerVault for perk discounts. Zero address disables
+    ///      discounts — every buyer pays full price (fail-closed to full price,
+    ///      never to a free mint).
+    function setVault(address vault_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        vault = vault_;
+        emit VaultUpdated(vault_);
+    }
+
     function setTreasury(address payable treasury_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(treasury_ != address(0), "VeSneakerStore: zero treasury");
         treasury = treasury_;
@@ -215,10 +233,12 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         return design.active && design.minted < design.maxSupply;
     }
 
-    /// @notice Total POL required to buy `quantity` copies of a design.
+    /// @notice Total POL required to buy `quantity` copies of a design,
+    ///      applying the buyer's best vault discount when one is linked.
     function quote(uint256 designIndex, uint16 quantity) external view returns (uint256) {
         require(quantity > 0, "VeSneakerStore: invalid quantity");
-        return _requireDesign(designIndex).price * quantity;
+        uint256 total = _requireDesign(designIndex).price * quantity;
+        return _applyDiscount(msg.sender, total);
     }
 
     // ─────────────────────────── Internal ────────────────────────
@@ -238,7 +258,7 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
                 "VeSneakerStore: level required"
             );
         }
-        uint256 total = design.price * quantity;
+        uint256 total = _applyDiscount(buyer, design.price * quantity);
         require(msg.value == total, "VeSneakerStore: wrong payment");
 
         firstTokenId = _mintCopies(design, designIndex, buyer, quantity);
@@ -246,6 +266,18 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         (bool sent, ) = treasury.call{value: total}("");
         require(sent, "VeSneakerStore: treasury transfer failed");
         emit VeSneakerPurchased(designIndex, buyer, quantity, total, firstTokenId);
+    }
+
+    /// @notice Apply the buyer's best vault discount. Zero vault address or a
+    ///      zero discount both mean full price — the discount can never make
+    ///      the payable amount zero.
+    function _applyDiscount(address buyer, uint256 total) internal view returns (uint256) {
+        if (vault == address(0)) return total;
+        uint16 discountBps = IVaultDiscountView(vault).bestDiscountBps(buyer);
+        if (discountBps == 0) return total;
+        uint256 discounted = (total * (BASIS_POINTS - discountBps)) / BASIS_POINTS;
+        require(discounted > 0, "VeSneakerStore: discount underflow");
+        return discounted;
     }
 
     function _mintCopies(Design storage design, uint256 designIndex, address to, uint16 quantity)

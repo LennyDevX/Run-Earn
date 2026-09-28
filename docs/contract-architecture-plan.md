@@ -22,6 +22,8 @@
 | — | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
 | — | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs (including consumables) |
 | — | `PlayerProgress` | `contracts/PlayerProgress.sol` | On-chain player XP/levels from live protocol state + public username/NFT-avatar identity |
+| — | `FeeSplitter` | `contracts/FeeSplitter.sol` | Pro-rata distribution of protocol fees (marketplace/rental) to weighted recipients in native POL |
+| — | `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/forge/POL/level/mod signals |
 
 ## Current Phase 1 foundation
 
@@ -78,6 +80,8 @@ The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but 
 - `ModRental.sol`: owners list mods for `pricePerDay` POL; renters prepay and equip via the workshop while custody stays in the rental contract; consumables are not rentable.
 - `ModStore.sol`: catalog of premium mod designs minted on demand for POL (store holds `MINTER_ROLE` on SneakerMods), including consumable designs via the `aux`/`consumable` fields. `ModDesign.requiredLevel` gates purchases by `PlayerProgress.levelOf` — the paid path for extra skill copies.
 - `PlayerProgress.sol`: deterministic XP/levels aggregated from live protocol state — sneaker balance ×100, mod balance ×40, `game.lifetimeEarned`/1,000 ×10, `marketplace.tradesCount` ×60, `workshop.actionsCount` ×30, staked POL principal ×20 — mapped onto a 10-tier threshold table (`0 → 21,000`). Also hosts the public profile half: `setUsername` (3–20 bytes) and `setNftAvatar` (ownership-verified pointer); uploaded images stay client-side. Levels are live standing — selling NFTs or unstaking POL lowers them. See [`player-progression.md`](player-progression.md).
+- `SneakerVault.sol`: live-state benefits — store discounts (`bestDiscountBps`, capped at 50%) and one-time access claims, gated by additive signals (sneaker tier, forge level, POL staked, PlayerProgress level, mod count). Read-only for funds; linked to both stores via `setVault` (zero address = full price).
+- `FeeSplitter.sol`: receives marketplace/rental fee withdrawals and distributes them pro-rata to weighted recipients (weights must sum to exactly 10,000 bps). The last recipient absorbs division dust so the sum is exact; `distribute()` is callable by anyone.
 
 **POL formula:**
 
@@ -141,13 +145,13 @@ The adapter introspects the configured schema and normalizes address-indexed dep
 `DEPLOY_TARGET=all` in `scripts/deploy.ts` deploys in dependency order and runs the
 post-deploy wiring automatically:
 
-1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore` → `PlayerProgress`.
+1. `RENToken` → `SneakerMint` → `SneakerStaking` → `SneakerAppraiser` → `SneakerMarketplace` → `SneakerGame` → `SneakerMods` → `SneakerWorkshop` → `SneakerSwap` → `ModRental` → `ModStore` → `VeSneakerStore` → `PlayerProgress` → `FeeSplitter` → `SneakerVault`.
 2. Wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`,
    `mods.setWorkshop`, `workshop.setRentalSource`,
    `marketplace.setWorkshop/setCollectionAllowed(mods)`,
    `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`,
    `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress`,
-   `modStore.setProgress`, `veStore.setProgress`.
+   `modStore.setProgress`, `veStore.setProgress`, `modStore.setVault`, `veStore.setVault`.
 3. Fund the POL reward reserve (`scripts/fund-staking.ts`) and the veRUNE redemption pool.
 3b. Seed the level-gated skill catalog (`scripts/seed-skills.ts` — achievements + store copies).
 4. Configure frontend contract addresses and server-only Graph query settings.

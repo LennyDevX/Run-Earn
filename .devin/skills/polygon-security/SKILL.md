@@ -22,6 +22,8 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - `ModRental.sol`: POL-paid mod rentals with escrow custody and expiry return.
 - `ModStore.sol`: primary sale of premium/consumable mods for POL with `requiredLevel` gates.
 - `PlayerProgress.sol`: live-state XP/levels (counters in game/marketplace/workshop, staking principal) + public username/NFT-avatar identity.
+- `FeeSplitter.sol`: pro-rata POL fee distribution to weighted recipients (weights must sum to 100%).
+- `SneakerVault.sol`: live-state perks (store discounts, one-time access claims) gated by tier/forge/POL/level/mod signals; read-only for funds.
 - `/api/generate-sneaker`: server-only Gemini image generation for the mint studio.
 - `/api/subgraph`: server-only proxy for the `nuxgraph` Studio deployment.
 - `/api/pol-price`: server-only proxy for the Uniswap Trading API POL/USD quote.
@@ -102,6 +104,24 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Confirm `setLevelThresholds` is admin-only, must start at 0, and be strictly increasing — a broken table would corrupt every level gate.
 - Verify level gates (`PlayerLevel` achievements, `requiredLevel` designs) read `levelOf` at action time and revert when `progress` is unset — a zero-address `progress` must fail closed, never open.
 - Confirm `setProgress` on mods/both stores is admin-only — a malicious progress contract would fake levels.
+- Confirm `setVault` on both stores is admin-only — a malicious vault could fake discounts (capped at 50% by `MAX_DISCOUNT_BPS`).
+- Verify a zero-address vault means full price (fail-closed to full price, never to a free mint) and the discounted amount can never be zero.
+
+### Fee distribution (FeeSplitter)
+
+- Confirm recipient weights must sum to exactly 10_000 bps — no fee can be stranded by an incomplete split.
+- Verify `distribute()` is callable by anyone (deterministic split, no griefing vector) and is `nonReentrant`.
+- Confirm the last recipient absorbs division dust so the distributed sum is exact.
+- Verify `setRecipients` rejects zero addresses, zero weights, and empty lists.
+- Confirm the splitter never holds user principal — it only receives explicit fee withdrawals.
+
+### Benefits vault (SneakerVault)
+
+- Verify all eligibility is derived from live contract state (tier via `traitsOf`, forge via `rarityBonus`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf`) — never client-supplied.
+- Confirm gates are additive: a perk with several non-zero gates requires all of them.
+- Verify discounts cap at 50% (`MAX_DISCOUNT_BPS`) and inactive perks return 0 (full price).
+- Confirm access claims are one-per-wallet-per-perk and revert on any failed gate.
+- Verify the vault never holds POL or NFTs — it is read-only for funds.
 
 ### veSneaker primary sale
 
