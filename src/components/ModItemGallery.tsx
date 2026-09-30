@@ -160,7 +160,7 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
         <div>
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-mint/25 bg-mint/8 px-3 py-1.5 font-pixel text-[10px] tracking-[0.2em] text-mint">
             <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-mint" />
-            ITEM FORGE
+            ITEM LINE
           </span>
           <h2 id="item-gallery-title" className="text-gradient mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
             Mod NFTs you can equip

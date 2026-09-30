@@ -90,10 +90,11 @@ the whole v1.0 set in dependency order and runs the post-deploy wiring:
 3. Open `/workshop`, pick the sneaker, equip a mod into its slot (approve + equip),
    and confirm the effective-stats panel changes.
 4. Burn a consumable (`useAbility`): repair kit → full health, surge → instant
-   activation, boost capsule → +earn for 24h, forge stone → +1 forge level,
+   activation, boost capsule → +earn for 24h, service kit → condition back to 100%,
    Overdrive → +earn for 48h, Stim pack → energy refill, Lucky repair → full
    health + boost. Confirm the mod NFT is burned and the energy cost was deducted.
-5. Forge once veRUNE is claimed — verify `forgeLevel` and the rarity/earn bump.
+5. Warp a year forward and confirm `conditionBps` decays to the 5000 floor, then burn a
+   service kit and confirm it returns to 10000.
 6. Open `/badges` and claim an achievement whose on-chain requirement is met.
    In the "Level skills" section, confirm locked skills show "Unlocks at level N"
    and a claimable skill mints for free once `PlayerProgress.levelOf` qualifies.

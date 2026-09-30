@@ -17,13 +17,13 @@
 | — | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
 | — | `ISneakerBoosts` | `contracts/ISneakerBoosts.sol` | Shared boost read interface consumed by game, staking, appraiser, marketplace |
 | — | `SneakerMods` | `contracts/SneakerMods.sol` | ERC-721 mod/badge collection with on-chain achievement claims |
-| — | `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip system, consumable ability NFTs, and the veRUNE forge |
+| — | `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip system, consumable ability NFTs, and the 365-day veSneaker condition cycle |
 | — | `SneakerSwap` | `contracts/SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across collections |
 | — | `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL, workshop-aware |
 | — | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs (including consumables) |
 | — | `PlayerProgress` | `contracts/PlayerProgress.sol` | On-chain player XP/levels from live protocol state + public username/NFT-avatar identity |
 | — | `FeeSplitter` | `contracts/FeeSplitter.sol` | Pro-rata distribution of protocol fees (marketplace/rental) to weighted recipients in native POL |
-| — | `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/forge/POL/level/mod signals |
+| — | `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/condition/POL/level/mod signals |
 
 ## Current Phase 1 foundation
 
@@ -56,7 +56,7 @@ Current default economics are 2.80% base APY (reduced by 30% for sustainability)
 ### `SneakerAppraiser.sol`
 
 - Read-only contract that estimates the POL value of a SneakerMint NFT.
-- Formula: `(baseValue + tierValues[tier] + effectiveRarity * rarityWeight) * globalMultiplierBps / 10_000`, where effective rarity adds the forge `rarityBonus` and the value is then scaled by the equipped Skin `appraisalBonusBps` — both read live from the workshop via `setBoosts`.
+- Formula: `(baseValue + tierValues[tier] + effectiveRarity * rarityWeight) * globalMultiplierBps / 10_000`, where effective rarity is the base rarity scaled by live condition and the value is then scaled by the equipped Skin `appraisalBonusBps` — both read live from the workshop via `setBoosts`.
 - All parameters are admin-configurable via `updateParams()`.
 - `appraise(tokenId)` reads traits from `SneakerMint` and returns `(estimatedValue, rarity, tier)`.
 - `appraiseRaw(rarity, tier)` returns an estimate without requiring an existing NFT.
@@ -66,7 +66,7 @@ The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but 
 
 ### `SneakerGame.sol` — power / health / energy
 
-- **Power** scales the tier base rate by effective rarity: `powerBps = 5000 + rarity × 100` (r50 = 1.0x, r100 = 1.5x); forge rarity counts.
+- **Power** scales the tier base rate by effective rarity: `powerBps = 5000 + rarity × 100` (r50 = 1.0x, r100 = 1.5x); condition scales the rarity first.
 - **Health** is durability that decays 1 unit per `HEALTH_DECAY_PERIOD` (1 day) of real time plus wear per activation. Accrual is capped at the death timestamp (`lastDecayAt + remainingHealth × 24h`); at 0 the sneaker is worn out and cannot activate.
 - **Energy** capacity = `2 + effectiveRarity / 20`, refilled to max on each manual `activate`; spent by workshop abilities through `spendEnergy` (workshop-only, like `repairFromWorkshop`, `activateFromWorkshop`, `spendPoints`).
 - Views `powerOf`, `healthOf`, `energyOf`, `maxEnergyOf`, `earnRatePerSecond`, `pendingPoints` are all decay-aware; `sneakers(tokenId)` returns 8 fields including `lastDecayAt` and `energy`.
@@ -74,13 +74,13 @@ The legacy RUNE NFT reward path (`claimRewards`) remains for compatibility, but 
 ### Upgrade economy (v1.0)
 
 - `SneakerMods.sol`: ERC-721 mods/badges with `ModTraits{slot, rarity, tier, effectBps, aux, consumable, proofHash}`. Seven slots: Sole (−wear), Upper (+earn rate), Lining (−repair cost), Skin (+appraisal, `aux` = design override), Core (auto-activation), Boost (+staking APY), Skill (passive +earn rate from level-gated skill NFTs). Achievements are claimable on-chain against verifiable state (streak, lifetime veRUNE, NFT balance, POL staked, `ReqKind.PlayerLevel` via `PlayerProgress.levelOf`).
-- `SneakerWorkshop.sol`: escrows equipped mods (one per slot), exposes `ISneakerBoosts` (`skillBonusBps` folds the slot-6 passive into `earnBonusBps`), runs `forge` (burns veRUNE via `game.spendPoints` for permanent +rarity/+earn), and `useAbility` which **burns a consumable mod NFT** per use — `aux` selects the ability: `0`/`255` repair kit (free), `1` surge (instant activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge stone (free level, 2⚡), `4` Overdrive (+`effectBps` earn for 48h, 3⚡), `5` Stim pack (instant energy refill via `game.refillEnergyFromWorkshop`, free), `6` Lucky repair (full health + `effectBps` boost for 24h, 1⚡).
+- `SneakerWorkshop.sol`: escrows equipped mods (one per slot), exposes `ISneakerBoosts` (`skillBonusBps` folds the slot-6 passive into `earnBonusBps`), runs the 365-day condition cycle, and `useAbility` which **burns a consumable mod NFT** per use — `aux` selects the ability: `0`/`255` repair kit (free), `1` surge (instant activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` service kit (restores condition, free), `4` Overdrive (+`effectBps` earn for 48h, 3⚡), `5` Stim pack (instant energy refill via `game.refillEnergyFromWorkshop`, free), `6` Lucky repair (full health + `effectBps` boost for 24h, 1⚡).
 - `SneakerMarketplace.sol`: collection-aware V2 — `list(collection, tokenId, price)`, auctions, and POL offers work for sneakers and mods; locks are keyed by `(collection, tokenId)`; staked NFTs and sneakers with equipped mods cannot be listed.
 - `SneakerSwap.sol`: atomic NFT↔NFT swaps with optional POL top-up, any allowed collection pair.
 - `ModRental.sol`: owners list mods for `pricePerDay` POL; renters prepay and equip via the workshop while custody stays in the rental contract; consumables are not rentable.
 - `ModStore.sol`: catalog of premium mod designs minted on demand for POL (store holds `MINTER_ROLE` on SneakerMods), including consumable designs via the `aux`/`consumable` fields. `ModDesign.requiredLevel` gates purchases by `PlayerProgress.levelOf` — the paid path for extra skill copies.
 - `PlayerProgress.sol`: deterministic XP/levels aggregated from live protocol state — sneaker balance ×100, mod balance ×40, `game.lifetimeEarned`/1,000 ×10, `marketplace.tradesCount` ×60, `workshop.actionsCount` ×30, staked POL principal ×20 — mapped onto a 10-tier threshold table (`0 → 21,000`). Also hosts the public profile half: `setUsername` (3–20 bytes) and `setNftAvatar` (ownership-verified pointer); uploaded images stay client-side. Levels are live standing — selling NFTs or unstaking POL lowers them. See [`player-progression.md`](player-progression.md).
-- `SneakerVault.sol`: live-state benefits — store discounts (`bestDiscountBps`, capped at 50%) and one-time access claims, gated by additive signals (sneaker tier, forge level, POL staked, PlayerProgress level, mod count). Perk ids must be sequential and the catalog is capped at `MAX_PERKS = 16`. Read-only for funds; linked to both stores via `setVault` (zero address = full price).
+- `SneakerVault.sol`: live-state benefits — store discounts (`bestDiscountBps`, capped at 50%) and one-time access claims, gated by additive signals (sneaker tier, condition, POL staked, PlayerProgress level, mod count). Perk ids must be sequential and the catalog is capped at `MAX_PERKS = 16`. Read-only for funds; linked to both stores via `setVault` (zero address = full price).
 - `VeSneakerStore.sol` / `ModStore.sol`: in addition to `requiredLevel`, both stores support `setDesignRequiredPerk(designIndex, perkId, required)` — purchases and `quote` revert `*: perk required` unless the buyer is vault-eligible. The gate fails closed when the vault is unset, and the perk id must already exist on the vault.
 - `SneakerMarketplace.sol` / `ModRental.sol`: `withdrawFeesToCollector()` withdraws accrued fees to the configured `feeCollector` (the FeeSplitter), while `withdrawFees(to)` remains available as an admin override.
 - `FeeSplitter.sol`: receives marketplace/rental fee withdrawals and distributes them pro-rata to weighted recipients (weights must sum to exactly 10,000 bps, max 16 recipients). The last recipient absorbs division dust so the sum is exact; `distribute()` is callable by anyone. Recipients are POL wallets, not contracts that must forward funds — allocation to staking or redemption still requires a treasury transaction.

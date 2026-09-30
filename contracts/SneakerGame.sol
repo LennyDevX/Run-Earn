@@ -17,7 +17,7 @@ import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 ///      per activation; at zero the sneaker stops mining until repaired
 ///      (veRUNE) or restored by burning a repair-kit mod NFT.
 ///      ENERGY — charges spent on special abilities (surge activations, boost
-///      capsules, forge stones) via the workshop. Refills to full on every
+///      capsules, service kits) via the workshop. Refills to full on every
 ///      manual activation; capacity grows with rarity.
 ///      The owner must activate the sneaker every 24 hours to keep it earning.
 ///      Activating within 48h builds a daily streak that multiplies power.
@@ -29,7 +29,7 @@ import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 ///      When a SneakerWorkshop is linked via setBoosts/setWorkshop, equipped
 ///      mods modify earn rate, wear, and repair cost; a Core mod keeps the
 ///      earn window open permanently (auto-activation), and the workshop can
-///      spend claimed veRUNE (forge), repair sneakers, trigger surge
+///      spend claimed veRUNE, repair sneakers, trigger surge
 ///      activations, and spend energy on behalf of the owner.
 contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -305,7 +305,7 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
     }
 
     /// @notice Spend claimed veRUNE on behalf of a user. Callable only by the
-    ///      workshop (forge upgrades).
+    ///      workshop (equipped mods and live condition).
     function spendPoints(address user, uint256 amount) external whenNotPaused {
         require(msg.sender == workshop, "SneakerGame: not workshop");
         require(veRuneBalance[user] >= amount, "SneakerGame: insufficient veRUNE");
@@ -430,7 +430,7 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
         if (address(boosts) != address(0)) {
             bps = (bps * (BASIS_POINTS + boosts.earnBonusBps(tokenId))) / BASIS_POINTS;
         }
-        // Daily rate scaled to per-second, boosted by streak and mods/forge.
+        // Daily rate scaled to per-second, boosted by streak, mods, and live condition.
         return (base * bps) / (BASIS_POINTS * 1 days);
     }
 
@@ -482,7 +482,7 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
         state.lastDecayAt += uint64(periods * HEALTH_DECAY_PERIOD);
     }
 
-    /// @notice Energy capacity from the effective rarity (forge counts).
+    /// @notice Energy capacity from the effective rarity (condition counts).
     function _maxEnergyFor(uint256 tokenId) internal view returns (uint16) {
         (uint8 rarity, ) = _traits(tokenId);
         return ENERGY_BASE + uint16(_effectiveRarity(tokenId, rarity)) / ENERGY_RARITY_DIV;

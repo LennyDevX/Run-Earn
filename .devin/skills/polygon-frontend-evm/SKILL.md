@@ -223,10 +223,10 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 
 ## Workshop UI flow (`/workshop`, `useWorkshop` hook)
 
-1. Sneaker selector → seven equip slots (Sole/Upper/Lining/Skin/Core/Boost/Skill), effective-stats panel, forge card, consumables section. Full mechanics: `airen-upgrade-economy` skill.
+1. Sneaker selector → seven equip slots (Sole/Upper/Lining/Skin/Core/Boost/Skill), effective-stats panel, condition bar, consumables section. Full mechanics: `airen-upgrade-economy` skill.
 2. Equip is two transactions: `approve(workshop, modId)` on SneakerMods, then `equip(sneakerId, modId)` — the mod goes into workshop escrow. `unequip(sneakerId, slot)` returns it.
-3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), forge stone (2⚡), Overdrive (3⚡, 48h), Stim pack (0⚡ refill), Lucky repair (1⚡, heal + boost).
-4. Forge burns `forgeCostPoints` veRUNE per level — show `forgeLevel` and the rarity/effective-earn bump.
+3. Consumables (`traits.consumable`) must be filtered OUT of the equip picker and shown under `useAbility`: repair kit (0⚡), surge (2⚡), boost capsule (1⚡, +`effectBps` earn for 24h — track `tempBoostBps`/`boostExpiresAt` with a `nowSeconds` state, never `Date.now()` in render), service kit (0⚡, condition only), Overdrive (3⚡, 48h), Stim pack (0⚡ refill), Lucky repair (1⚡, heal + boost).
+4. Condition decays on a 365-day season — show the wear bar and prompt for a repair/service kit before rarity drops.
 5. Blocked sneakers (staked, listed, rented out) must surface the contract revert as actionable copy.
 
 ## Subgraph integration
@@ -235,7 +235,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 - Use the Next Route Handler proxy and server-only environment variables.
 - The dynamic adapter introspects the schema and finds address-indexed activity entities.
 - If the schema does not expose new POL events, show RPC state and an empty indexed activity state rather than inventing history.
-- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace (list/buy/auction/offer), game (activate/repair/redeem), and upgrade-economy events (mod mint/burn, equip/unequip, ability use, forge, swap, rental, mod purchases).
+- Recommended indexed events: `POLDeposited`, `POLWithdrawn`, `POLRewardsClaimed`, `Staked`, `Unstaked`, plus marketplace (list/buy/auction/offer), game (activate/repair/redeem), and upgrade-economy events (mod mint/burn, equip/unequip, ability use, service, swap, mod purchases, tab sessions).
 - Full detail lives in the `airen-subgraph-activity` skill.
 
 ## Required approach
@@ -261,7 +261,7 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 - Verify `/marketplace` list (approve + list) for sneakers AND mods, buy, auction bid/settle, offer make/accept/cancel, suggested prices, and mod-equipped-sneaker listing rejection on Amoy.
 - Verify `/marketplace` Rentals (list/rent/return) and Trades (create/accept/cancel swap) tabs on Amoy.
 - Verify `/game` activate (24h cooldown + energy refill), streak display, live health bar (time decay), power/energy stats, repair, claim points, and redemption gating on Amoy.
-- Verify `/workshop` equip/unequip across all seven slots (incl. the passive Skill slot), each `useAbility` consumable burn (repair/surge/boost/forge stone/Overdrive/Stim/Lucky), forge levels, and equipped-mod custody on Amoy.
+- Verify `/workshop` equip/unequip across all seven slots (incl. the passive Skill slot), each `useAbility` consumable burn (repair/surge/boost/service/Overdrive/Stim/Lucky), the condition bar decaying over a season, and equipped-mod custody on Amoy.
 - Verify `/badges` achievement claims — including the "Level skills" section (free `PlayerLevel` claim gated by `PlayerProgress.levelOf`) — and `/collection` Astra/Sol/Luna image filters, stable store design indices, premium mod purchases, `requiredLevel` gates, and vault discount/perk badges on Amoy.
 - Verify `/defi` benefits panel: perk eligibility flips when NFTs are sold or POL is unstaked, access claims are one per wallet, and the fee splitter shows pending/distributed POL with recipient weights.
 - Verify the Home carousel crossfades among Astra/Sol/Luna, pauses on hover/focus, supports manual controls, and stops auto-rotation for `prefers-reduced-motion`; verify owned token artwork uses `tokenURI`, not token-ID-derived art.

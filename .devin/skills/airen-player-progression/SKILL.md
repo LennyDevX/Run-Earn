@@ -32,7 +32,7 @@ the level. Gates must read `levelOf` at claim/buy time — never cache levels.
 | Mod/badge held | 40 | `SneakerMods.balanceOf` |
 | 1,000 veRUNE lifetime | 10 | `SneakerGame.lifetimeEarned` (+= in `claimPoints`) |
 | Completed trade | 60 | `SneakerMarketplace.tradesCount` (++ both sides in `buy`/`acceptOffer`/`settleAuction`) |
-| Workshop action | 30 | `SneakerWorkshop.actionsCount` (++ equip/unequip/forge/useAbility/useRepairKit) |
+| Workshop action | 30 | `SneakerWorkshop.actionsCount` (++ equip/unequip/useAbility/useRepairKit) |
 | 1 POL staked | 20 | `SneakerStaking.polPositions.principal` |
 
 Default thresholds: `0,300,800,1600,2800,4500,7000,10500,15000,21000` → L1–L10

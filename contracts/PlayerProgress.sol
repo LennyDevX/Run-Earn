@@ -18,7 +18,7 @@ interface ISneakerMarketplaceProgress {
 }
 
 interface ISneakerWorkshopProgress {
-    /// @notice Workshop actions performed (equips, unequips, forges, ability uses).
+    /// @notice Workshop actions performed (equips, unequips, ability uses).
     function actionsCount(address user) external view returns (uint256);
 }
 
@@ -52,7 +52,7 @@ contract PlayerProgress is AccessControl {
     uint256 public constant XP_PER_SNEAKER = 100; // per owned veSneaker
     uint256 public constant XP_PER_MOD = 40; // per owned mod/badge
     uint256 public constant XP_PER_TRADE = 60; // per completed marketplace trade (buy or sell side)
-    uint256 public constant XP_PER_WORKSHOP_ACTION = 30; // per equip / unequip / forge / ability use
+    uint256 public constant XP_PER_WORKSHOP_ACTION = 30; // per equip / unequip / ability use
     uint256 public constant XP_PER_POL_STAKED = 20; // per 1 POL of live staking principal
     uint256 public constant XP_PER_1000_VERUNE = 10; // per 1,000 veRUNE of lifetime claimed points
     uint256 public constant VERUNE_STEP = 1_000 ether; // veRUNE is 18-decimal

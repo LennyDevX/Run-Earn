@@ -409,7 +409,7 @@ export default function TabArena() {
           })}
         </ol>
         <p className="mt-3 text-center font-mono text-[10px] text-foreground/35">
-          GREYED TIERS PAY YOUR CEILING · RAISE POWER WITH FORGE LEVELS OR EQUIPPED MODS TO EARN MORE
+          GREYED TIERS PAY YOUR CEILING · SERVICE THE PAIR OR EQUIP MODS TO EARN MORE
           POINTS PER TAP
         </p>
       </Panel>

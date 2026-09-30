@@ -109,11 +109,6 @@ export function marketplaceParameters() {
   };
 }
 
-/// Workshop forge parameters — the veRUNE sink for permanent sneaker upgrades.
-///   conditionFloorBps  rarity share kept at full wear (5000 = 50%)
-///   forgeRarityStep  rarity points gained per level
-///   forgeEarnStepBps earn-rate bonus per level
-///   maxForgeLevel    level cap per sneaker
 /// veSneaker care model: a 365-day wear season with a 50% floor.
 /// There is no forge — mods are the only upgrade path, and the sneaker is the
 /// only thing that wears. Restoring condition is what the repair kit is for.
@@ -138,18 +133,18 @@ export function sneakerVaultParameters() {
   const discountMinTier = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_TIER", 3n);
   const discountRequiredLevel = bigintEnv("SNEAKER_VAULT_DISCOUNT_REQUIRED_LEVEL", 0n);
   const discountMinPolStaked = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_POL_WEI", 0n);
-  const discountMinConditionBps = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_FORGE_LEVEL", 0n);
+  const discountMinConditionBps = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_CONDITION_BPS", 0n);
   const discountMinModCount = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_MOD_COUNT", 0n);
   const accessMinTier = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_TIER", 3n);
   const accessRequiredLevel = bigintEnv("SNEAKER_VAULT_ACCESS_REQUIRED_LEVEL", 5n);
   const accessMinPolStaked = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_POL_WEI", 0n);
-  const accessMinConditionBps = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_FORGE_LEVEL", 0n);
+  const accessMinConditionBps = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_CONDITION_BPS", 0n);
   const accessMinModCount = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_MOD_COUNT", 0n);
 
   if (discountBps === 0n || discountBps > 5_000n) throw new Error("SNEAKER_VAULT_DISCOUNT_BPS must be between 1 and 5000.");
   if (discountMinTier > 3n || accessMinTier > 3n) throw new Error("SneakerVault tier gates must be between 0 and 3.");
   if (discountRequiredLevel > 10n || accessRequiredLevel > 10n) throw new Error("SneakerVault level gates must be between 0 and 10.");
-  if (discountMinConditionBps > 255n || accessMinConditionBps > 255n) throw new Error("SneakerVault forge gates must fit uint8.");
+  if (discountMinConditionBps > 10_000n || accessMinConditionBps > 10_000n) throw new Error("SneakerVault condition gates must fit uint16.");
 
   return {
     discountBps: Number(discountBps),
@@ -272,14 +267,20 @@ export function veSneakerTokenUri(design: VeSneakerDesignConfig, index: number) 
     name: `veSneaker — ${design.name}`,
     description:
       "Airen virtual sneaker (veSneaker). Buy it with POL, lock it in staking for a POL APY boost, " +
-      "and activate it in the sneaker game to earn veRUNE points. No physical sneaker required.",
+      "equip mod NFTs across seven slots, and run the daily tab challenge to raise your yield. " +
+      "Every pair wears over a 365-day season — keep it serviced to hold its rarity. " +
+      "No physical sneaker required.",
     image: `${assetBaseUrl.origin}${design.imagePath}`,
     attributes: [
       { trait_type: "Collection", value: design.family },
       { trait_type: "Rarity", value: VE_TIER_LABEL[design.tier] },
       { trait_type: "Rarity Score", value: design.rarity },
       { trait_type: "Tier", value: design.tier },
-      { trait_type: "APY Boost", value: `+${VE_TIER_BOOST_BPS[design.tier] / 100}%` },
+      { trait_type: "Staking APY Boost", value: `+${VE_TIER_BOOST_BPS[design.tier] / 100}%` },
+      // Base tab ceiling with no mods equipped: 50 + rarity, in basis points.
+      { trait_type: "Tab Ceiling", value: `+${(50 + design.rarity) / 100}%` },
+      { trait_type: "Tab Multiplier", value: tabMultiplierLabel(design.rarity) },
+      { trait_type: "Season", value: "365 days" },
       { trait_type: "Design", value: design.design },
       { trait_type: "Design Index", value: index },
       { trait_type: "Origin", value: "Virtual sneaker · no physical pair required" },
@@ -287,6 +288,15 @@ export function veSneakerTokenUri(design: VeSneakerDesignConfig, index: number) 
     ],
   };
   return `data:application/json;base64,${Buffer.from(JSON.stringify(metadata), "utf8").toString("base64")}`;
+}
+
+/// Points-per-tap band a pristine pair starts in (mirrors `pointsPerTap` in
+/// `src/lib/tab-challenge.ts`).
+function tabMultiplierLabel(rarity: number) {
+  if (rarity >= 76) return "x4";
+  if (rarity >= 51) return "x3";
+  if (rarity >= 26) return "x2";
+  return "x1";
 }
 
 export async function assertNetwork(

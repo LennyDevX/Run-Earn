@@ -30,7 +30,7 @@ export default function WorkshopPage() {
               className="animate-fade-up rounded-full border border-magma/20 bg-magma/10 px-3.5 py-1.5 font-pixel text-[10px] text-magma"
               style={{ animationDelay: "120ms" }}
             >
-              FORGE
+              CARE
             </span>
           </div>
 

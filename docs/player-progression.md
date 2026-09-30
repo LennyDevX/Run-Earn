@@ -18,7 +18,7 @@ borrowed assets.
 | Mods/badges held | `SneakerMods.balanceOf` | 40 each |
 | Lifetime veRUNE claimed | `SneakerGame.lifetimeEarned` | 10 per 1,000 |
 | Completed trades | `SneakerMarketplace.tradesCount` | 60 each (buyer and seller) |
-| Workshop actions | `SneakerWorkshop.actionsCount` | 30 each (equip/unequip/forge/ability/repair kit) |
+| Workshop actions | `SneakerWorkshop.actionsCount` | 30 each (equip/unequip/ability/repair kit) |
 | POL staked | `SneakerStaking.polPositions.principal` | 20 per POL |
 
 The counters are incremented by each contract at the point of action —

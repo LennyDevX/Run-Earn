@@ -32,7 +32,7 @@ Each SneakerMint NFT behaves like a game item with three live stats — **power*
 
 | Stat | What it is | How it moves |
 | --- | --- | --- |
-| **Power** | The veRUNE mining rate: `tierBase × (50% + effectiveRarity%)`. A rarity-50 sneaker mines at ~1.0x its tier base; rarity 100 reaches ~1.5x. Forge levels raise effective rarity permanently. | Fixed by rarity + forge; read via `powerOf(tokenId)`. |
+| **Power** | The veRUNE mining rate: `tierBase × (50% + effectiveRarity%)`. A rarity-50 sneaker mines at ~1.0x its tier base; rarity 100 reaches ~1.5x. Condition scales effective rarity. | Fixed by rarity and live condition; read via `powerOf(tokenId)`. |
 | **Health** | The sneaker's "time of life". Stored durability minus whole 24h decay periods elapsed (`lastDecayAt`), minus wear per activation. | −1 per day of real time, −`wear` per activation. At 0 the sneaker is worn out: accrual stops and activation reverts until repaired. |
 | **Energy** | Charges that fuel consumable abilities. Capacity = `2 + effectiveRarity / 20`. | Refilled to max on every manual `activate`; spent by `SneakerWorkshop.useAbility` via `game.spendEnergy`. |
 
@@ -51,8 +51,8 @@ Each SneakerMint NFT behaves like a game item with three live stats — **power*
 2. **Streak bonus:** activating within 48h of the previous activation increments the streak. Each streak day adds +1% to the earn rate, capped at +50% (streak 51+). Missing more than 48h resets the streak to 1.
 3. **Health decay:** health ticks down 1 point per 24h of real time regardless of activity, plus `wearPerActivation` (1, reduced by Sole mods) on each activation. Accrual is capped at the sneaker's death timestamp (`lastDecayAt + remainingHealth × 24h`); at 0 health the sneaker stops earning and cannot activate.
 4. **Repair:** costs 50 veRUNE and restores full health plus a fresh decay clock — a point sink that recycles value. Equipped Lining mods discount the cost; consumable repair-kit mods restore health for free when burned.
-5. **Consumable abilities (`SneakerWorkshop.useAbility`):** burning a consumable mod NFT applies its `aux` ability — `0`/`255` repair kit (free), `1` surge = instant activation bypassing the cooldown (2⚡), `2` boost capsule = +`effectBps` earn rate for 24h (1⚡), `3` forge stone = free forge level (2⚡), `4` Overdrive = +`effectBps` earn for 48h (3⚡), `5` Stim pack = instant energy refill (free), `6` Lucky repair = full health + `effectBps` boost for 24h (1⚡). Each burn destroys the NFT — a permanent demand driver for the mod economy.
-6. **Forge:** `SneakerWorkshop.forge` burns claimed veRUNE (`250 × (level + 1)`) for permanent +5 rarity and +2.5% earn-rate per level — the second veRUNE sink.
+5. **Consumable abilities (`SneakerWorkshop.useAbility`):** burning a consumable mod NFT applies its `aux` ability — `0`/`255` repair kit (free), `1` surge = instant activation bypassing the cooldown (2⚡), `2` boost capsule = +`effectBps` earn rate for 24h (1⚡), `3` service kit = condition restored to pristine (free), `4` Overdrive = +`effectBps` earn for 48h (3⚡), `5` Stim pack = instant energy refill (free), `6` Lucky repair = full health + `effectBps` boost for 24h (1⚡). Each burn destroys the NFT — a permanent demand driver for the mod economy.
+6. **Care:** every pair runs a 365-day season. Condition decays linearly from 100% to 50% and scales the rarity, so the earn rate, the appraisal, and the tab power score all fall together. Repair and service kits are the sink that resets it — there is no forge.
 7. **Passive accrual:** points accrue per second while the sneaker is inside its 24h window (or permanently with a Core mod) and health > 0. Workshop mods raise the effective rate (`earnBonusBps`, including active boost capsules).
 
 ### Example: Mythic sneaker (rarity 90) with a 30-day streak
@@ -164,7 +164,7 @@ for the full level curve, skill catalog, and seeding script.
 2. **Mint → Stake:** lock NFT → +0.5% to +1.8% APY on staked POL (30-day lock).
 3. **Mint → Marketplace:** appraiser valuation → sell, auction, or accept offers in POL.
 4. **Stake ↔ Marketplace tension:** staked sneakers earn APY but cannot be sold; the owner chooses between yield and liquidity.
-5. **Consumable burn loop:** health decay + energy costs create permanent demand for mod NFTs — every repair kit, surge, boost capsule, and forge stone is destroyed on use, recycling demand back into the primary mod store and the secondary marketplace.
+5. **Consumable burn loop:** health decay + energy costs create permanent demand for mod NFTs — every repair kit, surge, boost capsule, and service kit is destroyed on use, recycling demand back into the primary mod store and the secondary marketplace.
 6. **Level → Skill loop:** playing earns XP → levels unlock skill NFTs (one free, extra copies cheap) → passive skills raise earn rate, consumable skills burn on use — feeding the same demand loop while gating the strongest boosts behind real activity.
 
 ## Sustainability guardrails

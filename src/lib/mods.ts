@@ -97,7 +97,7 @@ export const ABILITY_LABELS: Record<number, string> = {
   0: "Repair kit — full health restore, burns on use",
   1: "Surge — instant activation, bypasses cooldown (2 energy)",
   2: "Boost capsule — temporary earn-rate boost for 24h (1 energy)",
-  3: "Forge stone — free forge level (2 energy)",
+  3: "Service kit — restores a worn veSneaker to pristine condition",
   4: "Overdrive — stronger earn-rate boost for 48h (3 energy)",
   5: "Stim pack — instant energy refill, burns on use",
   6: "Lucky repair — full health restore + boost, burns on use (1 energy)",
@@ -156,12 +156,10 @@ export type WorkshopBonusSnapshot = {
   appraisalBonusBps: bigint;
   stakingBoostBps: bigint;
   skillBonusBps: bigint;
-  rarityBonus: number;
   autoActive: boolean;
   skinOverride: number;
   /** Live wear of the pair, 5000–10000 bps. */
   conditionBps: number;
-  nextForgeCost: bigint;
   tempBoostBps: number;
   boostExpiresAt: number;
 };

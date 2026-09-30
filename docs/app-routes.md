@@ -136,7 +136,7 @@ vector UI icons and the PWA icon are separate from sneaker artwork.
 | `useStakingVault` | Staking reads + `depositPOL`/`withdrawPOL`/`claimPOLRewards`/`stake`/`unstake` |
 | `useMarketplace` | Marketplace reads + collection-aware list/buy/auction/offer txs + `approveNft` |
 | `useOwnedMods` | Reads the wallet's mod NFTs + traits (`balanceOf`, `tokenOfOwnerByIndex`, `traitsOf`) |
-| `useWorkshop` | Workshop reads (equipped slots, effective bonuses, forge) + equip/unequip/repairKit/forge txs |
+| `useWorkshop` | Workshop reads (equipped slots, effective bonuses, condition) + equip/unequip/repairKit/useAbility txs |
 | `useBadges` | Achievement registry reads + `claim` tx on `SneakerMods` |
 | `useModEconomy` | `SneakerSwap` + `ModRental` + `ModStore` txs (approveMod, createSwap/acceptSwap/cancelSwap, listRental/cancelRental/rent/equipRented/releaseEarly/returnExpired, buyMod) |
 | `useSneakerGame` | Game reads + `activate`/`claimPoints`/`repair`/`redeem` |
@@ -289,20 +289,23 @@ Conventions every hook follows:
   - **Unequip:** `unequip(sneakerId, slot)` returns the mod to the owner.
   - **Consumables:** `useAbility(sneakerId, modId)` burns a consumable mod and applies
     its `aux` ability — `0`/`255` repair kit (free full health), `1` surge (instant
-    activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` forge
-    stone (free level, 2⚡), `4` Overdrive (+`effectBps` earn for 48h, 3⚡),
+    activation, 2⚡), `2` boost capsule (+`effectBps` earn for 24h, 1⚡), `3` service
+    kit (restores condition, free), `4` Overdrive (+`effectBps` earn for 48h, 3⚡),
     `5` Stim pack (instant energy refill, free), `6` Lucky repair (full health +
     `effectBps` boost for 24h, 1⚡). `useRepairKit` remains as a repair-kit-only
     shortcut.
-  - **Forge:** `forge(sneakerId)` burns claimed veRUNE (`nextForgeCost = base × (level+1)`)
-    for permanent +rarity/+earn-rate levels.
+  - **Care:** every veSneaker runs a 365-day season. `conditionBps(tokenId)` decays
+    linearly from 10000 to `conditionFloorBps` (5000) and scales the pair's rarity, so
+    wear drags the earn rate, the appraisal, and the tab power score down together. A
+    repair kit (aux `0`/`255`) restores health **and** condition; the service kit
+    (aux `3`) restores condition only. Neither costs energy. Mods never expire.
 - **Reads:** `equipped(sneakerId, slot)` per slot plus the bonus snapshot
   (`earnBonusBps`, `wearReductionBps`, `repairDiscountBps`, `appraisalBonusBps`,
-  `stakingBoostBps`, `skillBonusBps`, `autoActive`, `skinOverride`, `forgeLevel`,
-  `nextForgeCost`, `tempBoostBps`, `boostExpiresAt`).
+  `stakingBoostBps`, `skillBonusBps`, `autoActive`, `skinOverride`, `conditionBps`,
+  `tempBoostBps`, `boostExpiresAt`, `lastServiceAt`).
 - **Dev notes:** sneakers with equipped mods cannot be listed or auctioned — the UI
-  shows the equipped state so users can unequip first. Rented mods equip through
-  `ModRental.equipRented`, not `equip`.
+  shows the equipped state so users can unequip first. There is no rental path —
+  mods are bought, equipped, unequipped, sold, or gifted as plain ERC-721 transfers.
 
 ### `/badges` — Achievement badges
 

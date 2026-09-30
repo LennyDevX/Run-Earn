@@ -95,12 +95,12 @@ contract SneakerAppraiser is AccessControl {
     // ─────────────────────────── Views ───────────────────────────
 
     /// @notice Estimate the POL value of a SneakerMint NFT.
-    /// @dev Returns the EFFECTIVE rarity: base rarity plus forge levels gained
+    /// @dev Returns the EFFECTIVE rarity: base rarity scaled by live wear.
     ///      in the workshop, capped at 100. Skin mods add a percentage bonus on
     ///      top of the calculated value.
     /// @param tokenId The NFT token ID to appraise.
     /// @return estimatedValue The estimated POL value in wei.
-    /// @return rarity The effective rarity score (0-100), including forge bonus.
+    /// @return rarity The effective rarity score (0-100), after wear.
     /// @return tier The NFT tier (0=Common, 1=Rare, 2=Epic, 3=Mythic).
     function appraise(uint256 tokenId)
         external

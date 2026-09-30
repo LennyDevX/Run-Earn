@@ -27,14 +27,14 @@ item<N>_<Slot><EffectField><Tier>.png
 | Upper | ✅ `Item2_…Common.png` | ✅ `Item2_…Rare.png` | ✅ `Item2_…Epic.png` | ✅ `Item1_…Mythic.png` |
 | Lining | ✅ `Item1_LiningRepairDiscountBps.png` | ✅ `Item1_…Rare.png` | ✅ `Item1_…Epic.png` | ✅ `Item1_…Mythic.png` |
 | Skin | ✅ `Item1_SkinAppraisalBonusBpsCosmeticOverride.png` | ✅ `Item2_…Rare.png` | ✅ `Item3_…Epic.png` | ✅ `Item4_…Mythic.png` |
-| Core | — | — | — | — |
+| Core | ✅ `Item1_CoreAutoActive.png` | ✅ `Item2_…Rare.png` | ✅ `Item3_…Epic.png` | ✅ `Item4_…Mythic.png` |
 | Boost | — | — | — | — |
 | Skill | — | — | — | — |
 | Consumables (7) | — | — | — | — |
 | Passive skills (3) | — | — | — | — |
 
-**16 of 28 equippable artworks are done** (4 slots × 4 tiers). Core, Boost, and
-Skill remain, plus the 7 consumables and 3 passive skill chips.
+**20 of 28 equippable artworks are done** (5 slots × 4 tiers). Boost and Skill
+remain, plus the 7 consumables and 3 passive skill chips.
 
 > **Naming note:** the later batches use a capital `Item<N>_` prefix while the
 > Sole batch uses lowercase `item<N>_`. Both are referenced by their exact
@@ -248,14 +248,14 @@ mint energy inside, a chrome band around the middle, and a small analog timer
 dial on the side showing a 24-hour arc.
 ```
 
-### 3.4 Forge Stone — `aux 3`
+### 3.4 Service Kit — `aux 3`
 
-> Free forge level without paying veRUNE. Costs 2 energy.
+> Restores a worn veSneaker to pristine condition. No energy cost.
 
 ```text
-A raw ore fragment: a jagged crystal shard veined with molten gold running
-through its cracks, resting on a small anvil-shaped base plate, with heat
-shimmer rising off the glowing veins.
+A sneaker care kit: a folded microfibre cloth beside a slim maintenance
+canister, a soft-bristle brush, and a small glowing mint vial of conditioner,
+arranged on a compact hexagonal tray with a stitch-pattern emblem.
 ```
 
 ### 3.5 Overdrive — `aux 4`
@@ -342,5 +342,5 @@ engraved chevron marks around the rim.
 | `--color-brand` | `#48d5ff` | `#007b9e` | Primary rim light, Rare accents |
 | `--color-mint` | `#4ce5c0` | `#0d9488` | Healing, energy, positive effects |
 | `--color-astra` | `#c17aff` | `#7835b8` | Epic accents, plasma |
-| `--color-sol` | `#ffc84d` | `#875000` | Mythic trim, forge gold |
+| `--color-sol` | `#ffc84d` | `#875000` | Mythic trim, solar gold |
 | `--color-magma` | `#ff705e` | `#ff705e` | Consumable danger, Overdrive |

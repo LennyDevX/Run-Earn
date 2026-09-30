@@ -21,7 +21,7 @@ export type VeSneakerFamily = {
 ///   scaled by `powerOf` (rarity) and the tier base rate.
 /// - **Staking APY** — added to the vault rate while the pair is locked:
 ///   Common +0.5% · Rare +0.8% · Epic +1.5% · Mythic +1.8%, inside the 8% cap.
-/// - **Tab power** — `rarity + forge×5 + equippedMods×5` (max 100). Power sets
+/// - **Tab power** — `rarity × condition + equippedMods×5` (max 100). Power sets
 ///   the boost ceiling (`50 + power` bps, max 1.50%) and the points per tap
 ///   (×1 to ×4) in the daily tab challenge.
 export const VE_SNEAKER_FAMILIES: readonly VeSneakerFamily[] = [
@@ -41,7 +41,7 @@ export const VE_SNEAKER_FAMILIES: readonly VeSneakerFamily[] = [
     design: 1,
     tagline: "A solar flare built for the next run.",
     capability:
-      "Rare runner — the accessible entry point. Mines at the rare tier rate, adds +0.8% staking APY when locked, and starts with 45 tab power for a +0.95% ceiling. Forge levels and equipped mods carry it the rest of the way.",
+      "Rare runner — the accessible entry point. Mines at the rare tier rate, adds +0.8% staking APY when locked, and starts with 45 tab power for a +0.95% ceiling. Equipped mods and regular servicing carry it the rest of the way.",
   },
   {
     id: "luna",

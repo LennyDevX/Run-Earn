@@ -58,12 +58,12 @@
 /// Each slot is priced off the Sole baseline — **tier sets the price, and every
 /// new slot is a step above the last**:
 ///
-/// | Tier   | Sole (base) | Upper (+15%) | Lining (+5%) | Skin (+10%) |
-/// | ------ | ----------- | ------------ | ------------ | ----------- |
-/// | Common | 100 POL     | 115 POL      | 121 POL      | 133 POL     |
-/// | Rare   | 200 POL     | 230 POL      | 242 POL      | 266 POL     |
-/// | Epic   | 300 POL     | 345 POL      | 362 POL      | 398 POL     |
-/// | Mythic | 450 POL     | 518 POL      | 544 POL      | 598 POL     |
+/// | Tier   | Sole (base) | Upper (+15%) | Lining (+5%) | Skin (+10%) | Core (+10%) |
+/// | ------ | ----------- | ------------ | ------------ | ----------- | ----------- |
+/// | Common | 100 POL     | 115 POL      | 121 POL      | 133 POL     | 146 POL     |
+/// | Rare   | 200 POL     | 230 POL      | 242 POL      | 266 POL     | 293 POL     |
+/// | Epic   | 300 POL     | 345 POL      | 362 POL      | 398 POL     | 438 POL     |
+/// | Mythic | 450 POL     | 518 POL      | 544 POL      | 598 POL     | 658 POL     |
 ///
 /// The on-chain `ModStore` design price always wins when the store is live.
 ///
@@ -316,13 +316,74 @@ export const SKIN_ITEMS: readonly ModItem[] = [
   },
 ] as const;
 
-/// Full catalog. Slots 4–6 (Core, Boost, Skill) are drawn next — append them
-/// here and the gallery renders them without code changes.
+/// Slot 4 — Core. Upgrades the reactor so the earning window never closes on
+/// its own: while a Core is equipped the pair keeps mining without a manual
+/// daily activation.
+///
+/// The effect is **boolean** (`autoActive`), not a magnitude, so `effectBps` is
+/// zero for every tier — only the price and the artwork escalate.
+///
+/// **Price assumption:** +10% over the matching Skin tier, matching the most
+/// recent step in the ladder. Confirm or adjust the increment.
+export const CORE_ITEMS: readonly ModItem[] = [
+  {
+    id: "core-common",
+    name: "Pulse Ring",
+    slot: 4,
+    tier: 0,
+    rarity: 30,
+    effectBps: 0,
+    pricePol: "146",
+    imageSrc: "/items/Item1_CoreAutoActive.png",
+    description:
+      "Single-ring gyroscopic core with a dim cyan heart and exposed mint coils. Keeps the earning window open so the pair mines without a manual activation.",
+  },
+  {
+    id: "core-rare",
+    name: "Vector Core",
+    slot: 4,
+    tier: 1,
+    rarity: 55,
+    effectBps: 0,
+    pricePol: "293",
+    imageSrc: "/items/Item2_CoreAutoActiveRare.png",
+    description:
+      "Two counter-rotating rings around a bright cyan core. The everyday pick once you stop wanting to log in every 24 hours just to keep the pair earning.",
+  },
+  {
+    id: "core-epic",
+    name: "Flux Reactor",
+    slot: 4,
+    tier: 2,
+    rarity: 75,
+    effectBps: 0,
+    pricePol: "438",
+    imageSrc: "/items/Item3_CoreAutoActiveEpic.png",
+    description:
+      "Three rings with a violet plasma heart and energy arcing between them. Auto-activation stays reliable through streaks and repairs.",
+  },
+  {
+    id: "core-mythic",
+    name: "Apex Reactor",
+    slot: 4,
+    tier: 3,
+    rarity: 92,
+    effectBps: 0,
+    pricePol: "658",
+    imageSrc: "/items/Item4_CoreAutoActiveMythic.png",
+    description:
+      "Gold housing around a blinding white-mint core, throwing off sparks. The most elaborate reactor in the line — your Mythic runner never goes idle.",
+  },
+] as const;
+
+/// Full catalog. Slots 5–6 (Boost, Skill) are drawn next — append them here and
+/// the gallery renders them without code changes.
 export const MOD_ITEMS: readonly ModItem[] = [
   ...SOLE_ITEMS,
   ...UPPER_ITEMS,
   ...LINING_ITEMS,
   ...SKIN_ITEMS,
+  ...CORE_ITEMS,
 ];
 
 export const MOD_ITEM_SLOTS: readonly number[] = Array.from(

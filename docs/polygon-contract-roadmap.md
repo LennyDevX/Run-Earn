@@ -26,7 +26,7 @@ Airen targets Polygon with standard EVM tooling. The current foundation is a Har
 
 ### 6. `SneakerGame` gamification
 
-`contracts/SneakerGame.sol` runs the retention loop around three stats — **power** (rarity-scaled veRUNE mining, Common 100 → Mythic 800/day base), **health** (decays 1/day of real time plus wear per activation; at 0 the sneaker stops mining until repaired for 50 veRUNE or a burned repair kit), and **energy** (charges that fuel consumable abilities, refilled on each manual activation). Daily streaks add +1%/day (cap +50%), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. `SneakerWorkshop.useAbility` burns consumable mod NFTs for repair kits, surge activations, 24h boost capsules, forge stones, 48h Overdrives, Stim pack energy refills, and Lucky repairs — each use destroys the NFT, driving repeat demand. Tokenomics: `docs/veRune-tokenomics.md`.
+`contracts/SneakerGame.sol` runs the retention loop around three stats — **power** (rarity-scaled veRUNE mining, Common 100 → Mythic 800/day base), **health** (decays 1/day of real time plus wear per activation; at 0 the sneaker stops mining until repaired for 50 veRUNE or a burned repair kit), and **energy** (charges that fuel consumable abilities, refilled on each manual activation). Daily streaks add +1%/day (cap +50%), and `redeem` converts veRUNE to REN at 100:1 once the admin funds and enables the pool. `SneakerWorkshop.useAbility` burns consumable mod NFTs for repair kits, surge activations, 24h boost capsules, service kits, 48h Overdrives, Stim pack energy refills, and Lucky repairs — each use destroys the NFT, driving repeat demand. Tokenomics: `docs/veRune-tokenomics.md`.
 
 ### 7. Subgraph activity index
 
@@ -49,7 +49,7 @@ existing design indices.
 ### 9. Upgrade economy — shipped in v1.0
 
 - `contracts/SneakerMods.sol` — ERC-721 mod/badge collection with on-chain achievement claims (including `ReqKind.PlayerLevel` skill claims).
-- `contracts/SneakerWorkshop.sol` — seven-slot equipment (six upgrade slots + passive Skill slot), repair kits, and the veRUNE forge (implements `ISneakerBoosts`).
+- `contracts/SneakerWorkshop.sol` — seven-slot equipment (six upgrade slots + passive Skill slot), repair and service kits, and the 365-day condition cycle (implements `ISneakerBoosts`).
 - `contracts/SneakerSwap.sol` — atomic NFT↔NFT trades (± POL) across collections.
 - `contracts/ModRental.sol` — time-boxed mod rentals paid in POL.
 - `contracts/ModStore.sol` — primary sale of premium mod designs, with `requiredLevel` gates.
@@ -75,7 +75,7 @@ personal data stay off-chain.
 
 ## Planned contracts
 
-11. **Sneaker upgrades:** shipped — `SneakerWorkshop.forge` burns veRUNE for permanent rarity/earn-rate levels, and equipped mods add slot-based effects on top.
+11. **Sneaker upgrades:** shipped — equipped mods add slot-based effects on top of the pair's base traits, and the 365-day condition cycle means keeping it serviced is what holds those effects at full strength.
 12. **Benefits vault:** separate `SneakerVault` for discount, special-offer, early-access, and gift eligibility.
 13. **REN redemption pool:** fund `SneakerGame` with REN and enable `redeem(points)` so veRUNE converts to the live token at `redemptionRate`.
 14. **Treasury and fee splitter:** distribute protocol-fee shares (the 2.5% marketplace fee, rental fee, and store proceeds) to rewards, operations, and reserves.
