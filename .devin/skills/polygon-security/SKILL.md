@@ -12,18 +12,17 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - `SneakerMint.sol`: ERC-721 for AI-generated sneaker artwork with role-authorized production minting. Tiers 0–3 (Common, Rare, Epic, Mythic).
 - `RENToken.sol`: ERC-20 `REN`, 18 decimals, 100M hard cap, role-gated minting.
 - `SneakerStaking.sol`: native POL vault with separate principal/reward accounting, rarity-based SneakerMint NFT APY boosts (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%), workshop Boost-mod APY via `setBoosts`, and legacy REN NFT rewards.
-- `SneakerAppraiser.sol`: read-only NFT valuation (effective rarity incl. forge + Skin bonus via `setBoosts`). Admin-configurable parameters.
+- `SneakerAppraiser.sol`: read-only NFT valuation (effective rarity incl. condition + Skin bonus via `setBoosts`). Admin-configurable parameters.
 - `SneakerMarketplace.sol`: multi-collection fixed-price listings, English auctions, and escrowed POL offers with a 2.5% fee, staked-NFT and equipped-mod sale guards.
 - `SneakerGame.sol`: virtual veRUNE points (24h activation, streaks, power/health/energy, repair) with a funded REN redemption path.
 - `VeSneakerStore.sol`: on-demand primary sale of virtual sneakers for POL, with per-design pricing, supply caps, and a treasury payout.
 - `SneakerMods.sol`: ERC-721 mod/badge collection with on-chain achievement claims.
-- `SneakerWorkshop.sol`: seven-slot equip escrow (incl. passive Skill slot), consumable `useAbility` burns, veRUNE forge.
+- `SneakerWorkshop.sol`: seven-slot equip escrow (incl. passive Skill slot), consumable `useAbility` burns, veRUNE condition.
 - `SneakerSwap.sol`: atomic NFT↔NFT trades ± POL.
-- `ModRental.sol`: POL-paid mod rentals with escrow custody and expiry return.
 - `ModStore.sol`: primary sale of premium/consumable mods for POL with `requiredLevel` gates.
 - `PlayerProgress.sol`: live-state XP/levels (counters in game/marketplace/workshop, staking principal) + public username/NFT-avatar identity.
 - `FeeSplitter.sol`: pro-rata POL fee distribution to weighted recipients (weights must sum to 100%).
-- `SneakerVault.sol`: live-state perks (store discounts, one-time access claims) gated by tier/forge/POL/level/mod signals; read-only for funds.
+- `SneakerVault.sol`: live-state perks (store discounts, one-time access claims) gated by tier/condition/POL/level/mod signals; read-only for funds.
 - `/api/generate-sneaker`: server-only Gemini image generation for the mint studio.
 - `/api/subgraph`: server-only proxy for the `nuxgraph` Studio deployment.
 - `/api/pol-price`: server-only proxy for the Uniswap Trading API POL/USD quote.
@@ -72,7 +71,7 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Confirm veRUNE is tracked in contract state only — it must never be minted as a transferable token by this contract.
 - Verify `activate` enforces the 24h cooldown, ownership, and the worn-out guard; health (`durability` minus elapsed `HEALTH_DECAY_PERIOD` units) cannot underflow.
 - Confirm accrual stops at the 24h window boundary and at the death timestamp (`lastDecayAt + liveHealth × 24h`), and that already-earned points remain claimable.
-- Verify the power multiplier (`5000 + effectiveRarity × 100` bps) bounds — rarity/forge bonuses cannot push it past the 1.5x cap at rarity 100.
+- Verify the power multiplier (`5000 + effectiveRarity × 100` bps) bounds — rarity/condition bonuses cannot push it past the 1.5x cap at rarity 100.
 - Verify `spendEnergy`, `repairFromWorkshop`, `activateFromWorkshop`, and `spendPoints` revert for every caller except the configured workshop.
 - Confirm the surge path (`activateFromWorkshop`) does NOT refill energy — otherwise it would be a free-energy exploit.
 - Verify energy capacity (`2 + effectiveRarity/20`) and that `spendEnergy` cannot underflow.
@@ -87,12 +86,11 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Verify `claim` achievements check real on-chain requirements and enforce one claim per wallet per achievement.
 - Confirm `equip` escrows the mod (`equippedTo`), rejects consumables, enforces one mod per slot, and only the sneaker owner (or active renter via `rentalSource`) can equip.
 - Verify equipped mods cannot be burned, listed, or swapped while escrowed, and `unequip` returns the exact mod to its owner.
-- Confirm `useAbility` validates `consumable` + `aux` kind (0/255 repair, 1 surge, 2 boost, 3 forge stone, 4 Overdrive 48h, 5 Stim refill, 6 Lucky repair), spends the correct energy cost via `game.spendEnergy`, and ALWAYS burns the mod — no ability may be reusable.
+- Confirm `useAbility` validates `consumable` + `aux` kind (0/255 repair, 1 surge, 2 boost, 3 condition stone, 4 Overdrive 48h, 5 Stim refill, 6 Lucky repair), spends the correct energy cost via `game.spendEnergy`, and ALWAYS burns the mod — no ability may be reusable.
 - Verify the Stim pack (`refillEnergyFromWorkshop`) is workshop-only and reverts on a dead sneaker — free energy must never resurrect a worn-out sneaker.
 - Verify `tempBoostBps`/`boostExpiresAt` expire correctly and a new capsule refreshes rather than stacking indefinitely.
-- Confirm `forge` burns exactly `forgeCostPoints` veRUNE via `spendPoints` and that forge-stone free levels cannot be replayed.
+- Confirm `condition` burns exactly `conditionCostPoints` veRUNE via `spendPoints` and that condition-stone free levels cannot be replayed.
 - Verify `SneakerSwap` is atomic: both NFTs (± POL) move in one transaction or the whole thing reverts; expired/counterparty-owned swaps cannot be accepted; escrow returns on `cancel`.
-- Confirm `ModRental` escrow cannot be withdrawn mid-rental by the owner, expiry lets anyone return the mod, and the renter's workshop equip rights die with the rental.
 - Verify `ModStore`/`VeSneakerStore` hold `MINTER_ROLE` only on their target collection and cannot mint outside their design catalog.
 - Confirm `workshop.setRentalSource`, `setWorkshop`, and `setBoosts` are admin-only — a wrong address would hijack equip rights or fake boosts.
 
@@ -106,19 +104,23 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Confirm `setProgress` on mods/both stores is admin-only — a malicious progress contract would fake levels.
 - Confirm `setVault` on both stores is admin-only — a malicious vault could fake discounts (capped at 50% by `MAX_DISCOUNT_BPS`).
 - Verify a zero-address vault means full price (fail-closed to full price, never to a free mint) and the discounted amount can never be zero.
+- Confirm `setDesignRequiredPerk` is admin-only, requires the vault to be set, and rejects perk ids above `perkCount - 1`; a gated design must fail closed (`*: perk required`) when the buyer is not eligible, in both `buy`/`buyBatch` and `quote`.
 
 ### Fee distribution (FeeSplitter)
 
 - Confirm recipient weights must sum to exactly 10_000 bps — no fee can be stranded by an incomplete split.
 - Verify `distribute()` is callable by anyone (deterministic split, no griefing vector) and is `nonReentrant`.
 - Confirm the last recipient absorbs division dust so the distributed sum is exact.
-- Verify `setRecipients` rejects zero addresses, zero weights, and empty lists.
+- Verify `setRecipients` rejects zero addresses, zero weights, empty lists, and more than `MAX_RECIPIENTS`.
 - Confirm the splitter never holds user principal — it only receives explicit fee withdrawals.
+- Confirm `withdrawFeesToCollector` on the marketplace/rental only moves `accumulatedFees` (never seller proceeds or offer escrow) and reverts when the collector is the zero address.
+- Recipients must be POL-accepting wallets; a contract that rejects native POL reverts the whole `distribute()` call, so verify each recipient before enabling mainnet.
 
 ### Benefits vault (SneakerVault)
 
-- Verify all eligibility is derived from live contract state (tier via `traitsOf`, forge via `rarityBonus`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf`) — never client-supplied.
+- Verify all eligibility is derived from live contract state (tier via `traitsOf`, condition via `workshop.conditionLevel`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf`) — never client-supplied.
 - Confirm gates are additive: a perk with several non-zero gates requires all of them.
+- Confirm perk ids must be sequential (`perkId <= perkCount`), the catalog is capped at `MAX_PERKS`, and `bestDiscountBps` reads each signal at most once.
 - Verify discounts cap at 50% (`MAX_DISCOUNT_BPS`) and inactive perks return 0 (full price).
 - Confirm access claims are one-per-wallet-per-perk and revert on any failed gate.
 - Verify the vault never holds POL or NFTs — it is read-only for funds.
@@ -183,3 +185,31 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 5. Verify subgraph events after indexing and compare them against RPC receipts.
 6. Report residual custody, solvency, economic, key-management, and indexing risks.
 7. Do not mark financial logic production-ready without multisig administration and independent smart-contract/economic review.
+
+
+## Daily tab arena invariants (SneakerTabArena)
+
+- `startSession` must require **both** a non-zero POL principal and
+  `staking.stakedOwner(runnerId) == caller`. Never relax one of the two.
+- The multiplier is **recomputed on-chain** in `completeSession`. A signed
+  multiplier must never be trusted — the server only attests the tap count.
+- The signed score is clamped to `multiplier * MAX_TAPS_PER_SESSION`. Keep that
+  clamp even if the ladder changes.
+- Each session consumes a per-wallet nonce. A signature binds
+  `(arena, player, nonce, points, deadline)` and expires.
+- Reject malleable signatures (`s > secp256k1n/2`) and `v` outside 27/28.
+- `SneakerStaking.setTabBoost` is `TAB_ARENA_ROLE`-gated and re-clamps to
+  `maxTabBoostBps`. The tab term is added **before** `maxApyBps`, so the hard cap
+  still bounds total liability.
+- `ARENA_SIGNER_PRIVATE_KEY` is server-only. Never expose it as `NEXT_PUBLIC_*`.
+
+## veSneaker condition invariants (SneakerWorkshop)
+
+- Condition decays from `10000` to `conditionFloorBps` and never below.
+- A pair with `lastServiceAt == 0` reads pristine — an unused sneaker must not
+  wear.
+- `conditionBps` is a pure function of `lastServiceAt` and `block.timestamp`; it
+  must never revert for an existing token.
+- Every consumer that scales rarity by condition must divide by `BASIS_POINTS`
+  (10000) and clamp to 100.
+- Mods never expire. Do not add an expiry to `SneakerMods`.

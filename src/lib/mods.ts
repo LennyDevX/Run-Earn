@@ -159,7 +159,8 @@ export type WorkshopBonusSnapshot = {
   rarityBonus: number;
   autoActive: boolean;
   skinOverride: number;
-  forgeLevel: number;
+  /** Live wear of the pair, 5000–10000 bps. */
+  conditionBps: number;
   nextForgeCost: bigint;
   tempBoostBps: number;
   boostExpiresAt: number;

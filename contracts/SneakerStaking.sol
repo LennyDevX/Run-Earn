@@ -62,6 +62,17 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     uint256 public baseApyBps; // 280 = 2.8% base POL APY (sustainable rate)
     uint256 public perNftBonusBps; // flat per-NFT bonus (0 by default — boost is rarity-based)
     uint256 public maxApyBps; // 800 = 8% hard cap
+
+    /// @notice Role allowed to grant the time-boxed daily tab-challenge boost.
+    bytes32 public constant TAB_ARENA_ROLE = keccak256("TAB_ARENA_ROLE");
+
+    /// @notice owner => boost granted by a completed tab session, in basis points.
+    mapping(address => uint256) public tabBoostBps;
+    /// @notice owner => timestamp when the tab boost lapses.
+    mapping(address => uint64) public tabBoostExpiresAt;
+
+    /// @notice Ceiling the tab arena may grant per wallet (150 bps = 1.50%).
+    uint256 public maxTabBoostBps = 150;
     uint256 public minLockSeconds; // 2_592_000 = 30 days minimum lock
     uint64[4] public tierBonusBps; // per-rarity-tier bonus: [50, 80, 150, 180] bps
 
@@ -87,6 +98,8 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     event NFTRecovered(address indexed to, uint256 indexed tokenId);
     event ERC20Recovered(address indexed token, address indexed to, uint256 amount);
     event BoostsUpdated(address indexed boosts);
+    event TabBoostSet(address indexed owner, uint256 boostBps, uint64 expiresAt);
+    event MaxTabBoostUpdated(uint256 maxTabBoostBps);
 
     constructor(
         address admin,
@@ -131,6 +144,36 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     function setBoosts(address boosts_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         boosts = ISneakerBoosts(boosts_);
         emit BoostsUpdated(boosts_);
+    }
+
+    /// @notice Grant a time-boxed APY boost after a completed tab session.
+    /// @dev Callable only by the tab arena. The boost is added to the requested
+    ///      APY **before** the `maxApyBps` clamp, so it can never push a wallet
+    ///      above the hard cap, and it lapses on its own — it never renews.
+    ///      `boostBps` is capped by `maxTabBoostBps` so a compromised or buggy
+    ///      arena cannot mint an unbounded liability.
+    function setTabBoost(address owner, uint256 boostBps, uint64 expiresAt)
+        external
+        onlyRole(TAB_ARENA_ROLE)
+    {
+        require(owner != address(0), "SneakerStaking: zero owner");
+        require(boostBps <= maxTabBoostBps, "SneakerStaking: tab boost too high");
+        require(expiresAt > block.timestamp, "SneakerStaking: boost already expired");
+        tabBoostBps[owner] = boostBps;
+        tabBoostExpiresAt[owner] = expiresAt;
+        emit TabBoostSet(owner, boostBps, expiresAt);
+    }
+
+    /// @notice Current tab boost, or zero once it has lapsed.
+    function activeTabBoostBps(address owner) external view returns (uint256) {
+        return _tabBoostBps(owner);
+    }
+
+    /// @notice Update the ceiling the arena may grant (admin).
+    function setMaxTabBoostBps(uint256 maxTabBoostBps_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(maxTabBoostBps_ <= maxApyBps, "SneakerStaking: tab cap above APY cap");
+        maxTabBoostBps = maxTabBoostBps_;
+        emit MaxTabBoostUpdated(maxTabBoostBps_);
     }
 
     /// @notice Add POL to the reward reserve. Principal deposits are separate.
@@ -427,7 +470,8 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
         uint256 requested = baseApyBps +
             position.lockedCount * perNftBonusBps +
             position.tierBonusBps +
-            _modBoostBps(owner);
+            _modBoostBps(owner) +
+            _tabBoostBps(owner);
         return requested > maxApyBps ? maxApyBps : requested;
     }
 
@@ -438,6 +482,16 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
         for (uint256 i = 0; i < tokenIds.length; i++) {
             total += boosts.stakingBoostBps(tokenIds[i]);
         }
+    }
+
+    /// @notice Active daily tab-challenge boost, or zero once it lapses.
+    /// @dev Added to `requested` **before** the `maxApyBps` clamp in
+    ///      `_effectiveApyBps`, so it can never lift a wallet past the hard cap.
+    ///      The arena writes it for exactly `tabBoostSeconds` after a completed
+    ///      session, and it never auto-renews.
+    function _tabBoostBps(address owner) internal view returns (uint256) {
+        if (block.timestamp >= tabBoostExpiresAt[owner]) return 0;
+        return tabBoostBps[owner];
     }
 
     function onERC721Received(

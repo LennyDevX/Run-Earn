@@ -40,7 +40,7 @@ contract PlayerProgressTest is Test {
         staking = new SneakerStaking(admin, address(nft), address(ren), 1000 ether, 280, 0, 800, [uint64(50), 80, 150, 180], 30 days);
         game = new SneakerGame(admin, address(nft), address(ren), tierBase, 100, 10, 1, 50 ether, 100 ether);
         mods = new SneakerMods("Airen Mods", "AMOD", admin, address(nft), address(game), address(staking));
-        workshop = new SneakerWorkshop(admin, address(nft), address(mods), address(game), address(staking), 250 ether, 5, 250, 10);
+        workshop = new SneakerWorkshop(admin, address(nft), address(mods), address(game), address(staking), 5_000, 365 days);
         appraiser = new SneakerAppraiser(admin, address(nft), 0.5 ether, [uint256(0), 1 ether, 3 ether, 8 ether], 0.01 ether, 10_000);
         marketplace = new SneakerMarketplace(admin, address(nft), address(appraiser), address(staking), 250, 12_000, admin);
 

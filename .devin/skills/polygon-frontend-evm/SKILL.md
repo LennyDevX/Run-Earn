@@ -22,6 +22,7 @@ Use this skill for wallet UX, RPC reads, native POL staking, SneakerMint NFT min
 | `/staking` | `StakingVaultDashboard` | `useStakingVault`, `useNftAppraisal` |
 | `/defi` | `StakingVaultDashboard`, `PolygonTransferCard` | same as `/staking` |
 | `/roadmap` | static milestones | — |
+| `/play` | `TabGameScreen` → `TabChallengePanel` | `useOwnedSneakers` |
 
 Full route documentation: `docs/app-routes.md`.
 
@@ -35,7 +36,6 @@ Full route documentation: `docs/app-routes.md`.
 - Mods: `SneakerMods` at `NEXT_PUBLIC_SNEAKER_MODS_ADDRESS`.
 - Workshop: `SneakerWorkshop` at `NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS` — UI at `/workshop`.
 - Swap: `SneakerSwap` at `NEXT_PUBLIC_SNEAKER_SWAP_ADDRESS` — Trades tab at `/marketplace`.
-- Mod rental: `ModRental` at `NEXT_PUBLIC_MOD_RENTAL_ADDRESS` — Rentals tab at `/marketplace`.
 - Mod store: `ModStore` at `NEXT_PUBLIC_MOD_STORE_ADDRESS` — premium mods at `/collection`.
 - Subgraph proxy: `/api/subgraph?address=0x...` (see the `airen-subgraph-activity` skill).
 - AI mint route: `/api/generate-sneaker` (see the `airen-mint-studio` skill).
@@ -43,6 +43,8 @@ Full route documentation: `docs/app-routes.md`.
   [`docs/uniswap-price-feed.md`](../../docs/uniswap-price-feed.md). Server-only key; the
   browser must never call Uniswap directly (no CORS on the Trading API). Use the
   `usePolPrice` hook for USD hints.
+- Benefits vault: `SneakerVault` at `NEXT_PUBLIC_SNEAKER_VAULT_ADDRESS` — perks panel at `/defi`.
+- Fee splitter: `FeeSplitter` at `NEXT_PUBLIC_FEE_SPLITTER_ADDRESS` — distribution panel at `/defi`.
 - Subgraph server config: `THE_GRAPH_QUERY_URL`, `THE_GRAPH_QUERY_API_KEY`, `THE_GRAPH_SUBGRAPH_SLUG=nuxgraph`, `THE_GRAPH_SUBGRAPH_VERSION=0.1.0`.
 
 ## Hooks inventory and conventions
@@ -50,8 +52,46 @@ Full route documentation: `docs/app-routes.md`.
 `src/hooks/`: `useContractTransaction`, `useOwnedSneakers`, `useOwnedMods`,
 `useMintedSneakers`, `useWalletOverview`, `useNftAppraisal`, `useStakingVault`,
 `useMarketplace`, `useSneakerGame`, `useVeSneakerStore`, `useWorkshop`,
-`useBadges`, `useModEconomy`, `usePolPrice`, `useSubgraphActivity`. Wallet state
-lives in `Providers.tsx` via `usePolygonWallet`.
+`useBadges`, `useModEconomy`, `usePolPrice`, `useSubgraphActivity`,
+`useSneakerVault`, `useFeeSplitter`. Wallet state lives in `Providers.tsx` via
+`usePolygonWallet`.
+
+Tab challenge UI (`src/lib/tab-challenge.ts` is the single source of truth for
+the level ladder, power score, boost ceiling, and APY budget):
+`TabChallengeSection` on the home page, `TabChallengePanel` and
+`PlayerGameProfile` on `/game`, and `HoloSneakerCard` for the holographic NFT
+cards. Boost math must stay clamped by `STAKING_BUDGET.maxApyBps` (800 bps) and
+must never exceed `TAB_CHALLENGE.maxBoostBps` (150 bps).
+
+Signature gradient text: use the `.text-gradient` class (`.text-gradient-wide`
+for large display type) for hero and section titles instead of ad-hoc
+`bg-clip-text` gradients. Stops are theme-aware via `--gradient-from/via/to`.
+
+Item shop: `/workshop` renders `WorkshopWorkbench` — `ModItemGallery` (the mod
+NFT catalog with prices, artwork in `public/items/`, and buy/equip actions) on
+top of `WorkshopDashboard` (the loadout). `src/lib/mod-items.ts` is the catalog;
+the gallery matches on-chain `ModStore` designs by `slot` + `tier`, so a new item
+goes live by adding a `MOD_ITEMS` entry and calling `addDesign` with the same
+slot/tier — no frontend change needed. "Equip on a veSneaker" in the gallery
+raises a `focusRequest` that opens the matching slot picker in the dashboard.
+Item prices show a live USD hint via `usePolPrice`, same as `/collection`.
+
+Playable route: `/play` is the tab arena, rendering `TabGameScreen` →
+`TabChallengePanel` full-bleed. The launch loader is **global**, not part of the
+route: `GameLaunchProvider` (`src/components/GameLaunch.tsx`, mounted in
+`src/app/layout.tsx` inside `Providers`) exposes `useGameLaunch().launch(href)`
+and a `LaunchLink`. Hitting Start covers the viewport with `GameLaunchOverlay`
+for 6s, then pushes the route — so the loader appears *while navigating*, never
+while the route renders. Any new entry point into `/play` must use `LaunchLink`
+(or call `launch`), and `MobileNav` marks the item with `launch: true`.
+`GameLaunchOverlay` is pure CSS: a ring of `.spinner-block` divs lighting up in
+sequence (`pixel-chase`). Do not reintroduce bitmap or SVG sprite assets for it.
+
+Store purchases always quote on-chain: `useVeSneakerStore.buy` and
+`useModEconomy.buyMod` read `quote(designIndex, quantity)` with the connected
+account before sending, so vault discounts and perk gates are applied by the
+contract. `ProtocolBenefitsPanel` (`/defi`) surfaces perk eligibility, access
+claims, pending fees, and the recipient weights.
 
 Every hook must:
 
@@ -170,7 +210,6 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 5. Offers: `makeOffer(collection, tokenId, duration)` with `value` escrows POL; the NFT stays with its owner until `acceptOffer(offerId)`.
 6. Staked NFTs cannot be listed or auctioned — surface the "unstake first" error. Sneakers with equipped workshop mods cannot be listed — surface the "unequip first" error.
 7. `valueRecommendations(tokenId)` returns 4 on-chain tips; show them as guidance text.
-8. Mod economy tabs (`ModMarketTabs` + `useModEconomy`): mod listings under Mods, `ModRental` list/rent/return under Rentals, `SneakerSwap` create/accept/cancel under Trades. See the `airen-upgrade-economy` skill for the full flow map.
 
 ## Game UI flow (`/game`, `useSneakerGame` hook)
 
@@ -223,7 +262,29 @@ contract address first, and locks are keyed by `(collection, tokenId)`.
 - Verify `/marketplace` Rentals (list/rent/return) and Trades (create/accept/cancel swap) tabs on Amoy.
 - Verify `/game` activate (24h cooldown + energy refill), streak display, live health bar (time decay), power/energy stats, repair, claim points, and redemption gating on Amoy.
 - Verify `/workshop` equip/unequip across all seven slots (incl. the passive Skill slot), each `useAbility` consumable burn (repair/surge/boost/forge stone/Overdrive/Stim/Lucky), forge levels, and equipped-mod custody on Amoy.
-- Verify `/badges` achievement claims — including the "Level skills" section (free `PlayerLevel` claim gated by `PlayerProgress.levelOf`) — and `/collection` Astra/Sol/Luna image filters, stable store design indices, premium mod purchases, and `requiredLevel` gates on Amoy.
+- Verify `/badges` achievement claims — including the "Level skills" section (free `PlayerLevel` claim gated by `PlayerProgress.levelOf`) — and `/collection` Astra/Sol/Luna image filters, stable store design indices, premium mod purchases, `requiredLevel` gates, and vault discount/perk badges on Amoy.
+- Verify `/defi` benefits panel: perk eligibility flips when NFTs are sold or POL is unstaked, access claims are one per wallet, and the fee splitter shows pending/distributed POL with recipient weights.
 - Verify the Home carousel crossfades among Astra/Sol/Luna, pauses on hover/focus, supports manual controls, and stops auto-rotation for `prefers-reduced-motion`; verify owned token artwork uses `tokenURI`, not token-ID-derived art.
 - Verify `/profile`: username edit, avatar upload + NFT pick, on-chain level card (`progressOf`), skills list, and the Navbar `ProfileButton`.
 - **Mobile:** 320/390/430px + landscape + 768px tablet; bottom nav reachable on every route with correct `aria-current`; nothing hidden behind the bar; no horizontal overflow; reduced motion honoured; sheets trap focus and close on Escape; verify `/manifest.webmanifest`, `/favicon.ico`, `/apple-icon.png`, `/icon-192.png`, and `/icon-512.png` return 200 after generating the PWA icon assets.
+
+
+## Condition, gate, and the tab arena
+
+`HoloSneakerCard` takes `conditionBps` (not `forgeLevel`) and renders the wear
+bar: `conditionBand()` picks one of four colour bands and `conditionPercent()`
+sizes the fill relative to the 50% floor. Always pair the colour with the numeric
+percentage — wear must never be conveyed by colour alone.
+
+`useRunnerRoster` reads `conditionBps` and `equippedCount` from the workshop per
+sneaker and resolves them into the derived power score. `useArenaGate` mirrors
+the contract's two conditions (POL principal, locked runner) so `/play` can list
+exactly what is missing before a session starts.
+
+`/play` blocked states, in order: `INSERT WALLET` → `READING ROSTER` →
+`GATE CLOSED` (with the unmet requirements as a checklist) → `NO VE SNEAKER`.
+
+`src/app/api/tab-session/route.ts` signs completed sessions. It is the only place
+`ARENA_SIGNER_PRIVATE_KEY` may be read — never expose it as `NEXT_PUBLIC_*`, and
+never sign a score the contract would reject (it clamps anyway, but the server
+should reject first).

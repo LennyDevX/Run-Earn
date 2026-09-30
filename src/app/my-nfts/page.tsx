@@ -17,7 +17,7 @@ export default function MyNftsPage() {
         <section className="flex flex-col gap-4 py-16">
           <span className="font-pixel text-[10px] text-mint">MY COLLECTION</span>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance md:text-5xl">
-            Your minted sneakers
+            Your <span className="text-gradient">minted sneakers</span>
           </h1>
           <p className="max-w-2xl leading-relaxed text-foreground/60">
             Every virtual sneaker NFT you have created with the AI studio.

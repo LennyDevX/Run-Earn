@@ -73,10 +73,10 @@ preferring explicit `eventType|action|type` for the label and
 | `SneakerMarketplace` | `ListingCreated`, `NFTSold`, `AuctionSettled`, `OfferAccepted` |
 | `SneakerGame` | `Activated`, `PointsClaimed`, `Repaired`, `Redeemed` |
 | `SneakerMods` | `ModMinted`, `ModBurned`, `AchievementClaimed` |
-| `SneakerWorkshop` | `ModEquipped`, `ModUnequipped`, `AbilityUsed`, `Forged` |
+| `SneakerWorkshop` | `ModEquipped`, `ModUnequipped`, `AbilityUsed`, `RepairKitUsed`, `Serviced` |
 | `SneakerSwap` | `SwapCreated`, `SwapAccepted`, `SwapCancelled` |
-| `ModRental` | `RentalListed`, `ModRented`, `ModReturned`, `RentalExtended`, `RentalCancelled` |
 | `ModStore` | `ModPurchased` |
+| `SneakerTabArena` | `SessionStarted`, `SessionCompleted`, `SessionAbandoned` |
 
 Until these are indexed, the dashboards still show RPC state and the local optimistic
 entries from `addLocalActivity(label, hash)`.

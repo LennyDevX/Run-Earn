@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import PolygonLogo from "@/components/PolygonLogo";
 import SneakerCarousel from "@/components/SneakerCarousel";
+import TabChallengeSection from "@/components/TabChallengeSection";
 
 const TRAITS = [
   "Astra",
@@ -104,7 +105,7 @@ export default function Home() {
             >
               Choose your
               <br />
-              <span className="text-brand">orbit.</span>
+              <span className="text-gradient text-gradient-wide">orbit.</span>
               <br />
               <span className="text-luna">Run. Earn.</span>
             </h1>
@@ -181,7 +182,7 @@ export default function Home() {
           <span className="font-pixel text-[10px] text-brand">
             THE COLLECTION
           </span>
-          <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+          <h2 className="text-gradient max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             Built for your next run.
           </h2>
         </div>
@@ -208,6 +209,8 @@ export default function Home() {
         </div>
       </section>
 
+      <TabChallengeSection />
+
       {/* DeFi band */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-16 md:pb-24">
         <div className="rounded-2xl border border-foreground/8 bg-surface px-6 py-12 sm:px-8 sm:py-16 md:px-16 dark:bg-linear-to-b dark:from-ink dark:to-ink-soft dark:text-paper dark:ring-paper/10">
@@ -215,7 +218,7 @@ export default function Home() {
             <span className="font-pixel text-[10px] text-brand">
               MOTOR DEFI
             </span>
-            <h2 className="max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+            <h2 className="text-gradient max-w-xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
               Your sneakers work while you walk
             </h2>
             <p className="max-w-lg leading-relaxed text-foreground/60 dark:text-paper/60">
@@ -229,7 +232,7 @@ export default function Home() {
                 key={stat.label}
                 className="flex flex-col gap-2 rounded-2xl border border-foreground/10 bg-background p-6 transition-colors duration-300 hover:border-brand/40 dark:border-paper/10 dark:bg-paper/5 dark:hover:border-mint/40"
               >
-                <span className="text-3xl font-bold tracking-tight text-brand dark:text-mint">
+                <span className="text-gradient text-3xl font-bold tracking-tight">
                   {stat.value}
                 </span>
                 <span className="text-sm text-foreground/60 dark:text-paper/60">{stat.label}</span>
@@ -246,7 +249,7 @@ export default function Home() {
           <span className="font-pixel text-[10px] text-brand dark:text-polygon-purple">
             POWERED BY POLYGON
           </span>
-          <h2 className="max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+          <h2 className="text-gradient max-w-2xl text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             The EVM network that makes frictionless collecting possible
           </h2>
           <p className="max-w-xl leading-relaxed text-foreground/60">
@@ -260,7 +263,7 @@ export default function Home() {
               key={feature.title}
               className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
-              <span className="bg-linear-to-r from-brand to-mint bg-clip-text text-3xl font-bold tracking-tight text-transparent">
+              <span className="text-gradient text-3xl font-bold tracking-tight">
                 {feature.stat}
               </span>
               <h3 className="text-lg font-bold tracking-tight">

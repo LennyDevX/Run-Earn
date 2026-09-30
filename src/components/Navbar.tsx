@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import WalletButton from "@/components/WalletButton";
 import MoreSheet from "@/components/MoreSheet";
+import { LaunchLink } from "@/components/GameLaunch";
 import { usePolygonWallet } from "@/components/Providers";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -26,9 +27,14 @@ const MENU_GROUPS = [
     label: "Play",
     links: [
       {
+        href: "/game",
+        label: "Game profile",
+        description: "Your level, collection, mods, and daily streak.",
+      },
+      {
         href: "/workshop",
         label: "Workshop",
-        description: "Equip mods, burn kits, and forge your sneakers.",
+        description: "Equip mods, burn kits, and service your sneakers.",
       },
       {
         href: "/badges",
@@ -260,6 +266,22 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Daily loop CTA — boots the launch screen, then opens /play. */}
+            <LaunchLink
+              href="/play"
+              aria-current={pathname === "/play" ? "page" : undefined}
+              className="group relative hidden min-h-11 items-center gap-2 overflow-hidden rounded-full bg-linear-to-r from-mint via-brand to-astra px-5 text-sm font-bold text-ink shadow-lg shadow-brand/25 transition-transform duration-300 hover:scale-105 active:scale-95 md:inline-flex"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+              />
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="relative size-3.5" fill="currentColor">
+                <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+              </svg>
+              <span className="relative">Start</span>
+            </LaunchLink>
+
             <ProfileButton />
             <div className="hidden md:block">
               <ThemeToggle />

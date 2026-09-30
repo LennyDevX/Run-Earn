@@ -19,12 +19,13 @@ export default function WalletButton() {
   const [error, setError] = useState<string | null>(null);
   const wallet = usePolygonWallet();
   const overview = useWalletOverview();
+  const { refresh: refreshOverview } = overview;
   const networkConnected = wallet.chainId === CHAIN.id;
   const isMobile = wallet.isMobile;
 
   // Close the desktop popovers on Escape or an outside click.
   useEffect(() => {
-    if (!open && !connectOpen) return;
+    if ((!open && !connectOpen) || isMobile) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setOpen(false);
@@ -42,7 +43,13 @@ export default function WalletButton() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onPointer);
     };
-  }, [connectOpen, open]);
+  }, [connectOpen, isMobile, open]);
+
+  useEffect(() => {
+    if (!open || !wallet.address) return;
+    const frame = window.requestAnimationFrame(() => void refreshOverview());
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, refreshOverview, wallet.address]);
 
   async function handleConnect(walletId: (typeof wallet.walletOptions)[number]["id"]) {
     try {
@@ -51,6 +58,15 @@ export default function WalletButton() {
       setConnectOpen(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not connect the wallet.");
+    }
+  }
+
+  async function handleSwitchNetwork() {
+    setError(null);
+    try {
+      await wallet.switchToPolygon();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not switch networks.");
     }
   }
 
@@ -91,10 +107,10 @@ export default function WalletButton() {
         <div className="flex items-center justify-between rounded-2xl bg-background px-4 py-3">
           <span className="text-xs text-foreground/50">Balance POL</span>
           <span className="font-mono text-sm font-semibold">
-            {overview.isLoading
-              ? "…"
+            {overview.isLoading && overview.balance === null
+              ? "Loading…"
               : overview.balance === null
-                ? "—"
+                ? "Unavailable"
                 : `${formatEther(overview.balance).slice(0, 10)} POL`}
           </span>
         </div>
@@ -119,7 +135,7 @@ export default function WalletButton() {
               {overview.isLoading
                 ? "…"
                 : overview.sneakerCount === null
-                  ? "Not configured"
+                  ? overview.sneakerCountError ? "Unavailable" : "Not configured"
                   : overview.sneakerCount.toString()}
             </span>
           </div>
@@ -134,9 +150,18 @@ export default function WalletButton() {
       </div>
 
       {error || overview.error ? (
-        <p className="mt-3 rounded-xl bg-magma/10 px-3 py-2 text-xs leading-relaxed text-magma">
-          {error ?? overview.error}
-        </p>
+        <div className="mt-3 flex items-start justify-between gap-3 rounded-xl bg-magma/10 px-3 py-2">
+          <p className="min-w-0 text-xs leading-relaxed text-magma">{error ?? overview.error}</p>
+          {overview.error ? (
+            <button
+              type="button"
+              onClick={() => void refreshOverview()}
+              className="min-h-8 shrink-0 cursor-pointer rounded-md px-2 text-xs font-semibold text-brand hover:bg-brand/10"
+            >
+              Retry
+            </button>
+          ) : null}
+        </div>
       ) : null}
       <button
         type="button"
@@ -207,13 +232,16 @@ export default function WalletButton() {
 
   if (!networkConnected) {
     return (
-      <button
-        type="button"
-        onClick={() => void wallet.switchToPolygon()}
-        className="min-h-11 cursor-pointer rounded-full bg-magma px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-105"
-      >
-        Switch to Polygon
-      </button>
+      <div className="flex flex-col items-end gap-2">
+        <button
+          type="button"
+          onClick={() => void handleSwitchNetwork()}
+          className="min-h-11 cursor-pointer rounded-full bg-magma px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-105"
+        >
+          Switch to {NETWORK_LABEL}
+        </button>
+        {error ? <p className="max-w-64 rounded-xl bg-magma/10 px-3 py-2 text-xs text-magma">{error}</p> : null}
+      </div>
     );
   }
 
@@ -221,10 +249,7 @@ export default function WalletButton() {
     <div className="relative">
       <button
         type="button"
-        onClick={() => {
-          setOpen((value) => !value);
-          void overview.refresh();
-        }}
+        onClick={() => setOpen((value) => !value)}
         aria-haspopup={isMobile ? "dialog" : "menu"}
         aria-expanded={open}
         className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background transition-all duration-300 hover:scale-105 hover:opacity-90"

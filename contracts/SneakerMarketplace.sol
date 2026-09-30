@@ -175,6 +175,15 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     }
 
     function withdrawFees(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        _withdrawFees(to);
+    }
+
+    /// @notice Withdraw accrued fees to the configured fee collector (e.g. FeeSplitter).
+    function withdrawFeesToCollector() external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        _withdrawFees(feeCollector);
+    }
+
+    function _withdrawFees(address to) private {
         require(to != address(0), "SneakerMarketplace: zero recipient");
         uint256 amount = accumulatedFees;
         require(amount > 0, "SneakerMarketplace: no fees");

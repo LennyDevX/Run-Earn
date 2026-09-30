@@ -10,6 +10,7 @@ import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { usePolPrice } from "@/hooks/usePolPrice";
 import SneakerArtwork from "@/components/SneakerArtwork";
 import { centerInScrollRow } from "@/lib/scroll-x";
+import { boostCeilingBps, bpsToPercent } from "@/lib/tab-challenge";
 import {
   VE_FALLBACK_PRICE_POL,
   VE_MAX_SUPPLY_FALLBACK,
@@ -64,6 +65,7 @@ export default function VeSneakerStorefront() {
         const tier = Number(onChain?.tier ?? entry.tier);
         const rarity = Number(onChain?.rarity ?? entry.rarity);
         const price = onChain?.price ?? parseEther(VE_FALLBACK_PRICE_POL[tier] ?? "421");
+        const discountedPrice = onChain?.discountedPrice ?? price;
         const maxSupply = onChain?.maxSupply ?? VE_MAX_SUPPLY_FALLBACK;
         const minted = onChain?.minted ?? 0n;
         return {
@@ -72,9 +74,13 @@ export default function VeSneakerStorefront() {
           family: entry.family,
           imageSrc: entry.imageSrc,
           tagline: family.tagline,
+          capability: family.capability,
           tier,
           rarity,
           price,
+          discountedPrice,
+          requiredPerkPlusOne: onChain?.requiredPerkPlusOne ?? 0n,
+          perkEligible: onChain?.perkEligible ?? null,
           maxSupply,
           minted,
           remaining: maxSupply - minted,
@@ -93,7 +99,7 @@ export default function VeSneakerStorefront() {
     setQuantityByDesign((current) => ({ ...current, [index]: Math.max(1, Math.min(20, next)) }));
   }
 
-  async function handleBuy(index: number, price: bigint, remaining: bigint) {
+  async function handleBuy(index: number, remaining: bigint) {
     setActionError(null);
     setActionNotice(null);
     if (!isConfigured) {
@@ -110,7 +116,7 @@ export default function VeSneakerStorefront() {
       return;
     }
     try {
-      const hash = await store.buy(BigInt(index), price, quantity);
+      const hash = await store.buy(BigInt(index), quantity);
       addLocalActivity(`Bought ${quantity}× veSneaker`, hash);
       setActionNotice(`Purchase confirmed — ${quantity} veSneaker${quantity > 1 ? "s" : ""} minted to your wallet.`);
       await store.refresh();
@@ -227,7 +233,8 @@ export default function VeSneakerStorefront() {
           const designMissing = isConfigured && row.index >= store.designs.length;
           const levelLocked =
             row.requiredLevel > 0 && (!progress.configured || playerLevel < row.requiredLevel);
-          const disabled = !isConfigured || designMissing || !row.active || soldOut || levelLocked || store.isLoading;
+          const perkLocked = row.requiredPerkPlusOne > 0n && wallet.address !== null && row.perkEligible !== true;
+          const disabled = !isConfigured || designMissing || !row.active || soldOut || levelLocked || perkLocked || store.isLoading;
           return (
             <article
               key={row.name}
@@ -259,19 +266,28 @@ export default function VeSneakerStorefront() {
                     LV {row.requiredLevel}+
                   </span>
                 ) : null}
+                {row.requiredPerkPlusOne > 0n ? (
+                  <span className={`absolute right-3 bottom-3 rounded-full px-2.5 py-1 font-pixel text-[9px] ${perkLocked ? "bg-magma/10 text-magma" : "bg-brand/10 text-brand"}`}>
+                    PERK {String(row.requiredPerkPlusOne - 1n)}
+                  </span>
+                ) : null}
               </div>
 
               <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-base font-bold tracking-tight">{row.name}</h3>
                   <p className="mt-1 line-clamp-2 max-w-[22ch] text-xs leading-relaxed text-foreground/55">{row.tagline}</p>
+                  <p className="mt-2 line-clamp-3 max-w-[26ch] text-[11px] leading-relaxed text-foreground/45">{row.capability}</p>
                   <span className="mt-2 block font-mono text-[11px] text-foreground/40">
                     veSneaker #{String(row.index + 1).padStart(4, "0")}
                   </span>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="font-mono text-sm font-bold text-mint">{formatPol(row.price)} POL</div>
-                  <div className="mt-1 text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.price)) * polPrice.price.usd).toFixed(2)}</div>
+                  <div className="font-mono text-sm font-bold text-mint">{formatPol(row.discountedPrice)} POL</div>
+                  {row.discountedPrice < row.price ? (
+                    <div className="mt-1 text-[10px] font-semibold text-brand">VAULT DISCOUNT · {formatPol(row.price)} POL standard</div>
+                  ) : null}
+                  <div className="mt-1 text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.discountedPrice)) * polPrice.price.usd).toFixed(2)}</div>
                 </div>
               </div>
 
@@ -283,6 +299,12 @@ export default function VeSneakerStorefront() {
                 <div className="flex items-center justify-between">
                   <span>Rarity score:</span>
                   <span className="font-mono font-bold text-foreground">{row.rarity}/100</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Tab ceiling:</span>
+                  <span className="font-mono font-bold text-brand">
+                    +{bpsToPercent(boostCeilingBps(row.rarity))}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Supply:</span>
@@ -317,7 +339,7 @@ export default function VeSneakerStorefront() {
                 <button
                   type="button"
                   disabled={disabled}
-                  onClick={() => void handleBuy(row.index, row.price, row.remaining)}
+                  onClick={() => void handleBuy(row.index, row.remaining)}
                   className="min-h-11 flex-1 cursor-pointer rounded-full bg-mint px-4 text-xs font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {designMissing
@@ -325,10 +347,14 @@ export default function VeSneakerStorefront() {
                     : soldOut
                       ? "Sold out"
                       : levelLocked
-                      ? `Requires level ${row.requiredLevel}`
-                      : store.isLoading
-                        ? "Confirming..."
-                        : `Buy for ${formatPol(row.price * BigInt(quantity))} POL`}
+                        ? `Requires level ${row.requiredLevel}`
+                        : perkLocked
+                          ? "Access perk required"
+                          : row.requiredPerkPlusOne > 0n && !wallet.address
+                            ? "Connect to check access"
+                            : store.isLoading
+                              ? "Confirming..."
+                              : `Buy for ${formatPol((row.price * BigInt(quantity) * (10_000n - BigInt(store.bestDiscountBps))) / 10_000n)} POL`}
                 </button>
               </div>
             </article>
@@ -350,9 +376,9 @@ export default function VeSneakerStorefront() {
             <p className="mt-1 text-xs text-foreground/60">Deposit POL and lock your veSneaker to raise your yield.</p>
           </Link>
           <Link href="/game" className="rounded-2xl bg-background p-5 transition-colors hover:bg-sky/5">
-            <span className="font-pixel text-[9px] text-sky">02 · GAME</span>
-            <p className="mt-2 text-sm font-bold">Activate daily</p>
-            <p className="mt-1 text-xs text-foreground/60">Activate every 24h to earn veRUNE and build streaks.</p>
+            <span className="font-pixel text-[9px] text-sky">02 · TAB CHALLENGE</span>
+            <p className="mt-2 text-sm font-bold">Tap daily for an APY boost</p>
+            <p className="mt-1 text-xs text-foreground/60">Run one 24h tap session a day to boost your staking yield.</p>
           </Link>
           <Link href="/marketplace" className="rounded-2xl bg-background p-5 transition-colors hover:bg-magma/5">
             <span className="font-pixel text-[9px] text-magma">03 · MARKETPLACE</span>

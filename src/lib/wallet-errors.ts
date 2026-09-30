@@ -1,7 +1,7 @@
 export function describeWalletError(cause: unknown, fallback: string) {
   const message = cause instanceof Error ? cause.message : String(cause);
-  if (/401|api key disabled|tenant disabled|polygon-rpc\.com/i.test(message)) {
-    return "The configured Polygon RPC is unavailable. Restart the app after setting NEXT_PUBLIC_POLYGON_RPC_URL to a working endpoint.";
+  if (/401|403|429|rate.?limit|api key disabled|tenant disabled|fetch failed|failed to fetch|network error|timed out|timeout|econn|http request failed|polygon-rpc\.com/i.test(message)) {
+    return "Polygon RPC endpoints are unavailable or rate-limited. The app tried its backup endpoint; retry in a moment or configure NEXT_PUBLIC_POLYGON_RPC_URL.";
   }
   if (/4001|user rejected|rejected/i.test(message)) {
     return "The wallet request was rejected.";

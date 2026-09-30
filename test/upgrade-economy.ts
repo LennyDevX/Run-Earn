@@ -50,7 +50,7 @@ describe("Upgrade economy (TypeScript integration)", () => {
     ]);
     const workshop = await viem.deployContract("SneakerWorkshop", [
       admin.account.address, nft.address, mods.address, game.address, staking.address,
-      250n * 10n ** 18n, 5, 250, 10,
+      5_000, 31_536_000n,
     ]);
     const appraiser = await viem.deployContract("SneakerAppraiser", [
       admin.account.address, nft.address,
@@ -62,9 +62,6 @@ describe("Upgrade economy (TypeScript integration)", () => {
     const swap = await viem.deployContract("SneakerSwap", [
       admin.account.address, nft.address, staking.address, workshop.address,
     ]);
-    const rental = await viem.deployContract("ModRental", [
-      admin.account.address, mods.address, workshop.address, 250n, admin.account.address,
-    ]);
     const modStore = await viem.deployContract("ModStore", [
       admin.account.address, mods.address, admin.account.address,
     ]);
@@ -75,7 +72,6 @@ describe("Upgrade economy (TypeScript integration)", () => {
     await staking.write.setBoosts([workshop.address], { account: admin.account });
     await appraiser.write.setBoosts([workshop.address], { account: admin.account });
     await mods.write.setWorkshop([workshop.address], { account: admin.account });
-    await workshop.write.setRentalSource([rental.address], { account: admin.account });
     await marketplace.write.setWorkshop([workshop.address], { account: admin.account });
     await marketplace.write.setCollectionAllowed([mods.address, true], { account: admin.account });
     await swap.write.setCollectionAllowed([mods.address, true], { account: admin.account });
@@ -89,7 +85,7 @@ describe("Upgrade economy (TypeScript integration)", () => {
       { account: admin.account },
     );
 
-    return { nft, ren, staking, game, mods, workshop, appraiser, marketplace, swap, rental, modStore };
+    return { nft, ren, staking, game, mods, workshop, appraiser, marketplace, swap, modStore };
   }
 
   // ─── SneakerMods ───
@@ -168,18 +164,23 @@ describe("Upgrade economy (TypeScript integration)", () => {
     await assert.rejects(mods.read.ownerOf([2n])); // burned
   });
 
-  it("forge spends veRUNE and raises earn bonus", async () => {
-    const { game, workshop } = await deployStack();
+  it("equipping a mod raises power, and wear drags it back down", async () => {
+    const { game, mods, workshop } = await deployStack();
     await game.write.activate([1n], { account: alice.account });
     await testClient.increaseTime({ seconds: Number(DAY) });
     await game.write.claimPoints([1n], { account: alice.account });
-    const balance = await game.read.veRuneBalance([alice.account.address]);
-    assert.ok(balance >= 250n * 10n ** 18n, "alice needs veRUNE to forge");
 
-    await workshop.write.forge([1n], { account: alice.account });
-    assert.equal(await workshop.read.forgeLevel([1n]), 1);
-    assert.equal(await workshop.read.earnBonusBps([1n]), 250);
-    assert.equal((await game.read.veRuneBalance([alice.account.address])) < balance, true);
+    // Epic runner, rarity 50: energy capacity derives from effective rarity.
+    const pristineEnergy = await game.read.maxEnergyOf([1n]);
+    await mods.write.setApprovalForAll([workshop.address, true], { account: alice.account });
+    await workshop.write.equip([1n, 1n], { account: alice.account });
+
+    await testClient.increaseTime({ seconds: Number(365n * DAY) });
+    await testClient.mine({ blocks: 1 });
+
+    // Wear scales rarity, so capacity shrinks with the pair.
+    assert.ok((await game.read.maxEnergyOf([1n])) < pristineEnergy, "wear must reduce effective rarity");
+    assert.equal(await workshop.read.conditionBps([1n]), 5_000);
   });
 
   // ─── Marketplace multi-collection ───
@@ -251,34 +252,28 @@ describe("Upgrade economy (TypeScript integration)", () => {
     assert.equal((await nft.read.ownerOf([1n])).toLowerCase(), alice.account.address.toLowerCase());
   });
 
-  // ─── ModRental ───
+  // ─── Condition (365-day season) ───
 
-  it("rents a mod for a fixed duration and settles expiry", async () => {
-    const { mods, rental } = await deployStack();
-    await mods.write.setApprovalForAll([rental.address, true], { account: alice.account });
-    await rental.write.list([1n, 10n ** 17n, 30n * DAY], { account: alice.account });
+  it("wears the sneaker across a season and services it back", async () => {
+    const { mods, workshop } = await deployStack();
+    // A fresh pair is pristine; equipping starts its season.
+    assert.equal(await workshop.read.conditionBps([1n]), 10_000);
 
-    await rental.write.rent([1n, 7n], { account: bob.account, value: 7n * 10n ** 17n });
-    const position = await rental.read.rentals([1n]);
-    assert.equal(position[4].toLowerCase(), bob.account.address.toLowerCase()); // renter
-    assert.equal(
-      (await rental.read.activeRenter([1n])).toLowerCase(),
-      bob.account.address.toLowerCase(),
-    );
-
-    await testClient.increaseTime({ seconds: Number(8n * DAY) });
-    await rental.write.returnExpired([1n]);
-    assert.equal((await mods.read.ownerOf([1n])).toLowerCase(), alice.account.address.toLowerCase());
-  });
-
-  it("rejects renting an equipped mod", async () => {
-    const { mods, workshop, rental } = await deployStack();
     await mods.write.setApprovalForAll([workshop.address, true], { account: alice.account });
     await workshop.write.equip([1n, 1n], { account: alice.account });
-    await mods.write.setApprovalForAll([rental.address, true], { account: alice.account });
-    await assert.rejects(
-      rental.write.list([1n, 10n ** 17n, 30n * DAY], { account: alice.account }),
+
+    await testClient.increaseTime({ seconds: Number(365n * DAY) });
+    await testClient.mine({ blocks: 1 });
+    assert.equal(await workshop.read.conditionBps([1n]), 5_000);
+
+    // A service kit (aux 3) restores the pair to pristine.
+    await mods.write.mintAuthorized(
+      [alice.account.address, URI, modTraits({ consumable: true, aux: 3, proofHash: proof("90") })],
+      { account: admin.account },
     );
+    const kitId = await mods.read.totalMinted();
+    await workshop.write.useAbility([1n, kitId], { account: alice.account });
+    assert.equal(await workshop.read.conditionBps([1n]), 10_000);
   });
 
   // ─── ModStore ───

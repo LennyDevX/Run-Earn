@@ -16,6 +16,11 @@ interface IVaultDiscountView {
     function bestDiscountBps(address user) external view returns (uint16);
 }
 
+interface IVaultAccessView {
+    function isEligible(address user, uint256 perkId) external view returns (bool);
+    function perkCount() external view returns (uint256);
+}
+
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
 /// @notice veSneakers are the playable NFTs of the Airen virtual sneaker
 ///      economy. Anyone can buy them with native POL — fully virtual assets. Once
@@ -55,9 +60,12 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     address public vault;
 
     Design[] private _designs;
+    /// designIndex => required vault perk id + 1 (0 = no access gate).
+    mapping(uint256 designIndex => uint256 perkIdPlusOne) public requiredPerkPlusOne;
 
     event DesignAdded(uint256 indexed designIndex, string name, uint8 rarity, uint8 tier, uint256 price, uint16 maxSupply);
     event DesignUpdated(uint256 indexed designIndex, uint256 price, uint16 maxSupply, bool active);
+    event DesignPerkRequirementUpdated(uint256 indexed designIndex, uint256 indexed perkId, bool required);
     event DesignUriUpdated(uint256 indexed designIndex, string uri);
     event VeSneakerPurchased(uint256 indexed designIndex, address indexed buyer, uint256 quantity, uint256 totalPaid, uint256 firstTokenId);
     event VeSneakerReserved(uint256 indexed designIndex, address indexed recipient, uint256 quantity, uint256 firstTokenId);
@@ -140,6 +148,23 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     ///      `reserveMint` bypasses the gate — it is an admin allocation.
     function setDesignRequiredLevel(uint256 designIndex, uint8 requiredLevel) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _requireDesign(designIndex).requiredLevel = requiredLevel;
+    }
+
+    /// @notice Require a SneakerVault perk for purchases of this design.
+    ///      `required=false` clears the gate; an unset vault fails closed.
+    function setDesignRequiredPerk(uint256 designIndex, uint256 perkId, bool required)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _requireDesign(designIndex);
+        if (required) {
+            require(vault != address(0), "VeSneakerStore: vault not set");
+            require(perkId < IVaultAccessView(vault).perkCount(), "VeSneakerStore: unknown perk");
+            requiredPerkPlusOne[designIndex] = perkId + 1;
+        } else {
+            requiredPerkPlusOne[designIndex] = 0;
+        }
+        emit DesignPerkRequirementUpdated(designIndex, perkId, required);
     }
 
     /// @notice Link PlayerProgress for level-gated designs.
@@ -237,7 +262,9 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     ///      applying the buyer's best vault discount when one is linked.
     function quote(uint256 designIndex, uint16 quantity) external view returns (uint256) {
         require(quantity > 0, "VeSneakerStore: invalid quantity");
-        uint256 total = _requireDesign(designIndex).price * quantity;
+        Design storage design = _requireDesign(designIndex);
+        _requirePerk(designIndex, msg.sender);
+        uint256 total = design.price * quantity;
         return _applyDiscount(msg.sender, total);
     }
 
@@ -258,6 +285,7 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
                 "VeSneakerStore: level required"
             );
         }
+        _requirePerk(designIndex, buyer);
         uint256 total = _applyDiscount(buyer, design.price * quantity);
         require(msg.value == total, "VeSneakerStore: wrong payment");
 
@@ -266,6 +294,15 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
         (bool sent, ) = treasury.call{value: total}("");
         require(sent, "VeSneakerStore: treasury transfer failed");
         emit VeSneakerPurchased(designIndex, buyer, quantity, total, firstTokenId);
+    }
+
+    function _requirePerk(uint256 designIndex, address buyer) internal view {
+        uint256 perkIdPlusOne = requiredPerkPlusOne[designIndex];
+        if (perkIdPlusOne == 0) return;
+        require(
+            vault != address(0) && IVaultAccessView(vault).isEligible(buyer, perkIdPlusOne - 1),
+            "VeSneakerStore: perk required"
+        );
     }
 
     /// @notice Apply the buyer's best vault discount. Zero vault address or a

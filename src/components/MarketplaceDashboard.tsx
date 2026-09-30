@@ -8,9 +8,9 @@ import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import SneakerArtwork from "@/components/SneakerArtwork";
-import { ModsMarketTab, RentalsTab, TradesTab } from "@/components/ModMarketTabs";
+import { ModsMarketTab, TradesTab } from "@/components/ModMarketTabs";
 
-type Tab = "list" | "auction" | "offers" | "mods" | "rentals" | "trades";
+type Tab = "list" | "auction" | "offers" | "mods" | "trades";
 
 const AUCTION_DURATIONS = [
   { label: "1 hour", seconds: 3600n },
@@ -161,7 +161,6 @@ export default function MarketplaceDashboard() {
                 { id: "auction" as Tab, label: "My Listings" },
                 { id: "offers" as Tab, label: "Make an Offer" },
                 { id: "mods" as Tab, label: "Mods" },
-                { id: "rentals" as Tab, label: "Rentals" },
                 { id: "trades" as Tab, label: "Trades" },
               ]
             ).map((tab) => (
@@ -453,8 +452,6 @@ export default function MarketplaceDashboard() {
         {/* Tab 4: Mods market */}
         {activeTab === "mods" ? <ModsMarketTab runAction={runAction} /> : null}
 
-        {/* Tab 5: Mod rentals */}
-        {activeTab === "rentals" ? <RentalsTab runAction={runAction} /> : null}
 
         {/* Tab 6: NFT trades */}
         {activeTab === "trades" ? <TradesTab runAction={runAction} /> : null}

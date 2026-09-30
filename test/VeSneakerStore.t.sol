@@ -5,6 +5,29 @@ import {Test} from "forge-std/Test.sol";
 import {SneakerMint} from "../contracts/SneakerMint.sol";
 import {VeSneakerStore} from "../contracts/VeSneakerStore.sol";
 
+/// @dev Minimal SneakerVault stub — perks + eligibility + discount for the store.
+contract MockVault {
+    mapping(address => bool) public eligible;
+    mapping(address => uint16) public discounts;
+    uint256 public perkCount = 2;
+
+    function setEligible(address user, bool value) external {
+        eligible[user] = value;
+    }
+
+    function setDiscount(address user, uint16 bps) external {
+        discounts[user] = bps;
+    }
+
+    function isEligible(address user, uint256) external view returns (bool) {
+        return eligible[user];
+    }
+
+    function bestDiscountBps(address user) external view returns (uint16) {
+        return discounts[user];
+    }
+}
+
 contract VeSneakerStoreTest is Test {
     SneakerMint nft;
     VeSneakerStore store;
@@ -290,6 +313,78 @@ contract VeSneakerStoreTest is Test {
         vm.prank(alice);
         (bool sent, ) = address(store).call{value: 1 ether}("");
         assertFalse(sent);
+    }
+
+    // ─────────── Vault perks ───────────
+
+    function test_SetDesignRequiredPerk_AdminOnly() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setDesignRequiredPerk(0, 1, true);
+
+        vm.prank(admin);
+        store.setDesignRequiredPerk(0, 1, true);
+        assertEq(store.requiredPerkPlusOne(0), 2);
+    }
+
+    function test_SetDesignRequiredPerk_RevertUnknownPerk() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        vm.expectRevert("VeSneakerStore: unknown perk");
+        store.setDesignRequiredPerk(0, 9, true);
+        vm.stopPrank();
+    }
+
+    function test_SetDesignRequiredPerk_RevertVaultNotSet() public {
+        vm.prank(admin);
+        vm.expectRevert("VeSneakerStore: vault not set");
+        store.setDesignRequiredPerk(0, 1, true);
+    }
+
+    function test_Buy_RevertPerkRequired() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        store.setDesignRequiredPerk(0, 1, true);
+        vm.stopPrank();
+
+        vm.deal(alice, 10_000 ether);
+        vm.prank(alice);
+        vm.expectRevert("VeSneakerStore: perk required");
+        store.buy{value: COMMON_PRICE}(0);
+
+        vault.setEligible(alice, true);
+        vm.prank(alice);
+        uint256 tokenId = store.buy{value: COMMON_PRICE}(0);
+        assertEq(nft.ownerOf(tokenId), alice);
+    }
+
+    function test_Buy_AppliesVaultDiscount() public {
+        MockVault vault = new MockVault();
+        vm.prank(admin);
+        store.setVault(address(vault));
+        vault.setDiscount(alice, 1_000); // 10%
+
+        vm.deal(alice, 10_000 ether);
+        vm.prank(alice);
+        uint256 tokenId = store.buy{value: (COMMON_PRICE * 9_000) / 10_000}(0);
+        assertEq(nft.ownerOf(tokenId), alice);
+    }
+
+    function test_Quote_AppliesVaultDiscount() public {
+        MockVault vault = new MockVault();
+        vm.prank(admin);
+        store.setVault(address(vault));
+        vault.setDiscount(alice, 2_500); // 25%
+
+        vm.prank(alice);
+        assertEq(store.quote(0, 2), (COMMON_PRICE * 2 * 7_500) / 10_000);
     }
 
     // ─────────── Fuzz ───────────

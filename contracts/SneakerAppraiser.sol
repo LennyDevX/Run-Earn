@@ -19,7 +19,9 @@ import {ISneakerBoosts} from "./ISneakerBoosts.sol";
 contract SneakerAppraiser is AccessControl {
     SneakerMint public immutable nft;
 
-    /// @notice Optional boost provider (SneakerWorkshop). Forge levels raise the
+    uint256 public constant BASIS_POINTS = 10_000;
+
+    /// @notice Optional boost provider (SneakerWorkshop). Live wear scales the
     ///      effective rarity and Skin mods add a percentage bonus to the value.
     ISneakerBoosts public boosts;
 
@@ -114,12 +116,14 @@ contract SneakerAppraiser is AccessControl {
         }
     }
 
-    /// @notice Effective rarity score: base rarity + forge rarity bonus (max 100).
+    /// @notice Effective rarity score: base rarity scaled by live wear (max 100).
+    /// @dev Wear drags the appraisal down with everything else, so servicing a
+    ///      pair is also what protects its resale value.
     function effectiveRarity(uint256 tokenId) public view returns (uint8) {
         SneakerMint.SneakerTraits memory traits = nft.traitsOf(tokenId);
         uint256 effective = uint256(traits.rarity);
         if (address(boosts) != address(0)) {
-            effective += boosts.rarityBonus(tokenId);
+            effective = (effective * boosts.conditionBps(tokenId)) / BASIS_POINTS;
         }
         return effective > 100 ? 100 : uint8(effective);
     }

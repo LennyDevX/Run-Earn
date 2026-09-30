@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   createPublicClient,
+  fallback,
   getAddress,
   http,
   isAddress,
@@ -63,11 +64,28 @@ export const EXPLORER =
   process.env.NEXT_PUBLIC_POLYGON_EXPLORER ??
   (NETWORK === "polygon" ? "https://polygonscan.com" : "https://amoy.polygonscan.com");
 
-const rpcUrl = process.env.NEXT_PUBLIC_POLYGON_RPC_URL ?? CHAIN.rpcUrls.default.http[0];
+const configuredRpcUrl = process.env.NEXT_PUBLIC_POLYGON_RPC_URL?.trim();
+
+function isValidRpcUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
+const rpcUrl = configuredRpcUrl && isValidRpcUrl(configuredRpcUrl)
+  ? configuredRpcUrl
+  : CHAIN.rpcUrls.default.http[0];
+const backupRpcUrl = NETWORK === "polygon"
+  ? "https://polygon.api.onfinality.io/public"
+  : "https://polygon-amoy.api.onfinality.io/public";
+const readRpcUrls = [...new Set([rpcUrl, ...CHAIN.rpcUrls.default.http, backupRpcUrl])];
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
-  transport: http(rpcUrl),
+  transport: fallback(readRpcUrls.map((url) => http(url, { retryCount: 1, retryDelay: 250, timeout: 8_000 }))),
 });
 
 export const explorerAccountUrl = (walletAddress: string) =>

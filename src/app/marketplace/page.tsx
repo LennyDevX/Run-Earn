@@ -29,7 +29,7 @@ export default function MarketplacePage() {
             className="animate-fade-up max-w-3xl text-4xl font-extrabold tracking-tight text-balance md:text-5xl lg:text-6xl"
             style={{ animationDelay: "120ms" }}
           >
-            Trade sneakers with on-chain valuations
+            Trade sneakers with <span className="text-gradient">on-chain valuations</span>
           </h1>
 
           <p

@@ -39,6 +39,137 @@ There is no flat per-NFT bonus (`perNftBonusBps = 0`). The boost is applied only
 
 Boost-slot mods equipped on a locked sneaker add `workshop.stakingBoostBps(tokenId)` on top of the tier bonus — read live from `SneakerWorkshop` via `setBoosts`, so unequipping the mod removes the extra APY on the next accrual. Mods can be equipped on staked sneakers because the workshop recognizes `staking.stakedOwner` as the sneaker's controller.
 
+## Daily Tab Challenge (shipped)
+
+A once-per-24h tap challenge grants a **time-boxed** staking APY boost of
+**0.50% – 1.50%**, written into `SneakerStaking` by `SneakerTabArena`. It is
+modelled as an extra term inside the existing APY clamp, never as a new reward
+stream.
+
+### Where it fits in the formula
+
+```text
+requested = baseApyBps (280)
+          + lockedCount * perNftBonusBps (0)
+          + Σ tierBonusBps          // 50 / 80 / 150 / 180 per locked NFT
+          + Σ stakingBoostBps       // Boost-slot mods on locked sneakers
+          + tabBoostBps             // ← 0 when no session is active
+effective = min(requested, maxApyBps = 800)
+```
+
+Because the tab boost is added **before** the clamp, it can never lift a wallet
+above the 8.00% hard cap. A Mythic holder with a Boost mod who is already near
+the cap simply absorbs no extra cost — the protocol's liability stays bounded by
+a constant that already exists.
+
+### Access gate
+
+A session requires **both**:
+
+1. `polPositions(caller).principal > 0` — otherwise the boost has no APY to
+   apply to.
+2. `staking.stakedOwner(runnerId) == caller` — the runner must be locked in the
+   vault. The 30-day minimum lock only delays *withdrawal*, not play, so a player
+   can stake and open their first session the same day.
+
+### Level ladder
+
+Levels are measured in **points**, not taps. A stronger veSneaker earns more
+points per tap, so the same ladder clears in fewer taps:
+
+| Level | Points | Boost granted |
+| ----- | ------ | ------------- |
+| 1     | 50     | +0.50%        |
+| 2     | 100    | +0.70%        |
+| 3     | 175    | +0.90%        |
+| 4     | 275    | +1.10%        |
+| 5     | 400    | +1.30%        |
+| 6     | 600    | +1.50%        |
+
+### Power score → ceiling and multiplier
+
+Power is **derived**, never stored. It is the live sum of the pair's base rarity
+(scaled by wear) and the mods currently equipped:
+
+```text
+power_score = min(rarity * conditionBps / 10000 + equipped_mods * 5, 100)
+ceiling_bps = 50 + power_score          // 0.50% .. 1.50%
+awarded_bps = min(level_boost_bps, ceiling_bps)
+```
+
+| Power score | Points per tap | Taps to clear L6 (600 pts) |
+| ----------- | -------------- | -------------------------- |
+| 0–25        | ×1             | 600                        |
+| 26–50       | ×2             | 300                        |
+| 51–75       | ×3             | 200                        |
+| 76–100      | ×4             | 150                        |
+
+**This is the whole payoff for upgrading.** Power changes how *fast* a player
+clears the ladder, never how *much* they can earn — the boost ceiling is a
+separate cap and the multiplier does not touch it. Protocol liability is
+therefore identical regardless of which NFT is used.
+
+### veSneaker condition (365-day season)
+
+`SneakerWorkshop` tracks `lastServiceAt[tokenId]`. Condition decays linearly from
+`10000` to `conditionFloorBps` (5000) over `seasonSeconds` (365 days). A pair
+that has never been equipped reads pristine, so an unused sneaker does not wear.
+
+Consumers scale rarity by condition, so wear drags the earn rate, the appraisal,
+and the tab power score down together:
+
+```text
+effective_rarity = rarity * conditionBps / 10000
+```
+
+The **repair kit** (aux 0/255) restores health and condition; the **service kit**
+(aux 3) restores condition only. Neither costs energy, so a worn-out pair is
+always revivable.
+
+**Mods never expire.** Every slot item is a permanent ERC-721 the owner keeps,
+sells, or gifts. The sneaker is what wears — that is what makes consumables the
+recurring sink.
+
+### Trust model
+
+Taps happen off-chain, so the completed score arrives as an EIP-191 signature
+from an admin `signer` (produced by `/api/tab-session`). The contract never
+trusts it blindly:
+
+| Risk | Mitigation |
+| ---- | ---------- |
+| Scripted taps | Server-side rate and plausibility checks before signing |
+| Inflated multiplier | The contract **recomputes** power on-chain; a signed multiplier is ignored |
+| Unbounded score | Clamped to `multiplier * MAX_TAPS_PER_SESSION` (600) |
+| Replayed signature | Per-wallet nonce consumed on completion |
+| Malleable signature | `s` is rejected above `secp256k1n/2` |
+| Buggy or compromised arena | `SneakerStaking.setTabBoost` re-clamps to `maxTabBoostBps` (150) |
+
+### Why this stays sustainable
+
+| Path                     | bps  | Annualised cost on principal |
+| ------------------------ | ---- | ---------------------------- |
+| Mythic tier boost        | 180  | 1.80%                        |
+| Boost-slot mod (typical) | ~300 | ~3.00%                       |
+| **Tab challenge (max)**  | 150  | **1.50%**                    |
+
+1. **Cheaper than what already exists.** The 1.50% ceiling is below the 1.80%
+   Mythic tier boost the vault already pays.
+2. **Time-boxed.** The boost lasts 24h from completion and never auto-renews.
+   Reaching 1.50% annualised requires completing a session every single day.
+3. **One session per wallet per 24h.** Sessions do not stack.
+4. **Requires a locked NFT and staked POL.** The boost applies to staking yield,
+   so the player has skin in the game before they can earn it.
+5. **Still reserve-funded.** `claimPOLRewards` pays only from the funded surplus
+   above `totalPOLPrincipal` and reverts when the reserve cannot cover a claim.
+6. **The cap is unchanged.** `maxApyBps × TVL` remains the absolute worst-case
+   liability. The tab game changes who reaches the cap and how fast, never the
+   number itself.
+
+The APY remains a parameter, not a guaranteed return.
+
+
+
 ## NFT valuation (SneakerAppraiser)
 
 The `SneakerAppraiser` contract provides an on-chain POL value estimate for each SneakerMint NFT:

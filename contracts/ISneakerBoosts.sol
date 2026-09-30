@@ -2,13 +2,14 @@
 pragma solidity 0.8.36;
 
 /// @title ISneakerBoosts — read interface implemented by SneakerWorkshop.
-/// @notice SneakerGame, SneakerStaking, and SneakerAppraiser query this
-///      interface to apply the effects of mods equipped to a sneaker and of
-///      forge levels bought with veRUNE. All values are read live, so
-///      equipping or unequipping a mod takes effect on the next read.
+/// @notice SneakerGame, SneakerStaking, SneakerAppraiser, SneakerTabArena, and
+///      SneakerVault query this interface to apply the effects of mods equipped
+///      to a sneaker and of the pair's live condition. All values are read live,
+///      so equipping or unequipping a mod — or letting the pair wear down —
+///      takes effect on the very next read.
 /// @dev A zero address on the consumer side disables all boosts.
 interface ISneakerBoosts {
-    /// @notice Extra veRUNE earn rate in basis points (Upper mods + forge levels).
+    /// @notice Extra veRUNE earn rate in basis points (Upper + Skill mods).
     function earnBonusBps(uint256 tokenId) external view returns (uint256);
 
     /// @notice Wear reduction per activation in basis points (Sole mods).
@@ -26,8 +27,12 @@ interface ISneakerBoosts {
     /// @notice Extra staking APY in basis points (Boost mods).
     function stakingBoostBps(uint256 tokenId) external view returns (uint256);
 
-    /// @notice Permanent rarity points gained through forge levels.
-    function rarityBonus(uint256 tokenId) external view returns (uint8);
+    /// @notice Live wear of the pair, in basis points.
+    /// @dev `10000` = freshly serviced, `5000` = fully worn. Consumers scale the
+    ///      base rarity by this value, so a neglected pair keeps half its rarity
+    ///      and never becomes useless. Restoring it is what the workshop's
+    ///      service consumables are for.
+    function conditionBps(uint256 tokenId) external view returns (uint16);
 
     /// @notice Whether a Core mod keeps the earn window always open.
     function autoActive(uint256 tokenId) external view returns (bool);

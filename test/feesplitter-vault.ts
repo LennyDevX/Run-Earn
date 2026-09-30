@@ -18,8 +18,8 @@ describe("FeeSplitter and SneakerVault (TypeScript integration)", () => {
   let nft: any;
   let veStore: any;
 
-  const DISCOUNT_PERK = 1n;
-  const ACCESS_PERK = 2n;
+  const DISCOUNT_PERK = 0n;
+  const ACCESS_PERK = 1n;
 
   before(async function () {
     this.timeout(120_000);
@@ -66,10 +66,8 @@ describe("FeeSplitter and SneakerVault (TypeScript integration)", () => {
       mods.address,
       game.address,
       staking.address,
-      parseEther("100"),
-      10n,
-      100n,
-      10n,
+      5_000, // conditionFloorBps
+      31_536_000n, // seasonSeconds
     ]);
     const thresholds = [0n, 300n, 800n, 1600n, 2800n, 4500n, 7000n, 10500n, 15000n, 21000n];
     const progress = await viem.deployContract("PlayerProgress", [

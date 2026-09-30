@@ -8,9 +8,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @title FeeSplitter — pro-rata distribution of protocol fees in native POL.
 /// @notice Receives POL from fee-generating contracts (SneakerMarketplace,
 ///      ModRental) via `withdrawFees` or direct sends, and distributes it to a
-///      fixed list of recipients according to admin-configurable weights.
-///      Typical split: treasury, staking reward reserve, REN redemption pool,
-///      and team. Weights are in basis points and must sum to exactly 10_000
+///      fixed list of POL-receiving wallets according to admin-configurable
+///      weights. Typical allocations are treasury, staking/reward operations,
+///      REN redemption operations, and team. Recipients must accept native POL.
+///      Weights are in basis points and must sum to exactly 10_000
 ///      (100%) so every deposited wei is fully allocated.
 /// @dev Distribution is pull-free: anyone can call `distribute()` to settle
 ///      the current balance, which sends each recipient its pro-rata share.
@@ -19,6 +20,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///      contract must never be a permanent fund sink.
 contract FeeSplitter is Pausable, AccessControl, ReentrancyGuard {
     uint256 public constant BASIS_POINTS = 10_000;
+    uint256 public constant MAX_RECIPIENTS = 16;
 
     struct Recipient {
         address account;
@@ -59,6 +61,7 @@ contract FeeSplitter is Pausable, AccessControl, ReentrancyGuard {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(accounts.length > 0, "FeeSplitter: empty recipients");
+        require(accounts.length <= MAX_RECIPIENTS, "FeeSplitter: too many recipients");
         require(accounts.length == weightsBps.length, "FeeSplitter: length mismatch");
         uint256 sum;
         for (uint256 i; i < accounts.length; ++i) {
@@ -84,6 +87,11 @@ contract FeeSplitter is Pausable, AccessControl, ReentrancyGuard {
 
     function recipients() external view returns (Recipient[] memory) {
         return _recipients;
+    }
+
+    function recipientAt(uint256 index) external view returns (address account, uint256 weightBps) {
+        Recipient memory recipient = _recipients[index];
+        return (recipient.account, recipient.weightBps);
     }
 
     /// @notice POL currently held and awaiting distribution.

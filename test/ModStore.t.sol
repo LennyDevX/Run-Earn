@@ -20,6 +20,29 @@ contract MockProgress {
     }
 }
 
+/// @dev Minimal SneakerVault stub — perks + eligibility + discount for ModStore.
+contract MockVault {
+    mapping(address => bool) public eligible;
+    mapping(address => uint16) public discounts;
+    uint256 public perkCount = 2;
+
+    function setEligible(address user, bool value) external {
+        eligible[user] = value;
+    }
+
+    function setDiscount(address user, uint16 bps) external {
+        discounts[user] = bps;
+    }
+
+    function isEligible(address user, uint256) external view returns (bool) {
+        return eligible[user];
+    }
+
+    function bestDiscountBps(address user) external view returns (uint16) {
+        return discounts[user];
+    }
+}
+
 contract ModStoreTest is Test {
     SneakerMint nft;
     RENToken ren;
@@ -139,5 +162,67 @@ contract ModStoreTest is Test {
         vm.prank(admin);
         store.withdrawProceeds(admin);
         assertEq(admin.balance, before + 3 ether);
+    }
+
+    function test_SetDesignRequiredPerk_AdminOnly() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setDesignRequiredPerk(0, 1, true);
+
+        vm.prank(admin);
+        store.setDesignRequiredPerk(0, 1, true);
+        assertEq(store.requiredPerkPlusOne(0), 2);
+    }
+
+    function test_SetDesignRequiredPerk_RevertUnknownPerk() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        vm.expectRevert("ModStore: unknown perk");
+        store.setDesignRequiredPerk(0, 5, true);
+        vm.stopPrank();
+    }
+
+    function test_Buy_RevertPerkRequired() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        store.setDesignRequiredPerk(0, 1, true);
+        vm.stopPrank();
+
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        vm.expectRevert("ModStore: perk required");
+        store.buy{value: 2 ether}(0);
+
+        vault.setEligible(alice, true);
+        vm.prank(alice);
+        uint256 modId = store.buy{value: 2 ether}(0);
+        assertEq(mods.ownerOf(modId), alice);
+    }
+
+    function test_Buy_AppliesVaultDiscount() public {
+        MockVault vault = new MockVault();
+        vm.startPrank(admin);
+        store.setVault(address(vault));
+        vm.stopPrank();
+        vault.setDiscount(alice, 1_000); // 10%
+
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        uint256 modId = store.buy{value: 1.8 ether}(0);
+        assertEq(mods.ownerOf(modId), alice);
+    }
+
+    function test_Buy_ZeroVaultPaysFullPrice() public {
+        vm.deal(alice, 5 ether);
+        vm.prank(alice);
+        vm.expectRevert("ModStore: wrong payment");
+        store.buy{value: 1.8 ether}(0);
     }
 }

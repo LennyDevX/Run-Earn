@@ -28,7 +28,7 @@ export default function BadgesPage() {
             className="animate-fade-up max-w-3xl text-4xl font-extrabold tracking-tight text-balance md:text-5xl lg:text-6xl"
             style={{ animationDelay: "120ms" }}
           >
-            Achievements you can wear
+            Achievements <span className="text-gradient">you can wear</span>
           </h1>
 
           <p

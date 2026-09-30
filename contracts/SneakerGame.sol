@@ -405,10 +405,14 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
         return (traits.rarity, traits.tier);
     }
 
-    /// @notice Effective rarity including forge levels (capped at 100).
+    /// @notice Effective rarity after live wear. A neglected pair keeps
+    ///      `conditionFloorBps` of its rarity, never less — wear weakens a
+    ///      sneaker without ever making it useless.
     function _effectiveRarity(uint256 tokenId, uint8 rarity) internal view returns (uint256) {
         uint256 effective = uint256(rarity);
-        if (address(boosts) != address(0)) effective += boosts.rarityBonus(tokenId);
+        if (address(boosts) != address(0)) {
+            effective = (effective * boosts.conditionBps(tokenId)) / BASIS_POINTS;
+        }
         return effective > 100 ? 100 : effective;
     }
 

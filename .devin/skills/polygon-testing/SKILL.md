@@ -1,6 +1,5 @@
 ---
 name: polygon-testing
-description: Test Airen's Hardhat 3 Solidity contracts, native POL staking, SneakerMint NFT boosts, RENToken rewards, the mod workshop economy (SneakerMods/SneakerWorkshop/SneakerSwap/ModRental/ModStore), viem integrations, and subgraph activity.
 ---
 
 # Airen Polygon Contract Testing
@@ -9,7 +8,7 @@ Use this skill whenever modifying contracts, deployment configuration, ABIs, wal
 
 ## Test locations
 
-- Solidity tests: `test/*.t.sol` using Hardhat 3's built-in Solidity test runner and `forge-std`.
+- Solidity tests: `test/*.t.sol` using Hardhat 3's built-in Solidity test runner and `condition-std`.
 - TypeScript integration tests: `test/*.ts` using `@nomicfoundation/hardhat-mocha` and `@nomicfoundation/hardhat-viem`.
 - `test/sneaker-artwork.ts` covers the Astra/Sol/Luna catalog order, tokenURI family resolution, legacy `pixel://` mapping, and preservation of embedded user artwork.
 - Do not place new Solidity tests in the old `tests/` directory; Hardhat 3 discovers Solidity tests from `test/` by default.
@@ -113,8 +112,8 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - `equip`: one mod per slot, escrow custody (`equippedTo`), owner-of-sneaker check (or renter via `rentalSource`), consumable mods rejected, approval required.
 - `unequip`: returns the mod, clears the slot bonus; staked/listed sneaker edge cases.
 - Bonus views per slot: Sole −wear, Upper +earn (`earnBonusBps` + `tempBoostBps` while unexpired), Lining −repair cost, Skin +appraisal, Core auto-activation, Boost +staking APY, Skill passive earn (`skillBonusBps`, folded into `earnBonusBps`).
-- `useAbility` per `aux` kind: repair kit → `repairFromWorkshop` (0 energy), surge → `activateFromWorkshop` bypassing cooldown without energy refill (2⚡), boost capsule → `tempBoostBps`/`boostExpiresAt` 24h (1⚡), forge stone → free forge level (2⚡), Overdrive → 48h boost (3⚡), Stim pack → `refillEnergyFromWorkshop` (0⚡, reverts on dead sneaker), Lucky repair → full health + 24h boost (1⚡). Every use burns the mod; insufficient energy reverts.
-- `forge`: burns `forgeCostPoints` veRUNE via `game.spendPoints`, increments `forgeLevel`, raises effective rarity.
+- `useAbility` per `aux` kind: repair kit → `repairFromWorkshop` (0 energy), surge → `activateFromWorkshop` bypassing cooldown without energy refill (2⚡), boost capsule → `tempBoostBps`/`boostExpiresAt` 24h (1⚡), condition stone → free condition level (2⚡), Overdrive → 48h boost (3⚡), Stim pack → `refillEnergyFromWorkshop` (0⚡, reverts on dead sneaker), Lucky repair → full health + 24h boost (1⚡). Every use burns the mod; insufficient energy reverts.
+- `condition`: burns `conditionCostPoints` veRUNE via `game.spendPoints`, increments `conditionLevel`, raises effective rarity.
 - `hasEquippedMods` gating used by the marketplace.
 - `actionsCount` increments on each successful action — feeds `PlayerProgress` XP.
 
@@ -124,7 +123,6 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 - Expired swaps revert; only allowed collections; counterparty NFT must be owned/approved by the acceptor.
 - Works across collections (sneaker↔mod, mod↔mod).
 
-### `ModRental`
 
 - `list` escrows the mod (3 args — price/day, max duration; consumables rejected), `cancelListing` returns it, `rent` pays upfront POL (fee to `feeCollector`), `extend` tops up days.
 - `equipRented(rentalId, sneakerId)` equips through `workshop.rentalSource`; `releaseEarly` (renter) and `returnExpired` (anyone, after `rentedUntil`) end the rental, unequip, pay the owner, and return the mod.
@@ -148,18 +146,20 @@ Use `viem.deployContract`, not Hardhat 2 `getContractFactory`. Use `connection.v
 
 ### `FeeSplitter`
 
-- `setRecipients` weights sum exactly to 10_000; rejects zero addresses, zero weights, empty lists, and non-admin calls.
+- `setRecipients` weights sum exactly to 10_000; rejects zero addresses, zero weights, empty lists, more than 16 recipients, and non-admin calls.
 - `distribute()` pro-rata exact: 1 ETH across 40/30/20/10 pays 0.4/0.3/0.2/0.1; dust stays for the next round.
 - `shareOf` last recipient absorbs division dust; `distribute` with zero balance reverts; pause blocks distribution.
-- `receive()` accumulates balance; `pendingFees` reflects the contract POL balance.
+- `receive()` accumulates balance; `pendingFees` reflects the contract POL balance; `recipientAt(index)` reads a single recipient.
+- Marketplace/rental: `withdrawFeesToCollector` pays the configured `feeCollector` and leaves user escrow untouched (`test_WithdrawFeesToCollector`).
 
 ### `SneakerVault`
 
-- `setPerk` validates kind (0=discount, 1=access), discount range (1–5000 bps), tier ≤ 3; admin-only.
-- `discountBps`/`bestDiscountBps` per gate: tier via `traitsOf`, forge via `rarityBonus`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf` — gates are additive.
-- Inactive perk or failed gate returns 0 (full price); `bestDiscountBps` picks the highest eligible discount.
+- `setPerk` validates kind (0=discount, 1=access), discount range (1–5000 bps), tier ≤ 3, sequential ids, and the `MAX_PERKS` cap; admin-only.
+- `discountBps`/`bestDiscountBps` per gate: tier via `traitsOf`, condition via `workshop.conditionLevel`, POL via `polPositions`, level via `levelOf`, mods via `balanceOf` — gates are additive.
+- Inactive perk or failed gate returns 0 (full price); `bestDiscountBps` picks the highest eligible discount; `perks(id)` returns a flat 8-field tuple.
 - `claimPerk` (access kind) succeeds once per wallet, reverts on inactive/discount-kind/requirements-not-met/already-claimed.
 - Store integration: `quote` applies the buyer's best discount; `buy` with the discounted value succeeds, full value reverts; zero vault address means full price.
+- Perk gates: `setDesignRequiredPerk` is admin-only and rejects unknown perks; a gated design reverts `*: perk required` for ineligible buyers in both `buy`/`buyBatch` and `quote`, and unlocks once the vault marks the wallet eligible (covered by `MockVault` in `test/VeSneakerStore.t.sol` and `test/ModStore.t.sol`).
 
 ## Subgraph/API checks
 
@@ -181,3 +181,37 @@ npm run build
 ```
 
 Before Amoy deployment, all local tests must pass. Before mainnet, add adversarial/invariant coverage, verify deterministic artifacts, use multisig administration, and obtain independent contract/economic reviews.
+
+
+## Tab arena and condition coverage
+
+`test/SneakerTabArena.t.sol` (34 tests) covers the full arena surface:
+
+- **Gate:** no POL, no locked runner, a runner locked by someone else, and the
+  open case; `gateStatus` reporting each missing piece.
+- **Power:** derived from rarity and condition, raised by equipped mods, and
+  dragged down by a full season of wear.
+- **Sessions:** start records runner/multiplier/expiry, a second concurrent
+  session reverts, `abandonSession` reopens the gate.
+- **Signatures:** wrong signer, expired deadline, tampered score, and a replayed
+  signature are all rejected.
+- **Boost:** granted from the cleared level, capped by the runner's ceiling,
+  raises `effectiveApyBps`, lapses after 24h, and is absorbed by the 8% cap for a
+  wallet already near it.
+- **Clamping:** an inflated signed score is clamped to `multiplier * 600`.
+- **Recompute:** equipping mods mid-session changes the multiplier because the
+  contract recomputes it at completion.
+- **Cooldown:** one session per day, reopened after 24h.
+- **Admin:** pause, `setSigner`, `setMaxTabBoostBps` bounds, `TAB_ARENA_ROLE`.
+
+`test/SneakerWorkshop.t.sol` covers condition: pristine until first use, linear
+decay across the season, clamping at the floor, repair/service kits restoring it,
+effective rarity scaling, `secondsUntilFullyWorn`, and `updateCareParams`.
+
+**Trap:** `SneakerMint.traitsOf` returns a 3-field struct (`rarity`, `tier`,
+`proofHash`). Declaring four return values in a minimal interface compiles but
+reverts at call time with "Function returned an unexpected amount of data".
+
+**Trap:** `lastCompletedAt == 0` must not be read as "completed at the epoch" —
+that gates every wallet until timestamp 86400. The arena guards this in
+`_cooldownElapsed`.

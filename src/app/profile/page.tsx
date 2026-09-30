@@ -28,7 +28,7 @@ export default function ProfilePage() {
             className="animate-fade-up max-w-3xl text-4xl font-extrabold tracking-tight text-balance md:text-5xl lg:text-6xl"
             style={{ animationDelay: "120ms" }}
           >
-            Your runner profile
+            Your <span className="text-gradient">runner profile</span>
           </h1>
 
           <p

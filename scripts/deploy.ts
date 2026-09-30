@@ -7,13 +7,14 @@ import {
   assertNetwork,
   assertSignerBalance,
   bigintEnv,
+  feeSplitterRecipients,
   gameParameters,
   marketplaceParameters,
   optionalEnv,
   progressParameters,
-  rentalParameters,
   saveDeployment,
   shouldVerify,
+  sneakerVaultParameters,
   stakingParameters,
   waitBeforeVerification,
   workshopParameters,
@@ -31,8 +32,8 @@ const TARGETS = new Set([
   "VeSneakerStore",
   "SneakerMods",
   "SneakerWorkshop",
+  "SneakerTabArena",
   "SneakerSwap",
-  "ModRental",
   "ModStore",
   "PlayerProgress",
   "FeeSplitter",
@@ -50,7 +51,7 @@ type ContractName =
   | "SneakerMods"
   | "SneakerWorkshop"
   | "SneakerSwap"
-  | "ModRental"
+  | "SneakerTabArena"
   | "ModStore"
   | "PlayerProgress"
   | "FeeSplitter"
@@ -262,10 +263,8 @@ async function main() {
       modsAddress,
       gameAddress,
       stakingAddress,
-      wp.forgeCostPoints,
-      wp.forgeRarityStep,
-      wp.forgeEarnStepBps,
-      wp.maxForgeLevel,
+      wp.conditionFloorBps,
+      wp.seasonSeconds,
     ]));
   }
 
@@ -281,18 +280,6 @@ async function main() {
     ]));
   }
 
-  if (target === "all" || target === "ModRental") {
-    const modsAddress = requireAddress(resolveAddress(deployments, "SneakerMods", "SNEAKER_MODS_ADDRESS"), "SNEAKER_MODS_ADDRESS", "ModRental");
-    const workshopAddress = requireAddress(resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS"), "SNEAKER_WORKSHOP_ADDRESS", "ModRental");
-    const rp = rentalParameters();
-    deployments.push(await deployContract(viem, "ModRental", [
-      addressEnv("RENTAL_ADMIN_ADDRESS", admin),
-      modsAddress,
-      workshopAddress,
-      rp.feeBps,
-      addressEnv("RENTAL_FEE_COLLECTOR_ADDRESS", admin),
-    ]));
-  }
 
   if (target === "all" || target === "ModStore") {
     const modsForStore = requireAddress(resolveAddress(deployments, "SneakerMods", "SNEAKER_MODS_ADDRESS"), "SNEAKER_MODS_ADDRESS", "ModStore");
@@ -361,7 +348,18 @@ async function main() {
   }
 
   if (target === "all" || target === "FeeSplitter") {
-    deployments.push(await deployContract(viem, "FeeSplitter", [addressEnv("FEE_SPLITTER_ADMIN_ADDRESS", admin)]));
+    const splitterDeployment = await deployContract(viem, "FeeSplitter", [addressEnv("FEE_SPLITTER_ADMIN_ADDRESS", admin)]);
+    deployments.push(splitterDeployment);
+
+    const splitter = await viem.getContractAt("FeeSplitter", splitterDeployment.address);
+    const recipients = feeSplitterRecipients(admin);
+    const setRecipientsHash = await splitter.write.setRecipients(
+      [recipients, [4_000n, 3_000n, 2_000n, 1_000n]],
+      { account: wallet.account },
+    );
+    const setRecipientsReceipt = await publicClient.waitForTransactionReceipt({ hash: setRecipientsHash });
+    if (setRecipientsReceipt.status !== "success") throw new Error(`FeeSplitter recipient setup failed (${setRecipientsHash}).`);
+    console.log("Configured FeeSplitter recipients with the recommended 40/30/20/10 split");
   }
 
   if (target === "all" || target === "SneakerVault") {
@@ -370,7 +368,7 @@ async function main() {
     const workshopAddress = requireAddress(resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS"), "SNEAKER_WORKSHOP_ADDRESS", "SneakerVault");
     const stakingAddress = requireAddress(resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS"), "STAKING_VAULT_ADDRESS", "SneakerVault");
     const progressAddress = requireAddress(resolveAddress(deployments, "PlayerProgress", "PLAYER_PROGRESS_ADDRESS"), "PLAYER_PROGRESS_ADDRESS", "SneakerVault");
-    deployments.push(await deployContract(viem, "SneakerVault", [
+    const vaultDeployment = await deployContract(viem, "SneakerVault", [
       addressEnv("VAULT_ADMIN_ADDRESS", admin),
       sneakerAddress,
       modsAddress,
@@ -378,21 +376,57 @@ async function main() {
       workshopAddress,
       stakingAddress,
       progressAddress,
+    ]);
+    deployments.push(vaultDeployment);
+
+    const vault = await viem.getContractAt("SneakerVault", vaultDeployment.address);
+    const vp = sneakerVaultParameters();
+    const discountPerkHash = await vault.write.setPerk([
+      0n, 0, vp.discountBps, vp.discountMinTier, vp.discountRequiredLevel,
+      vp.discountMinPolStaked, vp.discountMinConditionBps, vp.discountMinModCount, true,
+    ], { account: wallet.account });
+    const discountPerkReceipt = await publicClient.waitForTransactionReceipt({ hash: discountPerkHash });
+    if (discountPerkReceipt.status !== "success") throw new Error(`SneakerVault discount perk setup failed (${discountPerkHash}).`);
+
+    const accessPerkHash = await vault.write.setPerk([
+      1n, 1, 0, vp.accessMinTier, vp.accessRequiredLevel,
+      vp.accessMinPolStaked, vp.accessMinConditionBps, vp.accessMinModCount, true,
+    ], { account: wallet.account });
+    const accessPerkReceipt = await publicClient.waitForTransactionReceipt({ hash: accessPerkHash });
+    if (accessPerkReceipt.status !== "success") throw new Error(`SneakerVault access perk setup failed (${accessPerkHash}).`);
+    console.log("Seeded SneakerVault perk 0 (discount) and perk 1 (exclusive access)");
+  }
+
+  if (target === "all" || target === "SneakerTabArena") {
+    const sneakerAddress = requireAddress(resolveAddress(deployments, "SneakerMint", "SNEAKER_MINT_ADDRESS"), "SNEAKER_MINT_ADDRESS", "SneakerTabArena");
+    const workshopAddress = requireAddress(resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS"), "SNEAKER_WORKSHOP_ADDRESS", "SneakerTabArena");
+    const stakingAddress = requireAddress(resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS"), "STAKING_VAULT_ADDRESS", "SneakerTabArena");
+    const arenaSignerAddress = requireAddress(
+      resolveAddress(deployments, "SneakerTabArena", "ARENA_SIGNER_ADDRESS"),
+      "ARENA_SIGNER_ADDRESS",
+      "SneakerTabArena",
+    );
+    deployments.push(await deployContract(viem, "SneakerTabArena", [
+      addressEnv("ARENA_ADMIN_ADDRESS", admin),
+      sneakerAddress,
+      workshopAddress,
+      stakingAddress,
+      arenaSignerAddress,
     ]));
   }
 
   // ─── Upgrade economy wiring ────────────────────────────────────
   // Link the workshop as the boost provider, authorize it on the game/mods,
-  // connect the rental contract, and allow the mods collection on the
+  // connect the tab arena, and allow the mods collection on the
   // marketplace and swap venue.
   const workshopAddress = resolveAddress(deployments, "SneakerWorkshop", "SNEAKER_WORKSHOP_ADDRESS");
+  const arenaAddress = resolveAddress(deployments, "SneakerTabArena", "SNEAKER_TAB_ARENA_ADDRESS");
   const modsAddress = resolveAddress(deployments, "SneakerMods", "SNEAKER_MODS_ADDRESS");
   const gameAddress = resolveAddress(deployments, "SneakerGame", "SNEAKER_GAME_ADDRESS");
   const stakingAddress = resolveAddress(deployments, "SneakerStaking", "STAKING_VAULT_ADDRESS");
   const appraiserAddress = resolveAddress(deployments, "SneakerAppraiser", "SNEAKER_APPRAISER_ADDRESS");
   const marketplaceAddress = resolveAddress(deployments, "SneakerMarketplace", "MARKETPLACE_ADDRESS");
   const swapAddress = resolveAddress(deployments, "SneakerSwap", "SNEAKER_SWAP_ADDRESS");
-  const rentalAddress = resolveAddress(deployments, "ModRental", "MOD_RENTAL_ADDRESS");
   const modStoreAddress = resolveAddress(deployments, "ModStore", "MOD_STORE_ADDRESS");
   const veStoreAddress = resolveAddress(deployments, "VeSneakerStore", "VE_SNEAKER_STORE_ADDRESS");
   const progressAddress = resolveAddress(deployments, "PlayerProgress", "PLAYER_PROGRESS_ADDRESS");
@@ -404,6 +438,23 @@ async function main() {
     console.log(`Wired ${name}`);
   }
 
+  const feeSplitterAddress = resolveAddress(deployments, "FeeSplitter", "FEE_SPLITTER_ADDRESS");
+  if (feeSplitterAddress !== ZERO) {
+    if (marketplaceAddress !== ZERO) {
+      const marketplace = await viem.getContractAt("SneakerMarketplace", marketplaceAddress);
+      const [feeBps, premiumBps, currentCollector] = await Promise.all([
+        marketplace.read.feeBps(),
+        marketplace.read.appraiserPremiumBps(),
+        marketplace.read.feeCollector(),
+      ]);
+      if (currentCollector.toLowerCase() !== feeSplitterAddress.toLowerCase()) {
+        await wire("SneakerMarketplace.feeCollector", () =>
+          marketplace.write.updateParams([feeBps, premiumBps, feeSplitterAddress], { account: wallet.account }),
+        );
+      }
+    }
+  }
+
   if (workshopAddress !== ZERO) {
     if (gameAddress !== ZERO) {
       const game = await viem.getContractAt("SneakerGame", gameAddress);
@@ -413,6 +464,12 @@ async function main() {
     if (stakingAddress !== ZERO) {
       const staking = await viem.getContractAt("SneakerStaking", stakingAddress);
       await wire("SneakerStaking.boosts", () => staking.write.setBoosts([workshopAddress], { account: wallet.account }));
+      if (arenaAddress !== ZERO) {
+        const tabArenaRole = await staking.read.TAB_ARENA_ROLE();
+        await wire("SneakerStaking.TAB_ARENA_ROLE", () =>
+          staking.write.grantRole([tabArenaRole, arenaAddress], { account: wallet.account }),
+        );
+      }
     }
     if (appraiserAddress !== ZERO) {
       const appraiser = await viem.getContractAt("SneakerAppraiser", appraiserAddress);
@@ -421,10 +478,6 @@ async function main() {
     if (modsAddress !== ZERO) {
       const mods = await viem.getContractAt("SneakerMods", modsAddress);
       await wire("SneakerMods.workshop", () => mods.write.setWorkshop([workshopAddress], { account: wallet.account }));
-    }
-    if (rentalAddress !== ZERO) {
-      const workshop = await viem.getContractAt("SneakerWorkshop", workshopAddress);
-      await wire("SneakerWorkshop.rentalSource", () => workshop.write.setRentalSource([rentalAddress], { account: wallet.account }));
     }
     if (marketplaceAddress !== ZERO) {
       const marketplace = await viem.getContractAt("SneakerMarketplace", marketplaceAddress);

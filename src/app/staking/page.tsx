@@ -29,7 +29,7 @@ export default function StakingPage() {
             className="animate-fade-up max-w-3xl text-4xl font-extrabold tracking-tight text-balance md:text-5xl lg:text-6xl"
             style={{ animationDelay: "120ms" }}
           >
-            Sustainable POL yield, amplified by sneaker NFTs
+            Sustainable POL yield, <span className="text-gradient">amplified by sneaker NFTs</span>
           </h1>
 
           <p

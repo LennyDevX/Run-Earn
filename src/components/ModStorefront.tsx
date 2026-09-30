@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatEther, getAddress, isAddress, type Address } from "viem";
+import { formatEther, getAddress, isAddress, zeroAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
-import { modStoreAbi } from "@/lib/contracts";
+import { modStoreAbi, sneakerVaultAbi } from "@/lib/contracts";
 import { useModEconomy } from "@/hooks/useModEconomy";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
@@ -20,9 +20,12 @@ type ModDesign = {
   effectBps: number;
   consumable: boolean;
   price: bigint;
+  quotedPrice: bigint;
   maxSupply: number;
   minted: number;
   requiredLevel: number;
+  requiredPerkPlusOne: bigint;
+  perkEligible: boolean | null;
   active: boolean;
 };
 
@@ -35,6 +38,7 @@ function formatPol(value: bigint, maxDigits = 4) {
 export default function ModStorefront() {
   const wallet = usePolygonWallet();
   const economy = useModEconomy();
+  const { quoteMod } = economy;
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
   const playerLevel = progress.snapshot?.level ?? 0;
   const { addLocalActivity } = useSubgraphActivity(wallet.address);
@@ -55,47 +59,74 @@ export default function ModStorefront() {
     }
     setIsReading(true);
     try {
-      const count = await wallet.publicClient.readContract({
-        address: storeAddress,
-        abi: modStoreAbi,
-        functionName: "designCount",
-      });
+      const [count, vaultAddress] = await Promise.all([
+        wallet.publicClient.readContract({ address: storeAddress, abi: modStoreAbi, functionName: "designCount" }),
+        wallet.publicClient.readContract({ address: storeAddress, abi: modStoreAbi, functionName: "vault" }),
+      ]);
       const rows = await Promise.all(
-        Array.from({ length: Number(count) }, (_, i) =>
-          wallet.publicClient!.readContract({
-            address: storeAddress,
-            abi: modStoreAbi,
-            functionName: "designs",
-            args: [BigInt(i)],
-          }).catch(() => null),
-        ),
+        Array.from({ length: Number(count) }, async (_, i) => {
+          const [raw, requiredPerkPlusOne] = await Promise.all([
+            wallet.publicClient.readContract({
+              address: storeAddress,
+              abi: modStoreAbi,
+              functionName: "designs",
+              args: [BigInt(i)],
+            }).catch(() => null),
+            wallet.publicClient.readContract({
+              address: storeAddress,
+              abi: modStoreAbi,
+              functionName: "requiredPerkPlusOne",
+              args: [BigInt(i)],
+            }),
+          ]);
+          if (!raw) return null;
+          const [name, , slot, , tier, effectBps, , consumable, price, maxSupply, minted, requiredLevel, active] =
+            raw as readonly [string, string, number, number, number, number, number, boolean, bigint, number, number, number, boolean];
+          const perkEligible = requiredPerkPlusOne === 0n
+            ? true
+            : !wallet.address
+              ? null
+              : vaultAddress.toLowerCase() === zeroAddress
+                ? false
+                : await wallet.publicClient.readContract({
+                    address: vaultAddress,
+                    abi: sneakerVaultAbi,
+                    functionName: "isEligible",
+                    args: [wallet.address, requiredPerkPlusOne - 1n],
+                  });
+          let quotedPrice = price;
+          if (wallet.address && (requiredPerkPlusOne === 0n || perkEligible)) {
+            try {
+              quotedPrice = await quoteMod(BigInt(i));
+            } catch {
+              quotedPrice = price;
+            }
+          }
+          return {
+            index: BigInt(i),
+            name,
+            slot: Number(slot),
+            tier: Number(tier),
+            effectBps: Number(effectBps),
+            consumable: Boolean(consumable),
+            price,
+            quotedPrice,
+            maxSupply: Number(maxSupply),
+            minted: Number(minted),
+            requiredLevel: Number(requiredLevel),
+            requiredPerkPlusOne,
+            perkEligible,
+            active: Boolean(active),
+          };
+        }),
       );
-      const next: ModDesign[] = [];
-      rows.forEach((raw, i) => {
-        if (!raw) return;
-        const [name, , slot, , tier, effectBps, , consumable, price, maxSupply, minted, requiredLevel, active] =
-          raw as readonly [string, string, number, number, number, number, number, boolean, bigint, number, number, number, boolean];
-        next.push({
-          index: BigInt(i),
-          name,
-          slot: Number(slot),
-          tier: Number(tier),
-          effectBps: Number(effectBps),
-          consumable: Boolean(consumable),
-          price,
-          maxSupply: Number(maxSupply),
-          minted: Number(minted),
-          requiredLevel: Number(requiredLevel),
-          active: Boolean(active),
-        });
-      });
-      setDesigns(next);
+      setDesigns(rows.filter((design): design is ModDesign => design !== null));
     } catch {
       setDesigns([]);
     } finally {
       setIsReading(false);
     }
-  }, [storeAddress, wallet.publicClient]);
+  }, [quoteMod, storeAddress, wallet.address, wallet.publicClient]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());
@@ -111,7 +142,7 @@ export default function ModStorefront() {
     }
     void (async () => {
       try {
-        const hash = await economy.buyMod(design.index, design.price);
+        const hash = await economy.buyMod(design.index);
         addLocalActivity(`Bought mod ${design.name}`, hash);
         setNotice(`${design.name} minted to your wallet.`);
         await refresh();
@@ -139,6 +170,7 @@ export default function ModStorefront() {
             const soldOut = design.maxSupply > 0 && design.minted >= design.maxSupply;
             const levelLocked =
               design.requiredLevel > 0 && (!progress.configured || playerLevel < design.requiredLevel);
+            const perkLocked = design.requiredPerkPlusOne > 0n && wallet.address !== null && design.perkEligible !== true;
             const traits = {
               slot: design.slot,
               rarity: 0,
@@ -170,6 +202,11 @@ export default function ModStorefront() {
                         LV {design.requiredLevel}+
                       </span>
                     ) : null}
+                    {design.requiredPerkPlusOne > 0n ? (
+                      <span className={`absolute right-3 bottom-3 rounded-full px-2.5 py-1 font-pixel text-[9px] ${perkLocked ? "bg-magma/10 text-magma" : "bg-brand/10 text-brand"}`}>
+                        PERK {String(design.requiredPerkPlusOne - 1n)}
+                      </span>
+                    ) : null}
                   </div>
                   <h3 className="mt-4 font-bold tracking-tight">{design.name}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-foreground/50">{modEffectLabel(traits)}</p>
@@ -181,7 +218,7 @@ export default function ModStorefront() {
                 </div>
                 <button
                   type="button"
-                  disabled={economy.isLoading || !design.active || soldOut || levelLocked}
+                  disabled={isReading || economy.isLoading || !design.active || soldOut || levelLocked || perkLocked}
                   onClick={() => handleBuy(design)}
                   className="min-h-11 w-full cursor-pointer rounded-full bg-mint px-4 text-sm font-bold text-ink shadow-md shadow-mint/10 transition-transform active:scale-[0.98] hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -189,7 +226,11 @@ export default function ModStorefront() {
                     ? "Sold out"
                     : levelLocked
                       ? `Requires level ${design.requiredLevel}`
-                      : `Buy · ${formatPol(design.price)} POL`}
+                      : perkLocked
+                        ? "Access perk required"
+                        : design.requiredPerkPlusOne > 0n && !wallet.address
+                          ? "Connect to check access"
+                          : `Buy · ${formatPol(design.quotedPrice)} POL`}
                 </button>
               </article>
             );

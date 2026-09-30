@@ -17,7 +17,7 @@ export default function MintPage() {
         <section className="flex flex-col gap-4 py-16">
           <span className="font-pixel text-[10px] text-sky">YOUR SNEAKER → AI → NFT</span>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance md:text-5xl">
-            Your sneaker, reimagined by AI and minted on Polygon
+            Your sneaker, <span className="text-gradient">reimagined by AI</span> and minted on Polygon
           </h1>
           <p className="max-w-2xl leading-relaxed text-foreground/60">
             Upload a photo of your sneaker, let the AI agent create a unique virtual collectible,

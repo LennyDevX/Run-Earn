@@ -25,7 +25,7 @@ export default function CollectionPage() {
             className="animate-fade-up max-w-3xl text-4xl font-bold tracking-tight text-balance md:text-5xl"
             style={{ animationDelay: "120ms" }}
           >
-            Choose your orbit.
+            Choose your <span className="text-gradient text-gradient-wide">orbit.</span>
           </h1>
           <p
             className="animate-fade-up max-w-2xl leading-relaxed text-foreground/60"

@@ -20,8 +20,8 @@ interface IVaultSneakerTraits {
 }
 
 interface IVaultWorkshopBoosts {
-    /// @notice Permanent rarity points gained through forge levels.
-    function rarityBonus(uint256 tokenId) external view returns (uint8);
+    /// @notice Live wear of a sneaker, in basis points (10000 = pristine).
+    function conditionBps(uint256 tokenId) external view returns (uint16);
 }
 
 interface IVaultStakingProgress {
@@ -37,7 +37,7 @@ interface IVaultProgressView {
 
 /// @title SneakerVault — live-state benefits: discounts and exclusive access.
 /// @notice Grants protocol perks based on what a wallet currently owns or
-///      maintains: veSneakers by tier, forge level, POL staked, PlayerProgress
+///      maintains: veSneakers by tier, how well serviced they are, POL staked, PlayerProgress
 ///      level, and mod ownership. Two perk kinds exist:
 ///      — DISCOUNT: `discountBps(user, perkId)` returns a basis-point price
 ///        reduction that VeSneakerStore/ModStore apply at purchase time.
@@ -50,6 +50,7 @@ interface IVaultProgressView {
 contract SneakerVault is AccessControl {
     uint256 public constant BASIS_POINTS = 10_000;
     uint16 public constant MAX_DISCOUNT_BPS = 5_000; // discounts cap at 50%
+    uint256 public constant MAX_PERKS = 16;
     /// @notice Scan bound for owner enumeration. Designs are capped at 1,000
     ///      copies each, so a legitimate wallet cannot exceed this without
     ///      controlling the whole supply.
@@ -68,11 +69,19 @@ contract SneakerVault is AccessControl {
         uint8 requiredLevel;
         /// @notice Minimum POL principal staked (0 = no staking gate).
         uint256 minPolStaked;
-        /// @notice Minimum forge level across owned sneakers (0 = no forge gate).
-        uint8 minForgeLevel;
+        /// @notice Minimum condition across owned sneakers (0 = no care gate).
+        uint16 minConditionBps;
         /// @notice Minimum count of mods owned (0 = no mod gate).
         uint256 minModCount;
         bool active;
+    }
+
+    struct EligibilitySignals {
+        uint8 level;
+        uint256 polStaked;
+        uint256 modCount;
+        uint8 highestTier;
+        uint16 highestConditionBps;
     }
 
     IERC721Enumerable public immutable nft;
@@ -88,7 +97,7 @@ contract SneakerVault is AccessControl {
     /// @notice Access perks: one claim per wallet per perk.
     mapping(uint256 perkId => mapping(address user => bool claimed)) public accessClaimed;
 
-    event PerkSet(uint256 indexed perkId, uint8 kind, uint16 valueBps, uint8 minTier, uint8 requiredLevel, uint256 minPolStaked, uint8 minForgeLevel, uint256 minModCount, bool active);
+    event PerkSet(uint256 indexed perkId, uint8 kind, uint16 valueBps, uint8 minTier, uint8 requiredLevel, uint256 minPolStaked, uint16 minConditionBps, uint256 minModCount, bool active);
     event PerkClaimed(uint256 indexed perkId, address indexed user);
 
     constructor(
@@ -128,10 +137,12 @@ contract SneakerVault is AccessControl {
         uint8 minTier,
         uint8 requiredLevel,
         uint256 minPolStaked,
-        uint8 minForgeLevel,
+        uint16 minConditionBps,
         uint256 minModCount,
         bool active
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(perkId < MAX_PERKS, "SneakerVault: perk limit reached");
+        require(perkId <= perkCount, "SneakerVault: perk ids must be sequential");
         require(kind == KIND_DISCOUNT || kind == KIND_ACCESS, "SneakerVault: invalid kind");
         if (kind == KIND_DISCOUNT) {
             require(valueBps > 0 && valueBps <= MAX_DISCOUNT_BPS, "SneakerVault: discount out of range");
@@ -144,46 +155,93 @@ contract SneakerVault is AccessControl {
             minTier: minTier,
             requiredLevel: requiredLevel,
             minPolStaked: minPolStaked,
-            minForgeLevel: minForgeLevel,
+            minConditionBps: minConditionBps,
             minModCount: minModCount,
             active: active
         });
-        if (perkId >= perkCount) perkCount = perkId + 1;
-        emit PerkSet(perkId, kind, valueBps, minTier, requiredLevel, minPolStaked, minForgeLevel, minModCount, active);
+        if (perkId == perkCount) ++perkCount;
+        emit PerkSet(perkId, kind, valueBps, minTier, requiredLevel, minPolStaked, minConditionBps, minModCount, active);
     }
 
     // ─────────────────────────── Views ───────────────────────────
 
-    function perks(uint256 perkId) external view returns (Perk memory) {
-        return _perks[perkId];
+    function perks(uint256 perkId)
+        external
+        view
+        returns (
+            uint8 kind,
+            uint16 valueBps,
+            uint8 minTier,
+            uint8 requiredLevel,
+            uint256 minPolStaked,
+            uint16 minConditionBps,
+            uint256 minModCount,
+            bool active
+        )
+    {
+        Perk memory perk = _perks[perkId];
+        return (
+            perk.kind,
+            perk.valueBps,
+            perk.minTier,
+            perk.requiredLevel,
+            perk.minPolStaked,
+            perk.minConditionBps,
+            perk.minModCount,
+            perk.active
+        );
     }
 
     /// @notice Highest active discount available to `user` across all discount
-    ///      perks. Returns 0 when no discount applies — callers treat 0 as
-    ///      "pay full price".
-    function bestDiscountBps(address user) external view returns (uint16) {
-        uint16 best;
+    ///      perks. Perk count is capped, and wallet signals are read once so
+    ///      purchase quotes have bounded work even with several perks.
+    function bestDiscountBps(address user) external view returns (uint16 best) {
+        uint8 minTier;
+        uint16 minConditionBps;
+        uint8 requiredLevel;
+        uint256 minPolStaked;
+        uint256 minModCount;
+        bool hasDiscount;
+
         for (uint256 i; i < perkCount; ++i) {
             Perk memory perk = _perks[i];
             if (!perk.active || perk.kind != KIND_DISCOUNT) continue;
-            if (!_meetsGates(user, perk)) continue;
-            if (perk.valueBps > best) best = perk.valueBps;
+            hasDiscount = true;
+            if (perk.minTier > minTier) minTier = perk.minTier;
+            if (perk.minConditionBps > minConditionBps) minConditionBps = perk.minConditionBps;
+            if (perk.requiredLevel > requiredLevel) requiredLevel = perk.requiredLevel;
+            if (perk.minPolStaked > minPolStaked) minPolStaked = perk.minPolStaked;
+            if (perk.minModCount > minModCount) minModCount = perk.minModCount;
         }
-        return best;
+        if (!hasDiscount) return 0;
+
+        EligibilitySignals memory signals = _readSignals(
+            user, minTier, minConditionBps, requiredLevel, minPolStaked, minModCount
+        );
+        for (uint256 i; i < perkCount; ++i) {
+            Perk memory perk = _perks[i];
+            if (!perk.active || perk.kind != KIND_DISCOUNT || !_meetsGates(perk, signals)) continue;
+            if (perk.valueBps > best) best = perk.valueBps;
+            if (best == MAX_DISCOUNT_BPS) return best;
+        }
     }
 
     /// @notice Discount for a specific perk (0 when not eligible or inactive).
     function discountBps(address user, uint256 perkId) external view returns (uint16) {
         Perk memory perk = _perks[perkId];
         if (!perk.active || perk.kind != KIND_DISCOUNT) return 0;
-        if (!_meetsGates(user, perk)) return 0;
-        return perk.valueBps;
+        return _meetsGates(perk, _readSignals(
+            user, perk.minTier, perk.minConditionBps, perk.requiredLevel, perk.minPolStaked, perk.minModCount
+        )) ? perk.valueBps : 0;
     }
 
     /// @notice Whether `user` satisfies every non-zero gate of the perk.
     function isEligible(address user, uint256 perkId) external view returns (bool) {
         Perk memory perk = _perks[perkId];
-        return perk.active && _meetsGates(user, perk);
+        if (!perk.active) return false;
+        return _meetsGates(perk, _readSignals(
+            user, perk.minTier, perk.minConditionBps, perk.requiredLevel, perk.minPolStaked, perk.minModCount
+        ));
     }
 
     // ─────────────────────────── Claims ───────────────────────────
@@ -196,49 +254,62 @@ contract SneakerVault is AccessControl {
         require(perk.active, "SneakerVault: perk inactive");
         require(perk.kind == KIND_ACCESS, "SneakerVault: not an access perk");
         require(!accessClaimed[perkId][msg.sender], "SneakerVault: already claimed");
-        require(_meetsGates(msg.sender, perk), "SneakerVault: requirements not met");
+        require(
+            _meetsGates(perk, _readSignals(
+                msg.sender, perk.minTier, perk.minConditionBps, perk.requiredLevel, perk.minPolStaked, perk.minModCount
+            )),
+            "SneakerVault: requirements not met"
+        );
         accessClaimed[perkId][msg.sender] = true;
         emit PerkClaimed(perkId, msg.sender);
     }
 
     // ─────────────────────────── Internals ────────────────────────
 
+    /// @notice Read each required eligibility signal once. Tier and condition
+    ///      checks share a single bounded enumerable scan.
+    function _readSignals(
+        address user,
+        uint8 minTier,
+        uint16 minConditionBps,
+        uint8 requiredLevel,
+        uint256 minPolStaked,
+        uint256 minModCount
+    ) private view returns (EligibilitySignals memory signals) {
+        if (requiredLevel > 0) signals.level = progress.levelOf(user);
+        if (minPolStaked > 0) {
+            (signals.polStaked, , , ) = staking.polPositions(user);
+        }
+        if (minModCount > 0) signals.modCount = mods.balanceOf(user);
+
+        if (minTier == 0 && minConditionBps == 0) return signals;
+        uint256 balance = nft.balanceOf(user);
+        uint256 scan = balance > MAX_OWNER_SCAN ? MAX_OWNER_SCAN : balance;
+        for (uint256 i; i < scan; ++i) {
+            uint256 tokenId = nft.tokenOfOwnerByIndex(user, i);
+            if (minTier > signals.highestTier) {
+                IVaultSneakerTraits.SneakerTraitsView memory traits = sneakerTraits.traitsOf(tokenId);
+                if (traits.tier > signals.highestTier) signals.highestTier = traits.tier;
+            }
+            if (minConditionBps > signals.highestConditionBps) {
+                uint16 condition = workshop.conditionBps(tokenId);
+                if (condition > signals.highestConditionBps) signals.highestConditionBps = condition;
+            }
+            if (
+                (minTier == 0 || signals.highestTier >= minTier) &&
+                (minConditionBps == 0 || signals.highestConditionBps >= minConditionBps)
+            ) break;
+        }
+    }
+
     /// @notice Every non-zero gate must pass. Gates are additive by design:
     ///      a perk with minTier=3 AND requiredLevel=5 requires both.
-    function _meetsGates(address user, Perk memory perk) private view returns (bool) {
-        if (perk.requiredLevel > 0 && progress.levelOf(user) < perk.requiredLevel) return false;
-        if (perk.minPolStaked > 0) {
-            (uint256 principal, , , ) = staking.polPositions(user);
-            if (principal < perk.minPolStaked) return false;
-        }
-        if (perk.minTier > 0 && !_ownsSneakerOfTier(user, perk.minTier)) return false;
-        if (perk.minForgeLevel > 0 && !_hasForgeLevel(user, perk.minForgeLevel)) return false;
-        if (perk.minModCount > 0 && mods.balanceOf(user) < perk.minModCount) return false;
-        return true;
-    }
-
-    /// @notice Scan the wallet's sneaker balance for one with tier >= minTier.
-    function _ownsSneakerOfTier(address user, uint8 minTier) private view returns (bool) {
-        uint256 balance = nft.balanceOf(user);
-        if (balance == 0) return false;
-        uint256 scan = balance > MAX_OWNER_SCAN ? MAX_OWNER_SCAN : balance;
-        for (uint256 i; i < scan; ++i) {
-            uint256 tokenId = nft.tokenOfOwnerByIndex(user, i);
-            IVaultSneakerTraits.SneakerTraitsView memory traits = sneakerTraits.traitsOf(tokenId);
-            if (traits.tier >= minTier) return true;
-        }
-        return false;
-    }
-
-    /// @notice Scan the wallet's sneakers for one with forge level >= min.
-    function _hasForgeLevel(address user, uint8 minForgeLevel) private view returns (bool) {
-        uint256 balance = nft.balanceOf(user);
-        if (balance == 0) return false;
-        uint256 scan = balance > MAX_OWNER_SCAN ? MAX_OWNER_SCAN : balance;
-        for (uint256 i; i < scan; ++i) {
-            uint256 tokenId = nft.tokenOfOwnerByIndex(user, i);
-            if (workshop.rarityBonus(tokenId) >= minForgeLevel) return true;
-        }
-        return false;
+    function _meetsGates(Perk memory perk, EligibilitySignals memory signals) private pure returns (bool) {
+        return
+            (perk.requiredLevel == 0 || signals.level >= perk.requiredLevel) &&
+            (perk.minPolStaked == 0 || signals.polStaked >= perk.minPolStaked) &&
+            (perk.minTier == 0 || signals.highestTier >= perk.minTier) &&
+            (perk.minConditionBps == 0 || signals.highestConditionBps >= perk.minConditionBps) &&
+            (perk.minModCount == 0 || signals.modCount >= perk.minModCount);
     }
 }

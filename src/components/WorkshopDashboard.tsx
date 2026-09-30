@@ -9,6 +9,7 @@ import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { modEffectLabel, NO_AUX, SLOTS, type OwnedMod } from "@/lib/mods";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import { RARITIES } from "@/lib/sneaker-nft";
+import { bpsToPercent, conditionBand, conditionPercent, sneakerPower, TAB_CHALLENGE } from "@/lib/tab-challenge";
 import SneakerArtwork from "@/components/SneakerArtwork";
 import { veSneakerArtworkByDesign } from "@/lib/ve-sneakers";
 
@@ -21,7 +22,12 @@ function formatPoints(value: bigint) {
   return num.toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
-export default function WorkshopDashboard() {
+export default function WorkshopDashboard({
+  focusRequest,
+}: {
+  /** Set by the item gallery: opens the matching slot picker and scrolls to it. */
+  focusRequest?: { slot: number; nonce: number } | null;
+} = {}) {
   const wallet = usePolygonWallet();
   const workshop = useWorkshop();
   const game = useSneakerGame();
@@ -42,6 +48,20 @@ export default function WorkshopDashboard() {
     };
   }, []);
 
+  // "Equip on a veSneaker" in the item gallery opens the slot picker here.
+  useEffect(() => {
+    if (!focusRequest) return;
+    const frame = window.requestAnimationFrame(() => {
+      setSlotPicker(focusRequest.slot);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.getElementById("workshop-loadout")?.scrollIntoView({
+        behavior: reduced ? "auto" : "smooth",
+        block: "start",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRequest]);
+
   const sneakers = workshop.owned.sneakers;
   const selectedId = workshop.selectedSneakerId ?? sneakers[0]?.tokenId ?? null;
   const selected = sneakers.find((s) => s.tokenId === selectedId) ?? null;
@@ -50,6 +70,21 @@ export default function WorkshopDashboard() {
   const skinOverride = bonuses && bonuses.skinOverride !== 255 ? bonuses.skinOverride : null;
   const boostActive =
     bonuses != null && bonuses.boostExpiresAt > 0 && nowSeconds > 0 && bonuses.boostExpiresAt > nowSeconds;
+
+  /// Live tab-challenge ceiling: condition and equipped mods feed the power
+  /// score, so this panel is where a player raises their daily boost cap.
+  const equippedModCount = useMemo(
+    () => Array.from(workshop.equippedMap.values()).filter((id) => id !== 0n).length,
+    [workshop.equippedMap],
+  );
+  const tabPower = useMemo(() => {
+    if (!selected) return null;
+    return sneakerPower({
+      rarity: Number(selected.rarity),
+      conditionBps: bonuses?.conditionBps ?? 10_000,
+      equippedMods: equippedModCount,
+    });
+  }, [bonuses?.conditionBps, equippedModCount, selected]);
 
   const modsBySlot = useMemo(() => {
     const map = new Map<number, OwnedMod[]>();
@@ -102,7 +137,7 @@ export default function WorkshopDashboard() {
           <div>
             <span className="font-pixel text-[9px] text-mint">WORKSHOP</span>
             <p className="text-xs font-semibold text-foreground/80">
-              Equip mods · repair · forge
+              Equip mods · service · repair
             </p>
           </div>
         </div>
@@ -170,7 +205,7 @@ export default function WorkshopDashboard() {
       </div>
 
       {selected ? (
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+        <div id="workshop-loadout" className="grid scroll-mt-28 gap-8 lg:grid-cols-[1.4fr_1fr]">
           {/* Slots grid */}
           <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
             <span className="font-pixel text-[9px] text-mint">2 · UPGRADE SLOTS</span>
@@ -269,14 +304,14 @@ export default function WorkshopDashboard() {
             </div>
           </div>
 
-          {/* Effective stats + forge + consumables */}
+          {/* Effective stats + care + consumables */}
           <div className="flex flex-col gap-6">
             {/* Vitals: Power / Health / Energy */}
             <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
               <span className="font-pixel text-[9px] text-magma">VITALS</span>
               <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                 <div className="rounded-2xl bg-background p-3">
-                  <p className="font-pixel text-[8px] text-sky">POWER</p>
+                  <p className="font-pixel text-[8px] text-sky">EARN POWER</p>
                   <p className="mt-1 text-sm font-bold">
                     {gameStats ? formatPoints(gameStats.power) : "—"}
                   </p>
@@ -328,7 +363,7 @@ export default function WorkshopDashboard() {
                   ["Appraisal bonus", bonuses ? `+${formatBps(bonuses.appraisalBonusBps)}` : "—"],
                   ["Staking boost", bonuses ? `+${formatBps(bonuses.stakingBoostBps)}` : "—"],
                   ["Skill bonus", bonuses ? `+${formatBps(bonuses.skillBonusBps)}` : "—"],
-                  ["Forge level", bonuses ? `${bonuses.forgeLevel}` : "—"],
+                  ["Condition", `${conditionPercent(bonuses?.conditionBps ?? 10_000)}%`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between border-b border-foreground/5 pb-2">
                     <dt className="text-foreground/60">{label}</dt>
@@ -343,26 +378,60 @@ export default function WorkshopDashboard() {
                 </div>
               </dl>
 
-              {bonuses && bonuses.nextForgeCost > 0n ? (
-                <button
-                  type="button"
-                  disabled={workshop.isLoading}
-                  onClick={() =>
-                    void runAction(
-                      () => workshop.forge(selected.tokenId),
-                      `Sneaker #${selected.tokenId} forged to level ${bonuses.forgeLevel + 1}`,
-                    )
-                  }
-                  className="mt-6 w-full min-h-12 cursor-pointer rounded-full bg-magma px-4 text-sm font-bold text-white shadow-md shadow-magma/20 transition-transform active:scale-[0.98] disabled:opacity-50"
+              {/* Tab challenge ceiling — the reason to service and equip */}
+              <div className="mt-5 rounded-2xl border border-brand/20 bg-brand/8 p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-pixel text-[9px] tracking-[0.18em] text-brand">
+                    TAB BOOST CEILING
+                  </span>
+                  <span className="font-mono text-lg font-bold text-brand">
+                    +{bpsToPercent(tabPower?.ceilingBps ?? TAB_CHALLENGE.minBoostBps)}
+                  </span>
+                </div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                  <span
+                    className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-700 ease-out"
+                    style={{ width: `${tabPower?.score ?? 0}%` }}
+                  />
+                </div>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-foreground/55">
+                  Power {tabPower?.score ?? 0}/{TAB_CHALLENGE.maxPowerScore} · rarity{" "}
+                  {tabPower?.effectiveRarity ?? 0} + {equippedModCount} mods ×{" "}
+                  {TAB_CHALLENGE.modPowerEach}. Service this pair or equip more mods to raise the
+                  ceiling on your daily tab session.
+                </p>
+              </div>
+
+              {/* Care: the pair wears on a 365-day season, items restore it. */}
+              <div className="mt-6 rounded-2xl border border-foreground/10 bg-background p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-foreground/45 uppercase">
+                    Condition
+                  </span>
+                  <span className={`font-mono text-sm font-bold ${conditionBand(bonuses?.conditionBps ?? 10_000).tone}`}>
+                    {conditionBand(bonuses?.conditionBps ?? 10_000).label} ·{" "}
+                    {conditionPercent(bonuses?.conditionBps ?? 10_000)}%
+                  </span>
+                </div>
+                <div
+                  className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10"
+                  role="meter"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={conditionPercent(bonuses?.conditionBps ?? 10_000)}
+                  aria-label="veSneaker condition"
                 >
-                  Forge · {formatPoints(bonuses.nextForgeCost)} veRUNE
-                </button>
-              ) : (
-                <p className="mt-6 text-center text-xs text-foreground/50">Max forge level reached.</p>
-              )}
-              <p className="mt-3 text-[11px] leading-relaxed text-foreground/45">
-                Forge burns claimed veRUNE to permanently raise rarity (+5) and earn rate (+2.5%) per level.
-              </p>
+                  <span
+                    className={`block h-full rounded-full transition-[width] duration-700 ease-out ${conditionBand(bonuses?.conditionBps ?? 10_000).bar}`}
+                    style={{ width: `${Math.max(3, conditionPercent(bonuses?.conditionBps ?? 10_000))}%` }}
+                  />
+                </div>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-foreground/55">
+                  A pair wears from 100% to 50% over a 365-day season. Wear scales its rarity, so
+                  the earn rate, the appraisal, and the tab power score all drop with it. Burn a
+                  repair kit to restore it — mods are permanent, the sneaker is what wears.
+                </p>
+              </div>
             </div>
 
             {/* Consumable ability NFTs */}
@@ -401,7 +470,7 @@ export default function WorkshopDashboard() {
                 <p className="mt-4 text-xs leading-relaxed text-foreground/55">
                   No consumables in your wallet. Consumable mod NFTs burn on use — repair kits
                   restore health, surge triggers instant activation, boost capsules raise earn rate
-                  for 24h, and forge stones grant a free forge level.
+                  for 24h, and service kits restore a worn pair to pristine.
                 </p>
               )}
               {consumables.length > 0 && gameStats && gameStats.energy === 0 ? (

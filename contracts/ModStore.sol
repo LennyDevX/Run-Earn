@@ -16,6 +16,11 @@ interface IVaultDiscountView {
     function bestDiscountBps(address user) external view returns (uint16);
 }
 
+interface IVaultAccessView {
+    function isEligible(address user, uint256 perkId) external view returns (bool);
+    function perkCount() external view returns (uint256);
+}
+
 /// @title ModStore — primary sale of premium upgrade mods for POL.
 /// @notice The store mints SneakerMods on demand: the buyer pays POL and the
 ///      store calls SneakerMods.mintAuthorized, so no copies are pre-minted.
@@ -55,9 +60,12 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
     address public vault;
 
     ModDesign[] private _designs;
+    /// designIndex => required vault perk id + 1 (0 = no access gate).
+    mapping(uint256 designIndex => uint256 perkIdPlusOne) public requiredPerkPlusOne;
 
     event ModDesignAdded(uint256 indexed designIndex, string name, uint8 slot, uint8 tier, uint16 effectBps, uint256 price, uint16 maxSupply);
     event ModDesignUpdated(uint256 indexed designIndex, uint256 price, uint16 maxSupply, bool active);
+    event DesignPerkRequirementUpdated(uint256 indexed designIndex, uint256 indexed perkId, bool required);
     event ModPurchased(uint256 indexed designIndex, address indexed buyer, uint256 quantity, uint256 totalPaid, uint256 firstTokenId);
     event TreasuryUpdated(address indexed treasury);
     event ProgressUpdated(address indexed progress);
@@ -137,6 +145,23 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         emit ModDesignUpdated(designIndex, _requireDesign(designIndex).price, _requireDesign(designIndex).maxSupply, _requireDesign(designIndex).active);
     }
 
+    /// @notice Require a SneakerVault perk for purchases of this design.
+    ///      `required=false` clears the gate; an unset vault fails closed.
+    function setDesignRequiredPerk(uint256 designIndex, uint256 perkId, bool required)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _requireDesign(designIndex);
+        if (required) {
+            require(vault != address(0), "ModStore: vault not set");
+            require(perkId < IVaultAccessView(vault).perkCount(), "ModStore: unknown perk");
+            requiredPerkPlusOne[designIndex] = perkId + 1;
+        } else {
+            requiredPerkPlusOne[designIndex] = 0;
+        }
+        emit DesignPerkRequirementUpdated(designIndex, perkId, required);
+    }
+
     /// @notice Link PlayerProgress for level-gated designs.
     function setProgress(address progress_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         progress = progress_;
@@ -210,7 +235,9 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
     ///      applying the buyer's best vault discount when one is linked.
     function quote(uint256 designIndex, uint16 quantity) external view returns (uint256) {
         require(quantity > 0, "ModStore: invalid quantity");
-        uint256 total = _requireDesign(designIndex).price * quantity;
+        ModDesign storage design = _requireDesign(designIndex);
+        _requirePerk(designIndex, msg.sender);
+        uint256 total = design.price * quantity;
         return _applyDiscount(msg.sender, total);
     }
 
@@ -231,6 +258,7 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
                 "ModStore: level required"
             );
         }
+        _requirePerk(designIndex, buyer);
         uint256 total = _applyDiscount(buyer, design.price * quantity);
         require(msg.value == total, "ModStore: wrong payment");
 
@@ -256,6 +284,15 @@ contract ModStore is Pausable, AccessControl, ReentrancyGuard {
         (bool sent, ) = treasury.call{value: total}("");
         require(sent, "ModStore: treasury transfer failed");
         emit ModPurchased(designIndex, buyer, quantity, total, firstTokenId);
+    }
+
+    function _requirePerk(uint256 designIndex, address buyer) internal view {
+        uint256 perkIdPlusOne = requiredPerkPlusOne[designIndex];
+        if (perkIdPlusOne == 0) return;
+        require(
+            vault != address(0) && IVaultAccessView(vault).isEligible(buyer, perkIdPlusOne - 1),
+            "ModStore: perk required"
+        );
     }
 
     /// @notice Apply the buyer's best vault discount. Zero vault address or a

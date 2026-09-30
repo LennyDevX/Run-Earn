@@ -88,6 +88,10 @@ export const stakingAbi = [
   { type: "function", name: "baseApyBps", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "maxApyBps", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "tierBonuses", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint64[4]" }] },
+  { type: "function", name: "stakedOwner", stateMutability: "view", inputs: [{ name: "tokenId", type: "uint256" }], outputs: [{ name: "", type: "address" }] },
+  // Daily tab challenge boost (time-boxed, inside the maxApyBps clamp)
+  { type: "function", name: "tabBoostBps", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "tabBoostExpiresAt", stateMutability: "view", inputs: [{ name: "owner", type: "address" }], outputs: [{ name: "", type: "uint64" }] },
 ] as const;
 
 export const sneakerAppraiserAbi = [
@@ -284,6 +288,21 @@ export const veSneakerStoreAbi = [
   },
   {
     type: "function",
+    name: "requiredPerkPlusOne",
+    stateMutability: "view",
+    inputs: [{ name: "designIndex", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "setDesignRequiredPerk",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "designIndex", type: "uint256" }, { name: "perkId", type: "uint256" }, { name: "required", type: "bool" }],
+    outputs: [],
+  },
+  { type: "function", name: "vault", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
+  {
+    type: "function",
     name: "designCount",
     stateMutability: "view",
     inputs: [],
@@ -384,7 +403,6 @@ export const sneakerWorkshopAbi = [
   { type: "function", name: "unequip", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "slot", type: "uint8" }], outputs: [] },
   { type: "function", name: "useRepairKit", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "modId", type: "uint256" }], outputs: [] },
   { type: "function", name: "useAbility", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "modId", type: "uint256" }], outputs: [] },
-  { type: "function", name: "forge", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [] },
   // Equipped state
   { type: "function", name: "equipped", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }, { name: "slot", type: "uint8" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "equippedTo", stateMutability: "view", inputs: [{ name: "modId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
@@ -400,17 +418,15 @@ export const sneakerWorkshopAbi = [
   { type: "function", name: "stakingBoostBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "skillBonusBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "actionsCount", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "rarityBonus", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
   { type: "function", name: "autoActive", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
   { type: "function", name: "skinOverride", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
   // Consumable abilities
   { type: "function", name: "tempBoostBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
   { type: "function", name: "boostExpiresAt", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint64" }] },
-  // Forge
-  { type: "function", name: "forgeLevel", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint8" }] },
-  { type: "function", name: "nextForgeCost", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "forgeCostPoints", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
-  { type: "function", name: "maxForgeLevel", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint8" }] },
+  // Condition / 365-day season
+  { type: "function", name: "conditionBps", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint16" }] },
+  { type: "function", name: "lastServiceAt", stateMutability: "view", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [{ name: "", type: "uint64" }] },
+  { type: "function", name: "service", stateMutability: "nonpayable", inputs: [{ name: "sneakerId", type: "uint256" }], outputs: [] },
 ] as const;
 
 export const sneakerSwapAbi = [
@@ -490,6 +506,9 @@ export const modStoreAbi = [
       { name: "active", type: "bool" },
     ],
   },
+  { type: "function", name: "requiredPerkPlusOne", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "setDesignRequiredPerk", stateMutability: "nonpayable", inputs: [{ name: "designIndex", type: "uint256" }, { name: "perkId", type: "uint256" }, { name: "required", type: "bool" }], outputs: [] },
+  { type: "function", name: "vault", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "address" }] },
   { type: "function", name: "designCount", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "remaining", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "", type: "uint256" }] },
   { type: "function", name: "isAvailable", stateMutability: "view", inputs: [{ name: "designIndex", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
@@ -520,3 +539,52 @@ export const playerProgressAbi = [
 ] as const;
 
 export type PlayerProgressAbi = typeof playerProgressAbi;
+
+export const sneakerVaultAbi = [
+  { type: "function", name: "perkCount", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "bestDiscountBps", stateMutability: "view", inputs: [{ name: "user", type: "address" }], outputs: [{ name: "", type: "uint16" }] },
+  { type: "function", name: "isEligible", stateMutability: "view", inputs: [{ name: "user", type: "address" }, { name: "perkId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "accessClaimed", stateMutability: "view", inputs: [{ name: "perkId", type: "uint256" }, { name: "user", type: "address" }], outputs: [{ name: "", type: "bool" }] },
+  { type: "function", name: "claimPerk", stateMutability: "nonpayable", inputs: [{ name: "perkId", type: "uint256" }], outputs: [] },
+  {
+    type: "function",
+    name: "perks",
+    stateMutability: "view",
+    inputs: [{ name: "perkId", type: "uint256" }],
+    outputs: [
+      { name: "kind", type: "uint8" },
+      { name: "valueBps", type: "uint16" },
+      { name: "minTier", type: "uint8" },
+      { name: "requiredLevel", type: "uint8" },
+      { name: "minPolStaked", type: "uint256" },
+      { name: "minConditionBps", type: "uint16" },
+      { name: "minModCount", type: "uint256" },
+      { name: "active", type: "bool" },
+    ],
+  },
+] as const;
+
+export const feeSplitterAbi = [
+  { type: "function", name: "pendingFees", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "totalDistributed", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "recipientCount", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { type: "function", name: "recipientAt", stateMutability: "view", inputs: [{ name: "index", type: "uint256" }], outputs: [{ name: "account", type: "address" }, { name: "weightBps", type: "uint256" }] },
+  {
+    type: "function",
+    name: "recipients",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{
+      name: "",
+      type: "tuple[]",
+      components: [
+        { name: "account", type: "address" },
+        { name: "weightBps", type: "uint256" },
+      ],
+    }],
+  },
+  { type: "function", name: "distribute", stateMutability: "nonpayable", inputs: [], outputs: [] },
+] as const;
+
+export type SneakerVaultAbi = typeof sneakerVaultAbi;
+export type FeeSplitterAbi = typeof feeSplitterAbi;

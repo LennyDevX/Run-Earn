@@ -23,6 +23,7 @@ Solidity.
 | [`polygon-contract-roadmap.md`](polygon-contract-roadmap.md) | Shipped vs planned contracts and the recommended build/deploy order |
 | [`polygon-staking-model.md`](polygon-staking-model.md) | Native POL staking, rarity-based NFT boosts, reward reserve accounting, appraiser valuation |
 | [`veRune-tokenomics.md`](veRune-tokenomics.md) | 100M REN allocation, veRUNE accrual (power/health/energy stats, 24h activation, streaks, consumable abilities), veSneaker primary-sale pricing, redemption economics |
+| [`mod-artwork-prompts.md`](mod-artwork-prompts.md) | Image-generation prompts for the 7 equippable mods, 7 consumables, and level-gated skill chips, plus the shared retro-futuristic pixel style block |
 | [`player-progression.md`](player-progression.md) | PlayerProgress XP/levels, skill NFTs (free claims + store copies + skill slot + consumable abilities), hybrid profile identity, seed-skills script |
 | [`polygon-test-runbook.md`](polygon-test-runbook.md) | Test matrix, Amoy deployment and verification runbook, funding steps |
 

@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { useGameLaunch } from "@/components/GameLaunch";
 
 type NavItem = {
   href: string;
   label: string;
   icon: ReactNode;
+  /** Boot the full-screen launch loader before navigating. */
+  launch?: boolean;
 };
 
 /// Primary mobile navigation. Five destinations, always reachable with a thumb.
@@ -46,14 +49,13 @@ export const MOBILE_NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/game",
-    label: "Game",
+    href: "/play",
+    label: "Play",
+    launch: true,
     icon: (
       <>
-        <path d="M7.5 8.5h9a4 4 0 0 1 3.9 4.8l-.7 3.1a2.4 2.4 0 0 1-4.2 1L14 16h-4l-1.5 1.4a2.4 2.4 0 0 1-4.2-1l-.7-3.1A4 4 0 0 1 7.5 8.5Z" />
-        <path d="M8 12v2.5M6.75 13.25h2.5" />
-        <circle cx="15.6" cy="12.6" r="0.9" fill="currentColor" stroke="none" />
-        <circle cx="17.6" cy="14.1" r="0.9" fill="currentColor" stroke="none" />
+        <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+        <path d="M4 6v12" />
       </>
     ),
   },
@@ -75,6 +77,7 @@ function isActive(pathname: string, href: string) {
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const { launch } = useGameLaunch();
   const [hidden, setHidden] = useState(false);
 
   // Hide while scrolling down, reveal on the way up: keeps the bar out of the
@@ -113,6 +116,12 @@ export default function MobileNav() {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                onClick={(event) => {
+                  if (!item.launch) return;
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                  event.preventDefault();
+                  launch(item.href);
+                }}
                 className={`flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-colors active:scale-95 ${
                   active ? "text-brand" : "text-foreground/55"
                 }`}

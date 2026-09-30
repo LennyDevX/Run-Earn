@@ -1,12 +1,12 @@
 ---
 name: airen-upgrade-economy
-description: Build and extend Airen's v1.0 upgrade economy — SneakerMods badges, the seven-slot SneakerWorkshop (incl. passive skill slot), power/health/energy stats, consumable abilities, forge upgrades, SneakerSwap trades, ModRental, ModStore, PlayerProgress levels, and the multi-collection marketplace.
+description: Build and extend Airen's v1.0 upgrade economy — SneakerMods badges, the seven-slot SneakerWorkshop (incl. passive skill slot), power/health/energy stats, consumable abilities, the 365-day condition cycle, SneakerSwap trades, ModStore, SneakerTabArena, PlayerProgress levels, and the multi-collection marketplace.
 ---
 
 # Airen Upgrade Economy
 
 Use this skill for anything under the mod/upgrade game loop: `SneakerMods`,
-`SneakerWorkshop`, `SneakerSwap`, `ModRental`, `ModStore`, `ISneakerBoosts`, the
+`SneakerWorkshop`, `SneakerSwap`, `ModStore`, `SneakerTabArena`, `ISneakerBoosts`, the
 workshop integrations inside `SneakerGame`/`SneakerStaking`/`SneakerAppraiser`/
 `SneakerMarketplace`, and the `/workshop`, `/badges`, and mod tabs UI.
 
@@ -15,7 +15,7 @@ workshop integrations inside `SneakerGame`/`SneakerStaking`/`SneakerAppraiser`/
 ```
 SneakerMods (ERC-721) ──equip escrow──▶ SneakerWorkshop ──ISneakerBoosts──▶ SneakerGame
       ▲   ▲                                  │                              SneakerStaking
-      │   └────MINTER_ROLE──── ModStore      └──setRentalSource── ModRental  SneakerAppraiser
+      │   └────MINTER_ROLE──── ModStore      └──conditionBps──▶ SneakerTabArena · SneakerAppraiser
       │                                                                      SneakerMarketplace
       └──allowedCollections──▶ SneakerMarketplace · SneakerSwap                (hasEquippedMods guard)
 ```
@@ -23,14 +23,13 @@ SneakerMods (ERC-721) ──equip escrow──▶ SneakerWorkshop ──ISneaker
 | Contract | Role |
 | --- | --- |
 | `SneakerMods` | ERC-721 mod/badge NFTs with `ModTraits` + on-chain achievement claims |
-| `SneakerWorkshop` | Seven-slot equip escrow, consumable `useAbility` burns, veRUNE `forge` |
+| `SneakerWorkshop` | Seven-slot equip escrow, consumable `useAbility` burns, 365-day condition cycle |
 | `PlayerProgress` | XP/levels from live protocol state + on-chain username/NFT-avatar identity |
 | `ISneakerBoosts` | Shared view interface: `earnBonusBps`, `wearReductionBps`, `repairDiscountBps`, `appraisalBonusBps`, `stakingBoostBps`, `autoActive`, `hasEquippedMods` |
 | `SneakerSwap` | Atomic NFT↔NFT offers ± POL top-up, open or targeted taker |
-| `ModRental` | Mod escrow rental paid per-day in POL; renter equips via `workshop.rentalSource` |
 | `ModStore` | Primary sale of premium/consumable mod designs (`addDesign(ModDesign)` struct, `buy`/`buyBatch`) |
 | `SneakerVault` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims; linked via `setVault` |
-| `FeeSplitter` | Pro-rata POL fee distribution (marketplace/rental fees) to weighted recipients |
+| `FeeSplitter` | Pro-rata POL fee distribution (marketplace fees) to weighted recipients |
 
 ## SneakerMods
 
@@ -94,13 +93,17 @@ Burns the mod every time. Kind = `traits.aux` (`mods.NO_AUX()` → repair):
 | 0 or 255 | Repair kit | 0 | `game.repairFromWorkshop` — full health, no veRUNE |
 | 1 | Surge | 2 | `game.activateFromWorkshop` — instant activation, bypasses cooldown, no energy refill |
 | 2 | Boost capsule | 1 | `tempBoostBps` += `effectBps` for `BOOST_DURATION` (24h) — stacked into `earnBonusBps` until `boostExpiresAt` |
-| 3 | Forge stone | 2 | +1 `forgeLevel` without paying `forgeCostPoints` |
+| 3 | Service kit | 0 | condition restored to pristine (wear does not touch game health) |
 | 4 | Overdrive | 3 | `tempBoostBps` += `effectBps` for `OVERDRIVE_DURATION` (48h) |
 | 5 | Stim pack | 0 | `game.refillEnergyFromWorkshop` — energy back to max; reverts on a dead sneaker |
 | 6 | Lucky repair | 1 | full health + `effectBps` temp boost for 24h |
 
-`forge(sneakerId)` burns `forgeCostPoints` veRUNE via `game.spendPoints` and
-raises `forgeLevel` → effective rarity (capped contribution to rarity 100).
+`lastServiceAt[tokenId]` starts the pair's 365-day season on the first `equip` or
+ability use. `conditionBps` decays linearly from 10000 to `conditionFloorBps`
+(5000) over `seasonSeconds`; a pair never put to work reads pristine. Consumers
+scale rarity by it, so wear drags the earn rate, the appraisal, and the tab
+power score down together. The repair kit (aux 0/255) and service kit (aux 3)
+restore it. **Mods never expire — the sneaker is what wears.**
 
 ## PlayerProgress (levels + skill gating)
 
@@ -131,16 +134,6 @@ NFTs atomically (taker must own/approve the wanted token); `cancel(swapId)`
 returns escrow. `allowedCollections` gates both sides; staked, listed, rented,
 and equipped tokens revert via `_requireSwappable`.
 
-## ModRental
-
-`list(modId, pricePerDay, maxDuration)` escrows the mod (consumables rejected);
-`cancelListing(rentalId)` returns it. `rent(rentalId, days)` pays
-`pricePerDay × days` upfront in POL (fee to `feeCollector`). While active the
-renter calls `equipRented(rentalId, sneakerId)` — the rental contract equips the
-mod through the workshop (`workshop.rentalSource` authorizes it). `extend`
-tops up more days; `releaseEarly` (renter) or `returnExpired` (anyone, after
-`rentedUntil`) ends the rental, unequips, pays the owner, and returns the mod.
-`isActiveRental(modId)` / `activeRenter(modId)` are the live-state views.
 
 ## Multi-collection marketplace
 
@@ -156,7 +149,7 @@ trade (SneakerMint + SneakerMods after deploy wiring). Sneakers with
 
 | Piece | Where |
 | --- | --- |
-| `/workshop` | `WorkshopDashboard` + `useWorkshop` — slot grid, effective stats, forge, consumables |
+| `/workshop` | `ModItemGallery` (item shop) + `WorkshopDashboard` + `useWorkshop` — slot grid, effective stats, condition bar, consumables |
 | `/badges` | `BadgesDashboard` + `useBadges` — achievement progress + `claim` |
 | `/marketplace` Mods/Rentals/Trades tabs | `ModMarketTabs` + `useModEconomy` |
 | `/collection` mod section | `ModStorefront` (`useModEconomy.buyMod`) |
@@ -180,14 +173,13 @@ UI gotchas:
 ## Wiring (deploy order)
 
 `SneakerMods(name, symbol, admin, nft, game, staking)` →
-`SneakerWorkshop(admin, nft, mods, game, staking, forgeCostPoints, forgeRarityStep, forgeEarnStepBps, maxForgeLevel)` →
+`SneakerWorkshop(admin, nft, mods, game, staking, conditionFloorBps, seasonSeconds)` →
 `SneakerSwap(admin, nft, staking, workshop)` →
-`ModRental(admin, mods, workshop, feeBps, feeCollector)` →
 `ModStore(admin, mods, treasury)`. Post-deploy:
 
 - `game.setBoosts(workshop)` + `game.setWorkshop(workshop)`
 - `staking.setBoosts(workshop)`, `appraiser.setBoosts(workshop)`
-- `mods.setWorkshop(workshop)`, `workshop.setRentalSource(rental)`
+- `mods.setWorkshop(workshop)`
 - `marketplace.setWorkshop(workshop)` + `setCollectionAllowed(mods, true)`
 - `swap.setCollectionAllowed(mods, true)`
 - `mods.grantRole(MINTER_ROLE, modStore)`
@@ -201,7 +193,7 @@ UI gotchas:
 - `useAbility` always burns; energy cost always charged; boosts always expire.
 - Renter can equip but never transfer/withdraw; owner cannot pull an active rental.
 - Only the workshop calls `spendEnergy`/`repairFromWorkshop`/`spendPoints`/
-  `activateFromWorkshop` — verify `setWorkshop`/`setBoosts`/`setRentalSource`
+  `activateFromWorkshop` — verify `setWorkshop`/`setBoosts`
   are admin-only.
 - Surge must never refill energy; dead sneakers must not earn, activate, or be
   auto-activated by a Core mod.
@@ -209,7 +201,7 @@ UI gotchas:
 ## Testing
 
 - Solidity: `test/SneakerMods.t.sol`, `test/SneakerWorkshop.t.sol`,
-  `test/SneakerSwap.t.sol`, `test/ModRental.t.sol`, `test/ModStore.t.sol`,
+  `test/SneakerSwap.t.sol`, `test/ModStore.t.sol`, `test/SneakerTabArena.t.sol`,
   `test/PlayerProgress.t.sol` (XP, levels, identity, level-gated claims),
   `test/SneakerMarketplace.t.sol` (multi-collection + equipped guard).
 - Mocha: `test/upgrade-economy.ts` covers the full loop end-to-end.

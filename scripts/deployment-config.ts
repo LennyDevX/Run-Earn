@@ -10,7 +10,7 @@ export type DeploymentRecord = {
   admin: Address;
   minter: Address;
   deployedAt: string;
-  contracts: Partial<Record<"RENToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore" | "SneakerMods" | "SneakerWorkshop" | "SneakerSwap" | "ModRental" | "ModStore" | "PlayerProgress", { address: Address; constructorArgs: readonly unknown[] }>>;
+  contracts: Partial<Record<"RENToken" | "SneakerMint" | "SneakerStaking" | "SneakerAppraiser" | "SneakerMarketplace" | "SneakerGame" | "VeSneakerStore" | "SneakerMods" | "SneakerWorkshop" | "SneakerSwap" | "SneakerTabArena" | "ModStore" | "PlayerProgress" | "FeeSplitter" | "SneakerVault", { address: Address; constructorArgs: readonly unknown[] }>>;
 };
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
@@ -110,22 +110,59 @@ export function marketplaceParameters() {
 }
 
 /// Workshop forge parameters — the veRUNE sink for permanent sneaker upgrades.
-///   forgeCostPoints  base veRUNE per level (actual cost = base * (level + 1))
+///   conditionFloorBps  rarity share kept at full wear (5000 = 50%)
 ///   forgeRarityStep  rarity points gained per level
 ///   forgeEarnStepBps earn-rate bonus per level
 ///   maxForgeLevel    level cap per sneaker
+/// veSneaker care model: a 365-day wear season with a 50% floor.
+/// There is no forge — mods are the only upgrade path, and the sneaker is the
+/// only thing that wears. Restoring condition is what the repair kit is for.
 export function workshopParameters() {
   return {
-    forgeCostPoints: bigintEnv("WORKSHOP_FORGE_COST_POINTS", 250n * 10n ** 18n), // 250 veRUNE base
-    forgeRarityStep: Number(bigintEnv("WORKSHOP_FORGE_RARITY_STEP", 5n)), // +5 rarity per level
-    forgeEarnStepBps: Number(bigintEnv("WORKSHOP_FORGE_EARN_STEP_BPS", 250n)), // +2.5% earn per level
-    maxForgeLevel: Number(bigintEnv("WORKSHOP_MAX_FORGE_LEVEL", 10n)),
+    conditionFloorBps: Number(bigintEnv("WORKSHOP_CONDITION_FLOOR_BPS", 5_000n)), // 50% at full wear
+    seasonSeconds: bigintEnv("WORKSHOP_SEASON_SECONDS", 31_536_000n), // 365 days
   };
 }
 
-export function rentalParameters() {
+export function feeSplitterRecipients(fallbackRecipient: Address) {
+  return [
+    addressEnv("FEE_SPLITTER_TREASURY_ADDRESS", fallbackRecipient),
+    addressEnv("FEE_SPLITTER_STAKING_WALLET_ADDRESS", fallbackRecipient),
+    addressEnv("FEE_SPLITTER_REDEMPTION_WALLET_ADDRESS", fallbackRecipient),
+    addressEnv("FEE_SPLITTER_TEAM_ADDRESS", fallbackRecipient),
+  ] as const;
+}
+
+export function sneakerVaultParameters() {
+  const discountBps = bigintEnv("SNEAKER_VAULT_DISCOUNT_BPS", 1_000n);
+  const discountMinTier = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_TIER", 3n);
+  const discountRequiredLevel = bigintEnv("SNEAKER_VAULT_DISCOUNT_REQUIRED_LEVEL", 0n);
+  const discountMinPolStaked = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_POL_WEI", 0n);
+  const discountMinConditionBps = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_FORGE_LEVEL", 0n);
+  const discountMinModCount = bigintEnv("SNEAKER_VAULT_DISCOUNT_MIN_MOD_COUNT", 0n);
+  const accessMinTier = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_TIER", 3n);
+  const accessRequiredLevel = bigintEnv("SNEAKER_VAULT_ACCESS_REQUIRED_LEVEL", 5n);
+  const accessMinPolStaked = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_POL_WEI", 0n);
+  const accessMinConditionBps = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_FORGE_LEVEL", 0n);
+  const accessMinModCount = bigintEnv("SNEAKER_VAULT_ACCESS_MIN_MOD_COUNT", 0n);
+
+  if (discountBps === 0n || discountBps > 5_000n) throw new Error("SNEAKER_VAULT_DISCOUNT_BPS must be between 1 and 5000.");
+  if (discountMinTier > 3n || accessMinTier > 3n) throw new Error("SneakerVault tier gates must be between 0 and 3.");
+  if (discountRequiredLevel > 10n || accessRequiredLevel > 10n) throw new Error("SneakerVault level gates must be between 0 and 10.");
+  if (discountMinConditionBps > 255n || accessMinConditionBps > 255n) throw new Error("SneakerVault forge gates must fit uint8.");
+
   return {
-    feeBps: bigintEnv("RENTAL_FEE_BPS", 250n), // 2.5% rental fee
+    discountBps: Number(discountBps),
+    discountMinTier: Number(discountMinTier),
+    discountRequiredLevel: Number(discountRequiredLevel),
+    discountMinPolStaked,
+    discountMinConditionBps: Number(discountMinConditionBps),
+    discountMinModCount,
+    accessMinTier: Number(accessMinTier),
+    accessRequiredLevel: Number(accessRequiredLevel),
+    accessMinPolStaked,
+    accessMinConditionBps: Number(accessMinConditionBps),
+    accessMinModCount,
   };
 }
 
@@ -161,11 +198,13 @@ export function gameParameters() {
 /// veSneaker primary-sale pricing.
 ///
 /// Prices are defined in USD and converted to POL with `POL_USD_PRICE`, so a POL
-/// move only needs a single env change. The USD targets follow a geometric
-/// progression from $40 (Common) to $150 (Mythic):
+/// move only needs a single env change. The USD targets match the POL ladder in
+/// `src/lib/ve-sneakers.ts` at POL = $0.09764:
 ///
-///   Common $40 -> 410 POL     Rare $62  -> 635 POL
-///   Epic   $97 -> 993 POL    Mythic $150 -> 1536 POL   (at POL = $0.09764)
+///   Sol   (Rare)   1,500 POL -> $146
+///   Luna  (Epic)   2,100 POL -> $205
+///   Astra (Mythic) 3,000 POL -> $293
+///   Common (unused) 1,000 POL -> $98
 ///
 /// Set `VE_PRICE_*_POL` to override an individual design price in POL directly.
 export type VeSneakerDesignConfig = {
@@ -194,10 +233,10 @@ function usdToPolWhole(usd: number) {
 
 export function veSneakerPricesPol() {
   return {
-    common: bigintEnv("VE_PRICE_COMMON_POL", usdToPolWhole(numberEnv("VE_PRICE_COMMON_USD", 40))),
-    rare: bigintEnv("VE_PRICE_RARE_POL", usdToPolWhole(numberEnv("VE_PRICE_RARE_USD", 62))),
-    epic: bigintEnv("VE_PRICE_EPIC_POL", usdToPolWhole(numberEnv("VE_PRICE_EPIC_USD", 97))),
-    mythic: bigintEnv("VE_PRICE_MYTHIC_POL", usdToPolWhole(numberEnv("VE_PRICE_MYTHIC_USD", 150))),
+    common: bigintEnv("VE_PRICE_COMMON_POL", usdToPolWhole(numberEnv("VE_PRICE_COMMON_USD", 98))),
+    rare: bigintEnv("VE_PRICE_RARE_POL", usdToPolWhole(numberEnv("VE_PRICE_RARE_USD", 146))),
+    epic: bigintEnv("VE_PRICE_EPIC_POL", usdToPolWhole(numberEnv("VE_PRICE_EPIC_USD", 205))),
+    mythic: bigintEnv("VE_PRICE_MYTHIC_POL", usdToPolWhole(numberEnv("VE_PRICE_MYTHIC_USD", 293))),
   };
 }
 

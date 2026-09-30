@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import PolygonTransferCard from "@/components/PolygonTransferCard";
+import ProtocolBenefitsPanel from "@/components/ProtocolBenefitsPanel";
 import StakingVaultDashboard from "@/components/StakingVaultDashboard";
 
 export const metadata: Metadata = {
@@ -89,7 +90,7 @@ export default function DefiPage() {
             className="animate-fade-up max-w-2xl text-4xl font-bold tracking-tight text-balance md:text-5xl"
             style={{ animationDelay: "120ms" }}
           >
-            Sneaker staking, yield by rarity
+            Sneaker staking, <span className="text-gradient">yield by rarity</span>
           </h1>
           <p
             className="animate-fade-up max-w-lg leading-relaxed text-foreground/60"
@@ -146,6 +147,7 @@ export default function DefiPage() {
         </section>
 
         <StakingVaultDashboard />
+        <ProtocolBenefitsPanel />
 
         <div className="mt-10">
           <PolygonTransferCard />

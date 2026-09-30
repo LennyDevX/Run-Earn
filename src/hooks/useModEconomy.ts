@@ -112,10 +112,24 @@ export function useModEconomy() {
   );
 
   // ─── ModStore ───
+  const quoteMod = useCallback(async (designIndex: bigint) => {
+    if (!modStoreAddress) throw new Error("The ModStore is not configured.");
+    if (!wallet.address) throw new Error("Connect your wallet to check the store quote.");
+    return wallet.publicClient.readContract({
+      address: modStoreAddress,
+      abi: modStoreAbi,
+      functionName: "quote",
+      args: [designIndex, 1],
+      account: wallet.address,
+    });
+  }, [modStoreAddress, wallet.address, wallet.publicClient]);
+
   const buyMod = useCallback(
-    (designIndex: bigint, price: bigint) =>
-      sendTo(modStoreAddress, modStoreAbi, "buy", [designIndex], price),
-    [modStoreAddress, sendTo],
+    async (designIndex: bigint) => {
+      const value = await quoteMod(designIndex);
+      return sendTo(modStoreAddress, modStoreAbi, "buy", [designIndex], value);
+    },
+    [modStoreAddress, quoteMod, sendTo],
   );
 
   return {
@@ -136,6 +150,7 @@ export function useModEconomy() {
     equipRented,
     releaseEarly,
     returnExpired,
+    quoteMod,
     buyMod,
   };
 }

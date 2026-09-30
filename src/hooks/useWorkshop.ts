@@ -77,7 +77,7 @@ export function useWorkshop() {
         rarityBonus,
         autoActive,
         skinOverride,
-        forgeLevel,
+        conditionBps,
         nextForgeCost,
         tempBoostBps,
         boostExpiresAt,
@@ -92,7 +92,7 @@ export function useWorkshop() {
         read("rarityBonus"),
         read("autoActive"),
         read("skinOverride"),
-        read("forgeLevel"),
+        read("conditionBps"),
         read("nextForgeCost"),
         read("tempBoostBps"),
         read("boostExpiresAt"),
@@ -108,7 +108,7 @@ export function useWorkshop() {
         rarityBonus: Number(rarityBonus),
         autoActive: Boolean(autoActive),
         skinOverride: Number(skinOverride),
-        forgeLevel: Number(forgeLevel),
+        conditionBps: Number(conditionBps),
         nextForgeCost: nextForgeCost as bigint,
         tempBoostBps: Number(tempBoostBps),
         boostExpiresAt: Number(boostExpiresAt),
@@ -157,7 +157,7 @@ export function useWorkshop() {
 
   const send = useCallback(
     async (
-      functionName: "equip" | "unequip" | "useRepairKit" | "useAbility" | "forge",
+      functionName: "equip" | "unequip" | "useRepairKit" | "useAbility",
       args: readonly unknown[],
     ) => {
       if (!workshopAddress) throw new Error("The workshop is not configured.");
@@ -203,7 +203,6 @@ export function useWorkshop() {
     (sneakerId: bigint, modId: bigint) => send("useAbility", [sneakerId, modId]),
     [send],
   );
-  const forge = useCallback((sneakerId: bigint) => send("forge", [sneakerId]), [send]);
 
   return {
     configured,
@@ -225,6 +224,5 @@ export function useWorkshop() {
     unequip,
     useRepairKit,
     useAbility,
-    forge,
   };
 }

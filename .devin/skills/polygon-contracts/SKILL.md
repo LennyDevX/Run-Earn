@@ -14,19 +14,19 @@ Use this skill for EVM contract design, Solidity implementation, Hardhat 3 confi
 | `SneakerMint` | `contracts/SneakerMint.sol` | ERC-721 minting for AI-generated sneaker artwork (tiers 0–3: Common, Rare, Epic, Mythic) |
 | `RENToken` | `contracts/RENToken.sol` | ERC-20 reward token `REN` with a 100M hard cap |
 | `SneakerStaking` | `contracts/SneakerStaking.sol` | Native POL staking vault with rarity-based sneaker NFT APY boosts (+ workshop Boost mods) |
-| `SneakerAppraiser` | `contracts/SneakerAppraiser.sol` | Read-only NFT valuation contract (effective rarity from forge + Skin bonus via `setBoosts`) |
+| `SneakerAppraiser` | `contracts/SneakerAppraiser.sol` | Read-only NFT valuation contract (effective rarity from live wear + Skin bonus via `setBoosts`) |
 | `SneakerMarketplace` | `contracts/SneakerMarketplace.sol` | Multi-collection fixed-price sales, English auctions, and escrowed POL offers; staked NFTs and mod-equipped sneakers cannot be listed |
 | `SneakerGame` | `contracts/SneakerGame.sol` | Power/health/energy gamification: virtual veRUNE points, streaks, daily health decay, energy abilities, and REN redemption |
 | `VeSneakerStore` | `contracts/VeSneakerStore.sol` | Primary sale of virtual sneakers (veSneakers) for POL, minted on demand |
 | `ISneakerBoosts` | `contracts/ISneakerBoosts.sol` | Shared boost read interface consumed by game, staking, appraiser, marketplace |
 | `SneakerMods` | `contracts/SneakerMods.sol` | ERC-721 mod/badge collection with on-chain achievement claims (`claim`) |
-| `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip escrow (incl. passive Skill slot), `useAbility` consumable burns, and the veRUNE forge |
+| `SneakerWorkshop` | `contracts/SneakerWorkshop.sol` | Seven-slot equip escrow (incl. passive Skill slot), `useAbility` consumable burns, and the 365-day veSneaker wear cycle |
 | `SneakerSwap` | `contracts/SneakerSwap.sol` | Atomic NFT↔NFT trades (± POL) across allowed collections |
-| `ModRental` | `contracts/ModRental.sol` | Time-boxed mod rentals paid in POL; custody stays in escrow, renter equips via workshop |
 | `ModStore` | `contracts/ModStore.sol` | Primary sale of premium mod designs for POL, including consumables and `requiredLevel` gates |
 | `PlayerProgress` | `contracts/PlayerProgress.sol` | Live-state XP/levels across the protocol + public username/NFT-avatar identity |
 | `FeeSplitter` | `contracts/FeeSplitter.sol` | Pro-rata distribution of protocol fees (marketplace/rental) to weighted recipients in native POL |
-| `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/forge/POL/level/mod signals |
+| `SneakerVault` | `contracts/SneakerVault.sol` | Live-state perks: store discounts (`bestDiscountBps`) and one-time access claims, gated by tier/condition/POL/level/mod signals |
+| `SneakerTabArena` | `contracts/SneakerTabArena.sol` | Daily tap challenge: gates on POL + a locked NFT, recomputes power on-chain, and writes a 24h APY boost into staking |
 
 For the upgrade-economy internals (slots, traits, ability kinds, energy costs,
 stats) see the `airen-upgrade-economy` skill. For XP sources, the level curve,
@@ -46,6 +46,27 @@ Do not reintroduce `SneakerCollection`, `SneakerRewards`, `LaceToken`, or `RuneT
 - Existing RUNE NFT rewards remain available through `claimRewards` for compatibility.
 
 Current defaults are 2.80% base APY (sustainable rate), rarity-based tier boosts `[50, 80, 150, 180]` bps (Common +0.5%, Rare +0.8%, Epic +1.5%, Mythic +1.8%), 0% flat per-NFT bonus, 8% maximum APY, and a 30-day minimum lock cycle.
+
+### Daily Tab Challenge (implemented)
+
+`SneakerTabArena` grants a time-boxed **0.50% – 1.50%** staking APY boost. It is added to `requested` **before** the `maxApyBps` clamp, so it can never lift a wallet above 8.00%.
+
+**Access gate:** `polPositions(caller).principal > 0` **and** `staking.stakedOwner(runnerId) == caller`. The 30-day minimum lock only delays withdrawal, not play.
+
+**Power → ceiling and multiplier.** Power is derived, never stored: `power = rarity * conditionBps / 10000 + equippedCount * 5` (max 100). It sets both the ceiling (`50 + power` bps) and the points per tap (×1 to ×4, bands at 26/51/76).
+
+**Trust model.** Taps happen off-chain; the score arrives as an EIP-191 signature from an admin `signer`. The contract recomputes the multiplier on-chain from live state, clamps the signed score to `multiplier * MAX_TAPS_PER_SESSION`, and consumes a per-wallet nonce so a signature cannot be replayed.
+
+**Wiring:** `staking.grantRole(TAB_ARENA_ROLE, arena)`. `SneakerStaking.setTabBoost` re-clamps to `maxTabBoostBps` (150) so a buggy arena cannot mint unbounded liability.
+
+### veSneaker condition (365-day season)
+
+`SneakerWorkshop` tracks `lastServiceAt[tokenId]`. Condition decays linearly from 10000 to `conditionFloorBps` (5000) over `seasonSeconds` (365 days). A pair that has never been equipped reads pristine, so an unused sneaker does not wear.
+
+Consumers scale rarity by condition — `SneakerGame._effectiveRarity`, `SneakerAppraiser.effectiveRarity`, and `SneakerTabArena.powerOf` all do `rarity * conditionBps / 10000`. Wear therefore drags the earn rate, the appraisal, and the tab power score down together. The repair kit (aux 0/255) and the service kit (aux 3) restore it.
+
+**Mods never expire.** Every slot item is a permanent ERC-721 the owner keeps, sells, or gifts. The sneaker is what wears.
+
 
 ## NFT valuation model (SneakerAppraiser)
 
@@ -105,9 +126,10 @@ Use `hre.network.create()` and `connection.viem` in Hardhat 3 tests. Use `viem.d
 
 ## Deployment and funding scripts
 
-- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|ModRental|ModStore|PlayerProgress|FeeSplitter|SneakerVault` and writes an ignored deployment manifest.
-- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`, `modStore.setVault(vault)`, `veStore.setVault(vault)`.
+- `scripts/deploy.ts` supports `DEPLOY_TARGET=all|RENToken|SneakerMint|SneakerStaking|SneakerAppraiser|SneakerMarketplace|SneakerGame|VeSneakerStore|SneakerMods|SneakerWorkshop|SneakerSwap|SneakerTabArena|ModStore|PlayerProgress|FeeSplitter|SneakerVault` and writes an ignored deployment manifest.
+- `DEPLOY_TARGET=all` deploys in dependency order and runs the wiring: `game.setBoosts/setWorkshop`, `staking.setBoosts`, `appraiser.setBoosts`, `mods.setWorkshop`, `workshop.setRentalSource(rental)`, `marketplace.setWorkshop` + `setCollectionAllowed(mods)`, `swap.setCollectionAllowed(mods)`, `mods.grantRole(MINTER_ROLE, modStore)`, `nft.grantRole(MINTER_ROLE, veStore)`, `mods.setProgress(progress)`, `modStore.setProgress(progress)`, `veStore.setProgress(progress)`, `modStore.setVault(vault)`, `veStore.setVault(vault)`, `staking.grantRole(TAB_ARENA_ROLE, arena)`.
 - `scripts/seed-skills.ts` seeds the level-gated skill catalog (free `PlayerLevel` achievements + `requiredLevel` store copies) — idempotent, run after the progress wiring.
+- The full deploy also seeds `FeeSplitter.setRecipients` (recommended 40/30/20/10, `FEE_SPLITTER_*_ADDRESS`) and `SneakerVault.setPerk` ids 0 (discount) and 1 (exclusive access) from `SNEAKER_VAULT_*` values, and repoints `marketplace.feeCollector`/`rental.feeCollector` at the splitter. Gated designs still need a separate `setDesignRequiredPerk` call.
 - Single-target deploys read dependency addresses from `*_ADDRESS` env vars, so partial redeploys can re-wire against existing contracts.
 - Deploy with `npx hardhat run scripts/deploy.ts --network amoy` or `--network polygon`.
 - Set `SKIP_VERIFY=true` only when verification is intentionally skipped; otherwise `POLYGONSCAN_API_KEY` is required.

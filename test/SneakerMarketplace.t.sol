@@ -370,6 +370,22 @@ contract SneakerMarketplaceTest is Test {
         assertEq(admin.balance, before + 0.125 ether);
     }
 
+    function test_WithdrawFeesToCollector() public {
+        vm.prank(admin);
+        marketplace.updateParams(FEE_BPS, PREMIUM_BPS, carol);
+
+        vm.prank(alice);
+        marketplace.list(address(nft), 1, 5 ether);
+        vm.deal(bob, 10 ether);
+        vm.prank(bob);
+        marketplace.buy{value: 5 ether}(1);
+
+        uint256 before = carol.balance;
+        vm.prank(admin);
+        marketplace.withdrawFeesToCollector();
+        assertEq(carol.balance, before + 0.125 ether);
+    }
+
     function test_UpdateParams() public {
         vm.prank(admin);
         marketplace.updateParams(500, 15_000, carol);

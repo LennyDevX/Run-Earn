@@ -30,8 +30,8 @@ contract SneakerVaultTest is Test {
     address user;
     address minter;
 
-    uint256 constant DISCOUNT_PERK = 1;
-    uint256 constant ACCESS_PERK = 2;
+    uint256 constant DISCOUNT_PERK = 0;
+    uint256 constant ACCESS_PERK = 0;
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -69,10 +69,8 @@ contract SneakerVaultTest is Test {
             address(mods),
             address(game),
             address(staking),
-            100 ether, // forgeCostPoints
-            10, // forgeRarityStep
-            100, // forgeEarnStepBps
-            10 // maxForgeLevel
+            5_000, // conditionFloorBps (50% at full wear)
+            365 days // seasonSeconds
         );
         uint256[] memory thresholds = new uint256[](10);
         thresholds[0] = 0;
@@ -119,17 +117,42 @@ contract SneakerVaultTest is Test {
     function test_SetPerk_DiscountStoresConfig() public {
         vm.prank(admin);
         vault.setPerk(DISCOUNT_PERK, uint8(0), 1_000, 3, 0, 0, 0, 0, true);
-        SneakerVault.Perk memory perk = vault.perks(DISCOUNT_PERK);
-        assertEq(uint8(perk.kind), uint8(0));
-        assertEq(perk.valueBps, 1_000);
-        assertEq(perk.minTier, 3);
-        assertTrue(perk.active);
+        (
+            uint8 kind,
+            uint16 valueBps,
+            uint8 minTier,
+            uint8 requiredLevel,
+            uint256 minPolStaked,
+            uint16 minConditionBps,
+            uint256 minModCount,
+            bool active
+        ) = vault.perks(DISCOUNT_PERK);
+        assertEq(kind, 0);
+        assertEq(valueBps, 1_000);
+        assertEq(minTier, 3);
+        assertEq(requiredLevel, 0);
+        assertEq(minPolStaked, 0);
+        assertEq(minConditionBps, 0);
+        assertEq(minModCount, 0);
+        assertTrue(active);
     }
 
     function test_SetPerk_DiscountOverCap_Reverts() public {
         vm.prank(admin);
         vm.expectRevert("SneakerVault: discount out of range");
         vault.setPerk(DISCOUNT_PERK, uint8(0), 5_001, 0, 0, 0, 0, 0, true);
+    }
+
+    function test_SetPerk_GapInIds_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("SneakerVault: perk ids must be sequential");
+        vault.setPerk(1, uint8(0), 1_000, 0, 0, 0, 0, 0, true);
+    }
+
+    function test_SetPerk_TooManyPerks_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("SneakerVault: perk limit reached");
+        vault.setPerk(16, uint8(0), 1_000, 0, 0, 0, 0, 0, true);
     }
 
     function test_SetPerk_InvalidKind_Reverts() public {
@@ -174,6 +197,31 @@ contract SneakerVaultTest is Test {
         assertEq(vault.discountBps(user, DISCOUNT_PERK), 0);
     }
 
+    function test_Discount_ConditionGate_PassesOnPristineSneaker() public {
+        // An untouched pair reads pristine, so a care gate passes.
+        vm.prank(admin);
+        vault.setPerk(DISCOUNT_PERK, uint8(0), 1_000, 0, 0, 0, 9_000, 0, true);
+        assertEq(vault.discountBps(user, DISCOUNT_PERK), 1_000);
+    }
+
+    function test_Discount_ConditionGate_BlocksWornSneaker() public {
+        // Equipping starts the pair's season, so wear begins.
+        vm.prank(admin);
+        mods.mintAuthorized(user, "ipfs://sole", SneakerMods.ModTraits(0, 10, 0, 0, 255, false, keccak256("sole")));
+        vm.prank(user);
+        mods.approve(address(workshop), 1);
+        vm.prank(user);
+        workshop.equip(1, 1);
+
+        vm.warp(block.timestamp + 365 days);
+        assertEq(workshop.conditionBps(1), 5_000);
+
+        // An 80% care gate rejects a pair sitting at the 50% wear floor.
+        vm.prank(admin);
+        vault.setPerk(DISCOUNT_PERK, uint8(0), 1_000, 0, 0, 0, 8_000, 0, true);
+        assertEq(vault.discountBps(user, DISCOUNT_PERK), 0);
+    }
+
     function test_Discount_PolGate_BlocksUnstaked() public {
         vm.prank(admin);
         vault.setPerk(DISCOUNT_PERK, uint8(0), 1_000, 3, 0, 1 ether, 0, 0, true);
@@ -190,8 +238,8 @@ contract SneakerVaultTest is Test {
 
     function test_BestDiscount_PicksHighestEligible() public {
         vm.startPrank(admin);
-        vault.setPerk(1, uint8(0), 500, 3, 0, 0, 0, 0, true);
-        vault.setPerk(2, uint8(0), 1_500, 3, 0, 0, 0, 0, true);
+        vault.setPerk(0, uint8(0), 500, 3, 0, 0, 0, 0, true);
+        vault.setPerk(1, uint8(0), 1_500, 3, 0, 0, 0, 0, true);
         vm.stopPrank();
         assertEq(vault.bestDiscountBps(user), 1_500);
     }

@@ -47,10 +47,8 @@ contract SneakerWorkshopTest is Test {
             address(mods),
             address(game),
             address(staking),
-            250 ether, // forgeCostPoints (250 veRUNE base)
-            5,         // forgeRarityStep
-            250,       // forgeEarnStepBps (+2.5%/level)
-            10         // maxForgeLevel
+            5_000,     // conditionFloorBps (50% at full wear)
+            365 days   // seasonSeconds
         );
         appraiser = new SneakerAppraiser(admin, address(nft), 0.5 ether, [uint256(0), 1 ether, 3 ether, 8 ether], 0.01 ether, 10_000);
         marketplace = new SneakerMarketplace(admin, address(nft), address(appraiser), address(staking), 250, 12_000, admin);
@@ -78,6 +76,22 @@ contract SneakerWorkshopTest is Test {
     }
 
     // ─────────── Equip / unequip ───────────
+
+    /// @dev Mint a fresh Sole mod to `user`, equip it on sneaker 1, and return
+    ///      the mod id. Equipping is what starts the pair's wear season.
+    function _equipSole(address user) internal returns (uint256 modId) {
+        modId = mods.totalSupply() + 1;
+        vm.prank(admin);
+        mods.mintAuthorized(
+            user,
+            URI,
+            SneakerMods.ModTraits(0, 10, 0, 0, 255, false, keccak256(abi.encode("sole", modId)))
+        );
+        vm.prank(user);
+        mods.approve(address(workshop), modId);
+        vm.prank(user);
+        workshop.equip(1, modId);
+    }
 
     function test_Equip_EscrowsModAndSetsSlot() public {
         vm.prank(alice);
@@ -265,19 +279,24 @@ contract SneakerWorkshopTest is Test {
         mods.ownerOf(5);
     }
 
-    function test_Ability_ForgeStone_FreeLevel() public {
-        // Forge stone (aux 3) → +1 forge level without veRUNE.
-        vm.prank(admin);
-        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(4, 10, 0, 0, 3, true, keccak256("stone")));
-        vm.prank(alice);
-        game.activate(1);
+    function test_Ability_ServiceKit_RestoresCondition() public {
+        // Equipping starts the season, so wear begins.
+        _equipSole(alice);
 
+        vm.warp(block.timestamp + 365 days);
+        assertEq(workshop.conditionBps(1), 5_000);
+
+        // Service kit (aux 3) → condition back to pristine, no energy cost.
+        uint256 kitId = mods.totalSupply() + 1;
+        vm.prank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(4, 10, 0, 0, 3, true, keccak256("service")));
         vm.prank(alice);
-        workshop.useAbility(1, 5);
-        assertEq(workshop.forgeLevel(1), 1);
-        assertEq(game.energyOf(1), 2); // 4 - 2
+        workshop.useAbility(1, kitId);
+
+        assertEq(workshop.conditionBps(1), 10_000);
+        assertEq(game.energyOf(1), game.maxEnergyOf(1)); // service is free
         vm.expectRevert();
-        mods.ownerOf(5);
+        mods.ownerOf(kitId);
     }
 
     function test_Ability_RevertInsufficientEnergy() public {
@@ -401,52 +420,72 @@ contract SneakerWorkshopTest is Test {
         assertApproxEqRel(game.pendingPoints(1), 3_600 ether, 0.02e18);
     }
 
-    // ─────────── Forge ───────────
+    // ─────────── Condition (365-day season) ───────────
 
-    function test_Forge_SpendsVeRuneAndLevelsUp() public {
-        // Earn and claim enough veRUNE for the first forge (250 veRUNE).
-        vm.prank(alice);
-        game.activate(1); // Epic: 400/day
-        vm.warp(block.timestamp + 1 days - 1);
-        vm.prank(alice);
-        game.claimPoints(1); // ~400 veRUNE
-
-        uint256 balanceBefore = game.veRuneBalance(alice);
-        vm.prank(alice);
-        workshop.forge(1);
-
-        assertEq(workshop.forgeLevel(1), 1);
-        assertEq(workshop.rarityBonus(1), 5);
-        assertEq(workshop.earnBonusBps(1), 250);
-        assertEq(game.veRuneBalance(alice), balanceBefore - 250 ether);
+    function test_Condition_PristineUntilFirstUse() public {
+        // A sneaker in the box does not wear out.
+        assertEq(workshop.conditionBps(1), 10_000);
+        vm.warp(block.timestamp + 400 days);
+        assertEq(workshop.conditionBps(1), 10_000);
     }
 
-    function test_Forge_RevertInsufficientVeRune() public {
-        vm.prank(alice);
-        vm.expectRevert("SneakerGame: insufficient veRUNE");
-        workshop.forge(1);
+    function test_Condition_DecaysLinearlyAcrossSeason() public {
+        _equipSole(alice);
+        assertEq(workshop.conditionBps(1), 10_000);
+
+        // Half a season: halfway between pristine and the 50% floor.
+        vm.warp(block.timestamp + 365 days / 2);
+        assertApproxEqAbs(workshop.conditionBps(1), 7_500, 5);
+
+        // Full season and beyond: clamped at the floor, never below.
+        vm.warp(block.timestamp + 365 days);
+        assertEq(workshop.conditionBps(1), 5_000);
+        vm.warp(block.timestamp + 1000 days);
+        assertEq(workshop.conditionBps(1), 5_000);
     }
 
-    function test_Forge_EscalatingCost() public {
+    function test_Condition_RepairKitRestoresAndRestartsSeason() public {
+        _equipSole(alice);
+        // The pair must have been activated before the game will repair it.
         vm.prank(alice);
         game.activate(1);
-        vm.warp(block.timestamp + 1 days - 1);
-        vm.prank(alice);
-        game.claimPoints(1);
-        // Also fund alice directly via a second sneaker claim path is overkill;
-        // top up by redeeming nothing — instead grant veRUNE via repeated accrual:
-        // keep accruing across days by re-activating (cooldown 24h).
-        vm.warp(block.timestamp + 25 hours);
-        vm.prank(alice);
-        game.activate(1);
-        vm.warp(block.timestamp + 1 days);
-        vm.prank(alice);
-        game.claimPoints(1);
 
-        assertEq(workshop.nextForgeCost(1), 250 ether);
+        vm.warp(block.timestamp + 365 days);
+        assertEq(workshop.conditionBps(1), 5_000);
+
+        vm.prank(admin);
+        mods.mintAuthorized(alice, URI, SneakerMods.ModTraits(4, 10, 0, 0, 255, true, keccak256("kit")));
+        uint256 kitId = mods.totalSupply();
         vm.prank(alice);
-        workshop.forge(1);
-        assertEq(workshop.nextForgeCost(1), 500 ether); // level 2 costs 2x base
+        workshop.useRepairKit(1, kitId);
+        assertEq(workshop.conditionBps(1), 10_000);
+    }
+
+    function test_Condition_ScalesEffectiveRarity() public {
+        _equipSole(alice);
+        uint256 pristineEnergy = game.maxEnergyOf(1);
+
+        vm.warp(block.timestamp + 365 days);
+        // Energy capacity derives from effective rarity, so wear shrinks it.
+        assertLt(game.maxEnergyOf(1), pristineEnergy);
+    }
+
+    function test_Condition_SecondsUntilFullyWorn() public {
+        _equipSole(alice);
+        assertApproxEqAbs(workshop.secondsUntilFullyWorn(1), 365 days, 5);
+        vm.warp(block.timestamp + 365 days);
+        assertEq(workshop.secondsUntilFullyWorn(1), 0);
+    }
+
+    function test_UpdateCareParams_OnlyAdmin() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        workshop.updateCareParams(6_000, 180 days);
+
+        vm.prank(admin);
+        workshop.updateCareParams(6_000, 180 days);
+        assertEq(workshop.conditionFloorBps(), 6_000);
+        assertEq(workshop.seasonSeconds(), 180 days);
     }
 
     // ─────────── Appraisal ───────────

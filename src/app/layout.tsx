@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Chakra_Petch } from "next/font/google";
 import Providers from "@/components/Providers";
+import { GameLaunchProvider } from "@/components/GameLaunch";
 import MobileNav from "@/components/MobileNav";
 import "./globals.css";
 
@@ -53,9 +54,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <Providers>{children}</Providers>
-        {/* Single instance for the whole app so it never remounts on navigation. */}
-        <MobileNav />
+        <Providers>
+          {/* Wraps the app so the launch loader can cover the viewport on navigation. */}
+          <GameLaunchProvider>
+            {children}
+            {/* Single instance for the whole app so it never remounts on navigation. */}
+            <MobileNav />
+          </GameLaunchProvider>
+        </Providers>
       </body>
     </html>
   );
