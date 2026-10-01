@@ -12,6 +12,10 @@ contract SneakerMintTest is Test {
 
     bytes32 constant PROOF = keccak256("sneaker-photo-proof-1");
     bytes32 constant PROOF2 = keccak256("sneaker-photo-proof-2");
+    bytes32 constant DESIGN = keccak256("design-fingerprint-1");
+    bytes32 constant DESIGN2 = keccak256("design-fingerprint-2");
+    bytes32 constant STYLE = keccak256("style-key-1");
+    bytes32 constant STYLE2 = keccak256("style-key-2");
     string constant URI = "data:application/json;base64,eyJuYW1lIjoiVGVzdCJ9";
 
     function setUp() public {
@@ -93,21 +97,23 @@ contract SneakerMintTest is Test {
         nft.mintAuthorized(alice, URI, PROOF, 50, 2);
     }
 
-    // ─────────── mintWithProof ───────────
+    // ─────────── mintCollectibleWithProof ───────────
 
-    function test_MintWithProof_WhenEnabled() public {
+    function test_MintCollectibleWithProof_WhenEnabled() public {
         vm.prank(admin);
         nft.setPublicMintEnabled(true);
         vm.prank(alice);
-        uint256 tokenId = nft.mintWithProof(URI, PROOF, 30, 1);
+        uint256 tokenId = nft.mintCollectibleWithProof(URI, PROOF, DESIGN, STYLE, 30, 1);
         assertEq(tokenId, 1);
         assertEq(nft.ownerOf(1), alice);
+        assertTrue(nft.isCollectible(1));
+        assertFalse(nft.isPlayable(1));
     }
 
-    function test_MintWithProof_RevertWhenDisabled() public {
+    function test_MintCollectibleWithProof_RevertWhenDisabled() public {
         vm.prank(alice);
         vm.expectRevert("SneakerMint: public mint disabled");
-        nft.mintWithProof(URI, PROOF, 30, 1);
+        nft.mintCollectibleWithProof(URI, PROOF, DESIGN, STYLE, 30, 1);
     }
 
     // ─────────── traitsOf ───────────

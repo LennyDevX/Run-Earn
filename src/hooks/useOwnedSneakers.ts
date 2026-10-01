@@ -9,6 +9,9 @@ export type OwnedSneaker = {
   tokenId: bigint;
   rarity: bigint;
   tier: bigint;
+  /// 0 = Playable veSneaker (staking, arena, game, workshop)
+  /// 1 = AI collectible (marketplace only)
+  kind: number;
   artwork: ResolvedSneakerArtwork;
 };
 
@@ -50,7 +53,7 @@ export function useOwnedSneakers({ owner, contractAddress, publicClient }: UseOw
       );
       const nextSneakers = await Promise.all(
         (tokenIds as bigint[]).map(async (tokenId) => {
-          const [traits, tokenUri] = await Promise.all([
+          const [traits, tokenUri, kind] = await Promise.all([
             publicClient.readContract({
               address: contractAddress,
               abi: sneakerMintAbi,
@@ -63,11 +66,22 @@ export function useOwnedSneakers({ owner, contractAddress, publicClient }: UseOw
               functionName: "tokenURI",
               args: [tokenId],
             }).catch(() => ""),
+            // Older deployments predate the kind split; treat a failed read as
+            // Playable, which is the pre-split behaviour.
+            publicClient
+              .readContract({
+                address: contractAddress,
+                abi: sneakerMintAbi,
+                functionName: "kindOf",
+                args: [tokenId],
+              })
+              .catch(() => 0),
           ]);
           return {
             tokenId,
             rarity: BigInt(traits[0]),
             tier: BigInt(traits[1]),
+            kind: Number(kind),
             artwork: resolveSneakerArtwork(tokenUri as string),
           };
         }),

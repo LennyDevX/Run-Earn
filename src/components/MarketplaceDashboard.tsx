@@ -79,6 +79,17 @@ export default function MarketplaceDashboard() {
       setActionNotice("Interactive Demo Mode: Marketplace contract pending deployment on this network.");
       return;
     }
+    const sneaker = market.owned.sneakers.find((item) => item.tokenId === tokenId);
+    const isCollectible = sneaker?.kind === 1;
+    if (isCollectible) {
+      // Collectibles are appraiser-priced — `list` reverts for them, so route
+      // to the valued path and ignore the manual price field entirely.
+      void runAction(async () => {
+        await market.approveNft(tokenId);
+        return market.listAtAppraisal(market.sneakerAddress as `0x${string}`, tokenId);
+      }, `Collectible #${tokenId} listed at the appraised price`);
+      return;
+    }
     const price = parseAmount(priceInput);
     if (price <= 0n) {
       setActionError("Enter a valid POL price (minimum 0.001 POL).");
@@ -260,6 +271,7 @@ export default function MarketplaceDashboard() {
                   const saleKind = market.saleKinds.get(sneaker.tokenId.toString()) ?? 0n;
                   const suggested = market.suggested.get(sneaker.tokenId.toString()) ?? 0n;
                   const rarityObj = RARITIES[Number(sneaker.tier) % RARITIES.length];
+                  const isCollectible = sneaker.kind === 1;
                   const saleLabel = saleKind === 1n ? "LISTED" : saleKind === 2n ? "IN AUCTION" : "IN WALLET";
                   return (
                     <div
@@ -268,8 +280,8 @@ export default function MarketplaceDashboard() {
                     >
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${rarityObj?.accent ?? "bg-foreground/10"}`}>
-                            {rarityObj?.label ?? "Sneaker"} · Tier {sneaker.tier.toString()}
+                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isCollectible ? "border border-astra/40 bg-astra/10 text-astra" : (rarityObj?.accent ?? "bg-foreground/10")}`}>
+                            {isCollectible ? `Collectible · ${rarityObj?.label ?? "Common"}` : `${rarityObj?.label ?? "Sneaker"} · Tier ${sneaker.tier.toString()}`}
                           </span>
                           <span className={`font-pixel text-[9px] ${saleKind > 0n ? "text-magma" : "text-foreground/40"}`}>
                             {saleLabel}
@@ -280,11 +292,16 @@ export default function MarketplaceDashboard() {
                         </div>
                         <h4 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h4>
                         <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
-                          <span>Suggested price:</span>
+                          <span>{isCollectible ? "Appraised price:" : "Suggested price:"}</span>
                           <span className="font-mono font-bold text-sky">
                             {suggested > 0n ? `${formatPol(suggested)} POL` : "—"}
                           </span>
                         </div>
+                        {isCollectible ? (
+                          <p className="mt-2 rounded-xl bg-astra/8 px-3 py-2 text-[10px] leading-relaxed text-astra/90">
+                            Listed at the appraiser&apos;s price — no custom pricing.
+                          </p>
+                        ) : null}
                       </div>
                       <div className="mt-5 grid grid-cols-2 gap-2 border-t border-foreground/10 pt-3">
                         <button

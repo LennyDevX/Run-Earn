@@ -10,6 +10,9 @@ interface IArenaSneaker {
 
     /// @dev Mirrors `SneakerMint.SneakerTraits` — three fields, positional.
     function traitsOf(uint256 tokenId) external view returns (uint8 rarity, uint8 tier, bytes32 proofHash);
+
+    /// @notice False for AI collectibles, which never enter the arena.
+    function isPlayable(uint256 tokenId) external view returns (bool);
 }
 
 interface IArenaWorkshop {
@@ -164,6 +167,10 @@ contract SneakerTabArena is Pausable, AccessControl, ReentrancyGuard {
     function canStart(address player, uint256 runnerId) public view returns (bool) {
         if (paused()) return false;
         if (nft.ownerOf(runnerId) == address(0)) return false;
+        // Defense in depth: staking already rejects collectibles, so this is
+        // redundant today — but it keeps the arena honest if the staking gate
+        // ever changes.
+        if (!nft.isPlayable(runnerId)) return false;
         if (staking.stakedOwner(runnerId) != player) return false;
         (uint256 principal, , , ) = staking.polPositions(player);
         if (principal == 0) return false;

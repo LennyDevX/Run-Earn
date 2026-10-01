@@ -90,7 +90,8 @@ export function useStakingVault() {
         depositedAt: polPosTuple[2],
         minLockSeconds: (minLock as bigint) || 2592000n,
         stakedTokenIds: stakedTokenIds as bigint[],
-        ownedSneakers: owned.sneakers,
+        // Staking is veSneaker-only.
+        ownedSneakers: owned.sneakers.filter((s) => s.kind === 0),
       });
     } catch (cause) {
       setReadError(cause instanceof Error ? cause.message : "Could not read the staking vault.");
@@ -128,7 +129,7 @@ export function useStakingVault() {
   const lockNFT = useCallback((tokenId: bigint) => send("stake", [tokenId]), [send]);
   const unlockNFT = useCallback((tokenId: bigint) => send("unstake", [tokenId]), [send]);
 
-  const statsWithOwned = { ...stats, ownedSneakers: owned.sneakers };
+  const statsWithOwned = { ...stats, ownedSneakers: owned.sneakers.filter((s) => s.kind === 0) };
   return {
     configured,
     stakingAddress,

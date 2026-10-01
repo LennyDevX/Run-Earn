@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { encodeFunctionData, isAddress, type Address, type Hex } from "viem";
+import { encodeFunctionData, isAddress, keccak256, toHex, type Address, type Hex } from "viem";
 import { explorerTransactionUrl, NETWORK, usePolygonWallet } from "@/components/Providers";
 import {
   buildTokenUri,
   DEFAULT_SNEAKER_DESCRIPTION,
   getMintedSneakers,
-  PALETTES,
-  RARITIES,
   saveMintedSneaker,
   type PaletteId,
   type RarityLevel,
@@ -22,7 +20,102 @@ const SNEAKER_MINT_ADDRESS = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
 
 const STEPS = ["Photo", "AI Art", "Details", "Mint"] as const;
 
+/// Perceptual hash grid. 16x16 = 256 comparisons = exactly 32 bytes, so the
+/// average-hash drops straight into a `bytes32` with no padding.
+const HASH_GRID = 16;
+
 type GeneratedImage = { dataUrl: string; mimeType: string };
+
+/// What the grader assigned to this piece. Everything here is written by the AI
+/// — the collector only gets to rename the result.
+type MintGrade = {
+  tier: number;
+  tierLabel: string;
+  rarityScore: number;
+  quality: number;
+  silhouette: string;
+  material: string;
+  colorway: string[];
+  notableDetails: string;
+  stylePalette: string;
+  styleComposition: string;
+};
+
+type GenerateSneakerResponse = {
+  imageBase64?: string;
+  mimeType?: string;
+  error?: string;
+  suggestedName?: string;
+  description?: string;
+  silhouette?: string;
+  material?: string;
+  colorway?: string[];
+  notableDetails?: string;
+  tier?: number;
+  tierLabel?: string;
+  rarityScore?: number;
+  quality?: number;
+  stylePalette?: string;
+  styleComposition?: string;
+};
+
+/// Tier index -> the local `RarityLevel` id used by the offline collection store.
+const RARITY_IDS: RarityLevel[] = ["comun", "raro", "epico", "mitico"];
+
+/// Average-hash of an image, as a `bytes32`.
+///
+/// Draws the artwork into a 16x16 canvas, converts it to grayscale, and emits
+/// one bit per pixel comparing it against the mean. Two renders of the *same*
+/// physical sneaker land on the same hash far more often than not, which is what
+/// makes the on-chain `usedDesigns` guard meaningful — an exact-hash check alone
+/// would let someone mint the same shoe twice from two different photos.
+///
+/// This is the client-side stand-in for the semantic fingerprint the server
+/// pipeline will compute (model + silhouette + dominant colorway) in a later
+/// phase. It is strictly weaker than that, but it is real, deterministic, and
+/// enforced on-chain.
+async function perceptualHash(dataUrl: string): Promise<Hex> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("Could not read the generated artwork."));
+    element.src = dataUrl;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = HASH_GRID;
+  canvas.height = HASH_GRID;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Canvas is unavailable in this browser.");
+
+  context.drawImage(image, 0, 0, HASH_GRID, HASH_GRID);
+  const { data } = context.getImageData(0, 0, HASH_GRID, HASH_GRID);
+
+  const gray: number[] = [];
+  for (let i = 0; i < HASH_GRID * HASH_GRID; i += 1) {
+    const r = data[i * 4];
+    const g = data[i * 4 + 1];
+    const b = data[i * 4 + 2];
+    gray.push(0.299 * r + 0.587 * g + 0.114 * b);
+  }
+
+  const mean = gray.reduce((sum, value) => sum + value, 0) / gray.length;
+  let hex = "";
+  for (let byte = 0; byte < 32; byte += 1) {
+    let value = 0;
+    for (let bit = 0; bit < 8; bit += 1) {
+      if (gray[byte * 8 + bit] > mean) value |= 1 << (7 - bit);
+    }
+    hex += value.toString(16).padStart(2, "0");
+  }
+  return `0x${hex}` as Hex;
+}
+
+/// SHA-256 of the artwork data URL — the exact re-mint guard.
+async function artworkProof(dataUrl: string): Promise<Hex> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(dataUrl));
+  return `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
+}
 
 export default function SneakerMintStudio() {
   const wallet = usePolygonWallet();
@@ -33,14 +126,14 @@ export default function SneakerMintStudio() {
   const [generated, setGenerated] = useState<GeneratedImage | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [rarity, setRarity] = useState<RarityLevel>("raro");
-  const [palette, setPalette] = useState<PaletteId>("neon");
+  const palette: PaletteId = "neon";
+  /// Assigned by the grader, never chosen by the collector — a picker would
+  /// make the tier meaningless. Null until the AI has graded the piece.
+  const [grade, setGrade] = useState<MintGrade | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [mintedHash, setMintedHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedRarity = useMemo(() => RARITIES.find((item) => item.id === rarity), [rarity]);
 
   // Keep the active step centered inside the horizontal step row on mobile,
   // including when the wizard advances programmatically.
@@ -70,12 +163,11 @@ export default function SneakerMintStudio() {
     try {
       const form = new FormData();
       form.set("photo", photoFile);
-      form.set(
-        "style",
-        `Rarity theme: ${selectedRarity?.label ?? "Rare"}. Accent palette: ${PALETTES.find((item) => item.id === palette)?.colors.join(", ")}.`,
-      );
+      // Seed keeps the style rotation advancing while staying stable across a
+      // retry of the same submission.
+      form.set("seed", `${wallet.address ?? "guest"}:${photoFile.size}:${photoFile.name}`);
       const response = await fetch("/api/generate-sneaker", { method: "POST", body: form });
-      const data = (await response.json()) as { imageBase64?: string; mimeType?: string; error?: string };
+      const data = (await response.json()) as GenerateSneakerResponse;
       if (!response.ok || !data.imageBase64) {
         throw new Error(data.error ?? "AI did not return an image.");
       }
@@ -83,7 +175,22 @@ export default function SneakerMintStudio() {
         dataUrl: `data:${data.mimeType ?? "image/png"};base64,${data.imageBase64}`,
         mimeType: data.mimeType ?? "image/png",
       });
-      if (!name) setName(`Sneaker #${String(Date.now()).slice(-4)}`);
+      // Autofill: the grader writes the name, description, and tier. The
+      // collector can still rename the piece.
+      setGrade({
+        tier: data.tier ?? 0,
+        tierLabel: data.tierLabel ?? "Common",
+        rarityScore: data.rarityScore ?? 20,
+        quality: data.quality ?? 0,
+        silhouette: data.silhouette ?? "low-top",
+        material: data.material ?? "mixed",
+        colorway: data.colorway ?? [],
+        notableDetails: data.notableDetails ?? "",
+        stylePalette: data.stylePalette ?? "cyan-dominant",
+        styleComposition: data.styleComposition ?? "three-quarter hero",
+      });
+      setName(data.suggestedName ?? "");
+      setDescription(data.description ?? "");
       setStep(2);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not generate the artwork.");
@@ -100,26 +207,65 @@ export default function SneakerMintStudio() {
     setError(null);
     setIsMinting(true);
     try {
+      if (!grade) throw new Error("Generate your sneaker artwork first.");
       const metadata = {
-        name: name.trim() || "Sneaker Airen",
+        name: name.trim() || "Airen Collectible",
         description: description.trim() || DEFAULT_SNEAKER_DESCRIPTION,
-        rarity,
+        rarity: RARITY_IDS[grade.tier] ?? "comun",
         palette,
         imageDataUrl: generated.dataUrl,
       };
-      const proofBytes = new TextEncoder().encode(generated.dataUrl);
-      const digest = await crypto.subtle.digest("SHA-256", proofBytes);
-      const proofHash = `0x${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}` as Hex;
+      const proofHash = await artworkProof(generated.dataUrl);
+      // Perceptual fingerprint: catches the same physical sneaker re-rendered
+      // from a different photo.
+      const designHash = await perceptualHash(generated.dataUrl);
+      // Style combination handed to this render. Deriving it from the wallet,
+      // the chosen look, and a timestamp keeps two collectors from receiving
+      // the same one.
+      // Style key binds the exact look the renderer was handed, so the contract
+      // can reject a repeat.
+      const styleKey = keccak256(
+        toHex(
+          `airen:style:${grade.stylePalette}:${grade.styleComposition}:${wallet.address ?? "guest"}:${Date.now()}`,
+        ),
+      );
+      const tierIndex = grade.tier;
+      const rarityScore = grade.rarityScore;
       let transactionHash: `0x${string}` | undefined;
 
       if (SNEAKER_MINT_ADDRESS && isAddress(SNEAKER_MINT_ADDRESS)) {
         if (!wallet.isConnected || !wallet.address) {
           throw new Error("Connect your wallet to mint on Polygon.");
         }
+
+        // Fail with a readable message instead of an opaque revert.
+        const [designTaken, styleTaken] = await Promise.all([
+          wallet.publicClient.readContract({
+            address: SNEAKER_MINT_ADDRESS as Address,
+            abi: sneakerMintAbi,
+            functionName: "usedDesigns",
+            args: [designHash],
+          }),
+          wallet.publicClient.readContract({
+            address: SNEAKER_MINT_ADDRESS as Address,
+            abi: sneakerMintAbi,
+            functionName: "usedStyles",
+            args: [styleKey],
+          }),
+        ]);
+        if (designTaken) {
+          throw new Error(
+            "This sneaker has already been minted. Each physical pair can only become one collectible.",
+          );
+        }
+        if (styleTaken) {
+          throw new Error("That style combination is taken. Pick a different palette and try again.");
+        }
+
         const data = encodeFunctionData({
           abi: sneakerMintAbi,
-          functionName: "mintWithProof",
-          args: [buildTokenUri(metadata), proofHash, RARITIES.findIndex((item) => item.id === rarity), 1],
+          functionName: "mintCollectibleWithProof",
+          args: [buildTokenUri(metadata), proofHash, designHash, styleKey, rarityScore, tierIndex],
         });
         transactionHash = await wallet.sendContractCall(SNEAKER_MINT_ADDRESS as Address, data);
         await wallet.publicClient.waitForTransactionReceipt({ hash: transactionHash });
@@ -239,28 +385,56 @@ export default function SneakerMintStudio() {
               Description
               <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} enterKeyHint="done" autoComplete="off" placeholder={DEFAULT_SNEAKER_DESCRIPTION} className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky" />
             </label>
-            <button type="button" onClick={() => setDescription(DEFAULT_SNEAKER_DESCRIPTION)} className="cursor-pointer self-start rounded-full bg-mint/15 px-4 py-2 text-xs font-semibold text-mint transition-colors hover:bg-mint/25">
+            <button type="button" onClick={() => setDescription(grade?.notableDetails || DEFAULT_SNEAKER_DESCRIPTION)} className="cursor-pointer self-start rounded-full bg-mint/15 px-4 py-2 text-xs font-semibold text-mint transition-colors hover:bg-mint/25">
               Use default description
             </button>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="flex flex-col gap-2 text-sm font-semibold">
-                Rarity
-                <select value={rarity} onChange={(event) => setRarity(event.target.value as RarityLevel)} className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky">
-                  {RARITIES.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.multiplier}</option>)}
-                </select>
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-semibold">
-                Palette
-                <select value={palette} onChange={(event) => setPalette(event.target.value as PaletteId)} className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-sky">
-                  {PALETTES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                </select>
-              </label>
-            </div>
-            <div className="flex gap-2">
-              {PALETTES.find((item) => item.id === palette)?.colors.map((color) => (
-                <span key={color} className="size-6 rounded-full border border-foreground/10" style={{ backgroundColor: color }} />
-              ))}
-            </div>
+
+            {/* Graded by the AI, never chosen. A rarity picker would make the
+                tier meaningless and let every collector mint Mythic. */}
+            {grade ? (
+              <div className="rounded-3xl border border-astra/25 bg-astra/8 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="font-pixel text-[9px] tracking-[0.2em] text-astra">AI GRADING</span>
+                  <span className="rounded-full border border-astra/35 bg-ink/40 px-3 py-1 font-mono text-[11px] font-bold text-astra">
+                    {grade.tierLabel} · {grade.rarityScore}/100
+                  </span>
+                </div>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["Silhouette", grade.silhouette],
+                    ["Material", grade.material],
+                    ["Quality score", `${grade.quality}/100`],
+                    ["Style", `${grade.stylePalette} · ${grade.styleComposition}`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl bg-background/60 px-4 py-3">
+                      <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">{label}</dt>
+                      <dd className="mt-1 truncate text-sm font-semibold">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {grade.colorway.length > 0 ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
+                      Colorway
+                    </span>
+                    {grade.colorway.map((color) => (
+                      <span
+                        key={color}
+                        className="size-5 rounded-full border border-foreground/15"
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                <p className="mt-4 text-[11px] leading-relaxed text-foreground/55">
+                  The tier is assigned from the piece&apos;s own detail, color complexity, and
+                  distinctiveness, then capped by the collection&apos;s scarcity curve — 50% Common,
+                  30% Rare, 15% Epic, 5% Mythic. It cannot be chosen, and it cannot be re-rolled.
+                </p>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-3">
               <button type="button" onClick={() => setStep(1)} className="rounded-full border border-foreground/15 px-5 py-3 text-xs font-semibold transition-colors hover:border-foreground/30">← Back</button>
               <button

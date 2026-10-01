@@ -12,6 +12,9 @@ interface IVaultSneakerTraits {
     /// @notice (rarity, tier, proofHash) for a SneakerMint token.
     function traitsOf(uint256 tokenId) external view returns (IVaultSneakerTraits.SneakerTraitsView memory);
 
+    /// @notice False for AI collectibles — they never satisfy a veSneaker perk.
+    function isPlayable(uint256 tokenId) external view returns (bool);
+
     struct SneakerTraitsView {
         uint8 rarity;
         uint8 tier;
@@ -287,6 +290,9 @@ contract SneakerVault is AccessControl {
         uint256 scan = balance > MAX_OWNER_SCAN ? MAX_OWNER_SCAN : balance;
         for (uint256 i; i < scan; ++i) {
             uint256 tokenId = nft.tokenOfOwnerByIndex(user, i);
+            // Collectibles are artwork, not veSneakers — they must not satisfy
+            // a tier or care gate.
+            if (!sneakerTraits.isPlayable(tokenId)) continue;
             if (minTier > signals.highestTier) {
                 IVaultSneakerTraits.SneakerTraitsView memory traits = sneakerTraits.traitsOf(tokenId);
                 if (traits.tier > signals.highestTier) signals.highestTier = traits.tier;

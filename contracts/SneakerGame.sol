@@ -187,6 +187,8 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
     ///      refills the sneaker's energy to full.
     function activate(uint256 tokenId) external whenNotPaused {
         require(nft.ownerOf(tokenId) == msg.sender, "SneakerGame: not owner");
+        // Collectibles are AI artwork — they do not mine veRUNE.
+        require(nft.isPlayable(tokenId), "SneakerGame: not a veSneaker");
         SneakerState storage state = sneakers[tokenId];
         require(
             state.lastActivationAt == 0 || block.timestamp >= state.lastActivationAt + ACTIVATION_COOLDOWN,

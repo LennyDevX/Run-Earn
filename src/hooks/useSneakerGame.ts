@@ -117,7 +117,9 @@ export function useSneakerGame() {
       setVeRune(veRuneBalance as bigint);
       setTotalRedeemedPoints(redeemed as bigint);
 
-      const tokenIds = owned.sneakers.map((s) => s.tokenId);
+      // Only playable veSneakers have game state.
+      const playable = owned.sneakers.filter((s) => s.kind === 0);
+      const tokenIds = playable.map((s) => s.tokenId);
       const readStat = (functionName: string, tokenId: bigint, fallback: bigint | number | boolean) =>
         wallet.publicClient
           .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName, args: [tokenId] } as never)
@@ -140,7 +142,7 @@ export function useSneakerGame() {
         Promise.all(tokenIds.map((tokenId) => readStat("earnRatePerSecond", tokenId, 0n))),
       ]);
 
-      const next: GameSneaker[] = owned.sneakers.map((sneaker, idx) => {
+      const next: GameSneaker[] = playable.map((sneaker, idx) => {
         const raw = states[idx] as
           | readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
           | null;

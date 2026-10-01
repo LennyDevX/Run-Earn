@@ -4,6 +4,7 @@ import { getAddress, type Address } from "viem";
 import {
   addressEnv,
   appraiserParameters,
+  collectibleAppraiserParameters,
   assertNetwork,
   assertSignerBalance,
   bigintEnv,
@@ -177,14 +178,31 @@ async function main() {
       throw new Error("SneakerAppraiser requires SNEAKER_MINT_ADDRESS when deployed separately.");
     }
     const ap = appraiserParameters();
-    deployments.push(await deployContract(viem, "SneakerAppraiser", [
+    const appraiserDeployment = await deployContract(viem, "SneakerAppraiser", [
       addressEnv("APPRAISER_ADMIN_ADDRESS", admin),
       sneakerAddress,
       ap.baseValue,
       ap.tierValues,
       ap.rarityWeight,
       ap.globalMultiplierBps,
-    ]));
+    ]);
+    deployments.push(appraiserDeployment);
+
+    // The constructor seeds the collectible defaults; this applies any env
+    // override so art pricing can be tuned without a redeploy.
+    const cp = collectibleAppraiserParameters();
+    const appraiser = await viem.getContractAt("SneakerAppraiser", appraiserDeployment.address);
+    const collectibleHash = await appraiser.write.updateCollectibleParams([
+      cp.baseValue,
+      cp.tierValues,
+      cp.rarityWeight,
+      cp.multiplierBps,
+    ], { account: wallet.account });
+    const collectibleReceipt = await publicClient.waitForTransactionReceipt({ hash: collectibleHash });
+    if (collectibleReceipt.status !== "success") {
+      throw new Error(`SneakerAppraiser collectible params failed (${collectibleHash}).`);
+    }
+    console.log("Seeded SneakerAppraiser collectible valuation track");
   }
 
   if (target === "all" || target === "SneakerMarketplace") {

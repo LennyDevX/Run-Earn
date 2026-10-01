@@ -102,6 +102,28 @@ export function appraiserParameters() {
   };
 }
 
+/// AI collectible valuation track. Separate from the veSneaker set so tuning art
+/// prices never moves a playable valuation. Defaults land the MARKETPLACE price
+/// (appraisal x the 1.2x premium) inside the 250 - 8,000 POL band:
+///
+///   Common r0 -> 210 appraised ->  252 listed
+///   Rare r50  -> 1,310         -> 1,572
+///   Epic r70  -> 3,110         -> 3,732
+///   Mythic r100 -> 6,560       -> 7,872
+export function collectibleAppraiserParameters() {
+  return {
+    baseValue: bigintEnv("COLLECTIBLE_APPRAISER_BASE_VALUE", 210n * 10n ** 18n),
+    tierValues: [
+      bigintEnv("COLLECTIBLE_APPRAISER_TIER0_VALUE", 0n),
+      bigintEnv("COLLECTIBLE_APPRAISER_TIER1_VALUE", 600n * 10n ** 18n),
+      bigintEnv("COLLECTIBLE_APPRAISER_TIER2_VALUE", 2_200n * 10n ** 18n),
+      bigintEnv("COLLECTIBLE_APPRAISER_TIER3_VALUE", 5_350n * 10n ** 18n),
+    ] as const,
+    rarityWeight: bigintEnv("COLLECTIBLE_APPRAISER_RARITY_WEIGHT", 10n * 10n ** 18n),
+    multiplierBps: bigintEnv("COLLECTIBLE_APPRAISER_MULTIPLIER_BPS", 10_000n),
+  };
+}
+
 export function marketplaceParameters() {
   return {
     feeBps: bigintEnv("MARKETPLACE_FEE_BPS", 250n), // 2.5% marketplace fee

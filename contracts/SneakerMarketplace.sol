@@ -200,6 +200,10 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     function list(address collection, uint256 tokenId, uint256 price) external whenNotPaused nonReentrant {
         require(price >= MIN_PRICE, "SneakerMarketplace: price too low");
         require(tokenSaleKind[collection][tokenId] == 0, "SneakerMarketplace: token already on sale");
+        // AI collectibles are appraiser-priced — the seller never picks a number.
+        if (collection == address(nft)) {
+            require(!nft.isCollectible(tokenId), "SneakerMarketplace: use listAtAppraisal");
+        }
         _requireSellable(collection, tokenId);
 
         tokenSaleKind[collection][tokenId] = 1;
@@ -212,6 +216,41 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
             active: true
         });
         emit ListingCreated(_nextListingId, msg.sender, collection, tokenId, price);
+        _nextListingId += 1;
+
+        IERC721(collection).safeTransferFrom(msg.sender, address(this), tokenId);
+    }
+
+    /// @notice List an AI collectible at the price the appraiser sets.
+    /// @dev The seller supplies no price — the contract derives it from
+    ///      `SneakerAppraiser` and the marketplace premium. This is the only
+    ///      listing path open to a collectible, so a floor cannot be
+    ///      manipulated and every piece is priced by the same model.
+    function listAtAppraisal(address collection, uint256 tokenId)
+        external
+        whenNotPaused
+        nonReentrant
+        returns (uint256 listingId)
+    {
+        require(collection == address(nft), "SneakerMarketplace: sneaker collection only");
+        require(nft.isCollectible(tokenId), "SneakerMarketplace: not a collectible");
+        require(tokenSaleKind[collection][tokenId] == 0, "SneakerMarketplace: token already on sale");
+        _requireSellable(collection, tokenId);
+
+        uint256 price = _appraisalPrice(tokenId);
+        require(price >= MIN_PRICE, "SneakerMarketplace: appraisal below minimum");
+
+        listingId = _nextListingId;
+        tokenSaleKind[collection][tokenId] = 1;
+        listings[listingId] = Listing({
+            seller: msg.sender,
+            collection: collection,
+            tokenId: tokenId,
+            price: price,
+            listedAt: uint64(block.timestamp),
+            active: true
+        });
+        emit ListingCreated(listingId, msg.sender, collection, tokenId, price);
         _nextListingId += 1;
 
         IERC721(collection).safeTransferFrom(msg.sender, address(this), tokenId);
@@ -401,6 +440,13 @@ contract SneakerMarketplace is Pausable, AccessControl, ReentrancyGuard, IERC721
     ///      valuation and the marketplace premium. SneakerMint NFTs only —
     ///      mods are priced by the market.
     function suggestedPrice(uint256 tokenId) external view returns (uint256) {
+        return _appraisalPrice(tokenId);
+    }
+
+    /// @notice Appraiser valuation plus the marketplace premium. Collectibles
+    ///      are priced from a dedicated parameter set inside the appraiser, so
+    ///      this returns the right number for either kind.
+    function _appraisalPrice(uint256 tokenId) internal view returns (uint256) {
         (uint256 value, , ) = appraiser.appraise(tokenId);
         return (value * appraiserPremiumBps) / BASIS_POINTS;
     }

@@ -47,6 +47,7 @@ export function useRunnerRoster() {
   const [selectedId, setSelectedId] = useState<bigint | null>(null);
 
   const refresh = useCallback(async () => {
+    // Collectibles are art, not runners — they never enter the arena.
     if (!wallet.address || owned.sneakers.length === 0) {
       setRunners([]);
       setSelectedId(null);
@@ -55,7 +56,7 @@ export function useRunnerRoster() {
     setIsReading(true);
     try {
       const rows = await Promise.all(
-        owned.sneakers.map(async (sneaker) => {
+        owned.sneakers.filter((sneaker) => sneaker.kind === 0).map(async (sneaker) => {
           const [conditionBps, equippedMods] = workshopAddress
             ? await Promise.all([
                 wallet.publicClient

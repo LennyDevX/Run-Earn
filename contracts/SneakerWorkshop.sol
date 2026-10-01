@@ -349,6 +349,8 @@ contract SneakerWorkshop is Pausable, AccessControl, ReentrancyGuard, IERC721Rec
     // ─────────────────────────── Internal ────────────────────────
 
     function _controlsSneaker(address user, uint256 sneakerId) internal view returns (bool) {
+        // Collectibles are AI artwork — no loadout, no care cycle.
+        if (!nft.isPlayable(sneakerId)) return false;
         return nft.ownerOf(sneakerId) == user || staking.stakedOwner(sneakerId) == user;
     }
 

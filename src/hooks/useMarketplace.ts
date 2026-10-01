@@ -145,8 +145,8 @@ export function useMarketplace() {
         const [seller, , tokenId, price, listedAt, active] = raw as readonly [Address, Address, bigint, bigint, bigint, boolean];
         if (!active || seller.toLowerCase() !== wallet.address?.toLowerCase()) return null;
         const sneaker = owned.sneakers.find((item) => item.tokenId === tokenId);
-        const [traits, tokenUri] = sneaker
-          ? [null, null]
+        const [traits, tokenUri, kind] = sneaker
+          ? [null, null, null]
           : await Promise.all([
               wallet.publicClient.readContract({
                 address: sneakerAddress as Address,
@@ -160,6 +160,12 @@ export function useMarketplace() {
                 functionName: "tokenURI",
                 args: [tokenId],
               }).catch(() => ""),
+              wallet.publicClient.readContract({
+                address: sneakerAddress as Address,
+                abi: sneakerMintAbi,
+                functionName: "kindOf",
+                args: [tokenId],
+              }).catch(() => 0),
             ]);
         return {
           listingId: listingIds[idx],
@@ -170,6 +176,7 @@ export function useMarketplace() {
           active,
           rarity: sneaker?.rarity ?? (traits ? BigInt(traits[0]) : 0n),
           tier: sneaker?.tier ?? (traits ? BigInt(traits[1]) : 0n),
+          kind: sneaker?.kind ?? Number(kind ?? 0),
           artwork: sneaker?.artwork ?? resolveSneakerArtwork(tokenUri as string),
         };
       }));
@@ -190,6 +197,7 @@ export function useMarketplace() {
     async (
       functionName:
         | "list"
+        | "listAtAppraisal"
         | "buy"
         | "cancelListing"
         | "createAuction"
@@ -241,6 +249,12 @@ export function useMarketplace() {
     (collection: Address, tokenId: bigint, price: bigint) => send("list", [collection, tokenId, price]),
     [send],
   );
+  /// List an AI collectible at the appraiser's price. The seller supplies no
+  /// number — the contract derives it, and `list` reverts for collectibles.
+  const listAtAppraisal = useCallback(
+    (collection: Address, tokenId: bigint) => send("listAtAppraisal", [collection, tokenId]),
+    [send],
+  );
   const buy = useCallback((listingId: bigint, price: bigint) => send("buy", [listingId], price), [send]);
   const cancelListing = useCallback((listingId: bigint) => send("cancelListing", [listingId]), [send]);
   const createAuction = useCallback(
@@ -273,6 +287,7 @@ export function useMarketplace() {
       await Promise.all([refresh(), owned.refresh()]);
     },
     list,
+    listAtAppraisal,
     buy,
     cancelListing,
     createAuction,

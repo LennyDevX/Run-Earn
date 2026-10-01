@@ -62,7 +62,12 @@ export default function WorkshopDashboard({
     return () => window.cancelAnimationFrame(frame);
   }, [focusRequest]);
 
-  const sneakers = workshop.owned.sneakers;
+  // The loadout only applies to playable veSneakers. Memoized so the derived
+  // `selected` stays referentially stable for the downstream memos.
+  const sneakers = useMemo(
+    () => workshop.owned.sneakers.filter((sneaker) => sneaker.kind === 0),
+    [workshop.owned.sneakers],
+  );
   const selectedId = workshop.selectedSneakerId ?? sneakers[0]?.tokenId ?? null;
   const selected = sneakers.find((s) => s.tokenId === selectedId) ?? null;
   const gameStats = game.sneakers.find((s) => s.tokenId === selectedId) ?? null;

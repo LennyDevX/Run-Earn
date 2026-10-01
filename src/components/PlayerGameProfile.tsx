@@ -44,6 +44,7 @@ export default function PlayerGameProfile() {
   const [isReadingPower, setIsReadingPower] = useState(false);
 
   const readPower = useCallback(async () => {
+    // Collectibles are art — the runner profile only counts veSneakers.
     if (!wallet.address || owned.sneakers.length === 0) {
       setPowerRows([]);
       return;
@@ -51,7 +52,7 @@ export default function PlayerGameProfile() {
     setIsReadingPower(true);
     try {
       const rows = await Promise.all(
-        owned.sneakers.map(async (sneaker) => {
+        owned.sneakers.filter((sneaker) => sneaker.kind === 0).map(async (sneaker) => {
           const [conditionBps, equippedMods] = workshopAddress
             ? await Promise.all([
                 wallet.publicClient
@@ -211,7 +212,7 @@ export default function PlayerGameProfile() {
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
           {[
-            { label: "veSneakers", value: owned.sneakers.length.toString(), accent: "text-astra" },
+            { label: "veSneakers", value: owned.sneakers.filter((s) => s.kind === 0).length.toString(), accent: "text-astra" },
             { label: "Mods owned", value: ownedMods.mods.length.toString(), accent: "text-sol" },
             { label: "Avg. power", value: `${averagePower}/100`, accent: "text-brand" },
             { label: "Best ceiling", value: `+${bpsToPercent(bestCeiling)}`, accent: "text-mint" },

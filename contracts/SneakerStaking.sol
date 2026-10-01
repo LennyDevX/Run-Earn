@@ -306,6 +306,9 @@ contract SneakerStaking is Pausable, AccessControl, ReentrancyGuard, IERC721Rece
     function stake(uint256 tokenId) external whenNotPaused nonReentrant {
         require(!receipts[msg.sender][tokenId].active, "SneakerStaking: already staked");
         require(nft.ownerOf(tokenId) == msg.sender, "SneakerStaking: not owner");
+        // Only official veSneakers may be locked. AI collectibles are digital
+        // art and never touch the yield engine.
+        require(nft.isPlayable(tokenId), "SneakerStaking: not a veSneaker");
 
         SneakerMint.SneakerTraits memory traits = nft.traitsOf(tokenId);
         require(traits.tier < tierBonusBps.length, "SneakerStaking: invalid tier");

@@ -5,6 +5,8 @@ import hre from "hardhat";
 const URI = "data:application/json;base64,eyJuYW1lIjoiVGVzdCJ9";
 const PROOF1 = "0x" + "01".repeat(32);
 const PROOF2 = "0x" + "02".repeat(32);
+const DESIGN1 = "0x" + "d1".repeat(32);
+const STYLE1 = "0x" + "51".repeat(32);
 
 describe("SneakerMint (TypeScript integration)", () => {
   let viem: any;
@@ -87,21 +89,21 @@ describe("SneakerMint (TypeScript integration)", () => {
     );
   });
 
-  it("reverts on mintWithProof when public mint disabled", async () => {
+  it("reverts on mintCollectibleWithProof when public mint disabled", async () => {
     const nft = await deployNft();
     await assert.rejects(
-      nft.write.mintWithProof(
-        [URI, PROOF1, 30n, 1n],
+      nft.write.mintCollectibleWithProof(
+        [URI, PROOF1, DESIGN1, STYLE1, 30n, 1n],
         { account: alice.account },
       ),
     );
   });
 
-  it("allows mintWithProof when public mint enabled", async () => {
+  it("allows mintCollectibleWithProof when public mint enabled", async () => {
     const nft = await deployNft();
     await nft.write.setPublicMintEnabled([true], { account: admin.account });
-    await nft.write.mintWithProof(
-      [URI, PROOF1, 30n, 1n],
+    await nft.write.mintCollectibleWithProof(
+      [URI, PROOF1, DESIGN1, STYLE1, 30n, 1n],
       { account: alice.account },
     );
     assert.equal((await nft.read.ownerOf([1n])).toLowerCase(), alice.account.address.toLowerCase());

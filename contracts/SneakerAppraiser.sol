@@ -42,6 +42,17 @@ contract SneakerAppraiser is AccessControl {
     ///      individual parameters.
     uint256 public globalMultiplierBps;
 
+    /// @notice Separate valuation track for AI collectibles.
+    /// @dev Collectibles are pure digital art priced an order of magnitude above
+    ///      the playable collection, so they get their own base, tier ladder,
+    ///      and rarity weight. Keeping them separate means tuning art prices
+    ///      never moves a veSneaker valuation. Defaults land the range at
+    ///      250 POL (Common, rarity 0) to ~7,850 POL (Mythic, rarity 100).
+    uint256 public collectibleBaseValue;
+    uint256[4] public collectibleTierValues;
+    uint256 public collectibleRarityWeight;
+    uint256 public collectibleMultiplierBps;
+
     event AppraisalParamsUpdated(
         uint256 baseValue,
         uint256[4] tierValues,
@@ -49,6 +60,12 @@ contract SneakerAppraiser is AccessControl {
         uint256 globalMultiplierBps
     );
     event BoostsUpdated(address indexed boosts);
+    event CollectibleParamsUpdated(
+        uint256 baseValue,
+        uint256[4] tierValues,
+        uint256 rarityWeight,
+        uint256 multiplierBps
+    );
 
     constructor(
         address admin,
@@ -66,6 +83,18 @@ contract SneakerAppraiser is AccessControl {
         tierValues = tierValues_;
         rarityWeight = rarityWeight_;
         globalMultiplierBps = globalMultiplierBps_;
+
+        // Collectible defaults, tuned so the MARKETPLACE price (appraisal x the
+        // 1.2x premium) lands inside the 250 - 8,000 POL band:
+        //   Common r0   -> 210 appraised ->  252 listed
+        //   Rare r50    -> 1,310         -> 1,572
+        //   Epic r70    -> 3,110         -> 3,732
+        //   Mythic r100 -> 6,560         -> 7,872
+        collectibleBaseValue = 210 ether;
+        collectibleTierValues = [uint256(0), 600 ether, 2_200 ether, 5_350 ether];
+        collectibleRarityWeight = 10 ether;
+        collectibleMultiplierBps = 10_000;
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -84,6 +113,21 @@ contract SneakerAppraiser is AccessControl {
         rarityWeight = rarityWeight_;
         globalMultiplierBps = globalMultiplierBps_;
         emit AppraisalParamsUpdated(baseValue_, tierValues_, rarityWeight_, globalMultiplierBps_);
+    }
+
+    /// @notice Update the collectible valuation track. Admin only.
+    function updateCollectibleParams(
+        uint256 baseValue_,
+        uint256[4] calldata tierValues_,
+        uint256 rarityWeight_,
+        uint256 multiplierBps_
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(multiplierBps_ > 0, "SneakerAppraiser: zero collectible multiplier");
+        collectibleBaseValue = baseValue_;
+        collectibleTierValues = tierValues_;
+        collectibleRarityWeight = rarityWeight_;
+        collectibleMultiplierBps = multiplierBps_;
+        emit CollectibleParamsUpdated(baseValue_, tierValues_, rarityWeight_, multiplierBps_);
     }
 
     /// @notice Link the boost provider (SneakerWorkshop). Zero address disables boosts.
@@ -110,7 +154,7 @@ contract SneakerAppraiser is AccessControl {
         SneakerMint.SneakerTraits memory traits = nft.traitsOf(tokenId);
         rarity = effectiveRarity(tokenId);
         tier = traits.tier;
-        estimatedValue = _calculateValue(rarity, tier);
+        estimatedValue = _calculateValueFor(tokenId, rarity, tier);
         if (address(boosts) != address(0)) {
             estimatedValue = (estimatedValue * (10_000 + boosts.appraisalBonusBps(tokenId))) / 10_000;
         }
@@ -133,7 +177,23 @@ contract SneakerAppraiser is AccessControl {
     function appraiseRaw(uint8 rarity, uint8 tier) external view returns (uint256) {
         require(tier < 4, "SneakerAppraiser: invalid tier");
         require(rarity <= 100, "SneakerAppraiser: invalid rarity");
-        return _calculateValue(rarity, tier);
+        return _calculatePlayable(rarity, tier);
+    }
+
+    /// @notice Preview a collectible valuation without an existing NFT.
+    function appraiseCollectibleRaw(uint8 rarity, uint8 tier) external view returns (uint256) {
+        require(tier < 4, "SneakerAppraiser: invalid tier");
+        require(rarity <= 100, "SneakerAppraiser: invalid rarity");
+        return _calculateCollectible(rarity, tier);
+    }
+
+    /// @notice The collectible parameter set, for UI display.
+    function collectibleParams()
+        external
+        view
+        returns (uint256 baseValue_, uint256[4] memory tierValues_, uint256 rarityWeight_, uint256 multiplierBps_)
+    {
+        return (collectibleBaseValue, collectibleTierValues, collectibleRarityWeight, collectibleMultiplierBps);
     }
 
     /// @notice Returns the full tier values array for UI display.
@@ -162,8 +222,23 @@ contract SneakerAppraiser is AccessControl {
 
     // ─────────────────────────── Internal ────────────────────────
 
-    function _calculateValue(uint8 rarity, uint8 tier) internal view returns (uint256) {
+    /// @notice Route to the right valuation track for this token's kind.
+    function _calculateValueFor(uint256 tokenId, uint8 rarity, uint8 tier) internal view returns (uint256) {
+        if (nft.isCollectible(tokenId)) return _calculateCollectible(rarity, tier);
+        return _calculatePlayable(rarity, tier);
+    }
+
+    /// @notice Playable veSneaker track — the original parameter set.
+    function _calculatePlayable(uint8 rarity, uint8 tier) internal view returns (uint256) {
         uint256 raw = baseValue + tierValues[tier] + (uint256(rarity) * rarityWeight);
         return (raw * globalMultiplierBps) / 10_000;
+    }
+
+    /// @notice AI collectible track — separate base, tier ladder, and weight.
+    function _calculateCollectible(uint8 rarity, uint8 tier) internal view returns (uint256) {
+        uint256 raw = collectibleBaseValue +
+            collectibleTierValues[tier] +
+            (uint256(rarity) * collectibleRarityWeight);
+        return (raw * collectibleMultiplierBps) / 10_000;
     }
 }

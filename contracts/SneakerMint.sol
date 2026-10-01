@@ -9,16 +9,49 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title SneakerMint — Airen sneaker NFT collection.
 /// @notice Mints ERC-721 tokens from AI-generated sneaker artwork.
-/// @dev Users create NFTs via the /mint route: they upload a photo of their
-///      sneaker, the AI agent generates a unique retro-futuristic virtual
-///      artwork, and the result is minted on-chain. Each proof hash (SHA-256 of
-///      the generated artwork data URL) may be used only once to prevent
-///      duplicate mints.
+///
+/// ### Two kinds of token, one collection
+///
+/// | Kind | Source | Usable in |
+/// | ---- | ------ | --------- |
+/// | **Playable** | `VeSneakerStore` — the official Airen collection | Staking, tab arena, game, workshop, marketplace |
+/// | **Collectible** | The AI mint studio (`/mint`) | Marketplace only — pure digital art |
+///
+/// A collectible is a unique piece of AI artwork reconstructed from the owner's
+/// physical sneaker. It is deliberately **not** a veSneaker: it cannot be staked,
+/// cannot run the daily tab challenge, cannot be equipped, and does not mine
+/// veRUNE. The only gameplay surface it touches is the marketplace, where it
+/// trades at a price the appraiser sets.
+///
+/// The kind lives in its own mapping rather than inside `SneakerTraits` on
+/// purpose: adding a fourth struct field would break every positional
+/// `traitsOf` destructure across the protocol and the test suite. A dedicated
+/// mapping costs one extra read at the gate and changes nothing else.
+///
+/// ### Three uniqueness guarantees
+///
+/// The studio is off-chain, so the server computes the fingerprints; the
+/// contract is what makes them non-bypassable:
+///
+/// 1. `usedProofs[proofHash]` — SHA-256 of the artwork. Blocks re-minting the
+///    exact same image.
+/// 2. `usedDesigns[designHash]` — semantic fingerprint of the sneaker
+///    (model, silhouette, dominant colorway). Blocks the same physical pair
+///    being minted twice from two different photos.
+/// 3. `usedStyles[styleKey]` — the style combination used for the render
+///    (palette band, accent, composition). Blocks two collectors receiving the
+///    same look, which is what keeps the collection visually exclusive.
 contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     uint8 public constant MAX_RARITY = 100;
     uint8 public constant MAX_TIER = 4; // Common, Rare, Epic, Mythic
+
+    /// @notice What a token is allowed to do.
+    enum SneakerKind {
+        Playable, // official veSneaker — staking, tab arena, game, workshop
+        Collectible // AI art mint — marketplace only
+    }
 
     struct SneakerTraits {
         uint8 rarity;
@@ -30,10 +63,29 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     bool public publicMintEnabled;
     string public baseURI;
 
+    /// @notice tokenId => kind. Defaults to Playable for ids minted before the
+    ///      kind split; `setKindBatch` migrates those to Collectible.
+    mapping(uint256 tokenId => SneakerKind kind) public kindOf;
+
+    /// @notice Artwork hashes already minted (exact re-mint guard).
     mapping(bytes32 proofHash => bool used) public usedProofs;
+    /// @notice Semantic design fingerprints already minted (same-pair guard).
+    mapping(bytes32 designHash => bool used) public usedDesigns;
+    /// @notice Style combinations already handed out (exclusivity guard).
+    mapping(bytes32 styleKey => bool used) public usedStyles;
+
     mapping(uint256 tokenId => SneakerTraits traits) private _traits;
 
     event SneakerMinted(address indexed owner, uint256 indexed tokenId, bytes32 indexed proofHash, uint8 rarity, uint8 tier);
+    event CollectibleMinted(
+        address indexed owner,
+        uint256 indexed tokenId,
+        bytes32 indexed designHash,
+        bytes32 styleKey,
+        uint8 rarity,
+        uint8 tier
+    );
+    event KindUpdated(uint256 indexed tokenId, SneakerKind kind);
     event BaseURISet(string newBaseURI);
     event PublicMintToggled(bool enabled);
 
@@ -67,11 +119,30 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
         emit BaseURISet(newBaseURI);
     }
 
+    /// @notice Reclassify a token. Admin only.
+    /// @dev Used for the one-time migration that marks tokens minted before the
+    ///      kind split as Collectible. It is also the recovery path if a store
+    ///      deployment needs a token whitelisted back to Playable.
+    function setKind(uint256 tokenId, SneakerKind kind) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _requireOwned(tokenId);
+        kindOf[tokenId] = kind;
+        emit KindUpdated(tokenId, kind);
+    }
+
+    /// @notice Batch reclassify. Admin only — cheaper than N single calls.
+    function setKindBatch(uint256[] calldata tokenIds, SneakerKind kind) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint256 i; i < tokenIds.length; ++i) {
+            _requireOwned(tokenIds[i]);
+            kindOf[tokenIds[i]] = kind;
+            emit KindUpdated(tokenIds[i], kind);
+        }
+    }
+
     // ─────────────────────────── Mint ────────────────────────────
 
-    /// @notice Mint authorized by the verifier backend (MINTER_ROLE).
-    /// @dev This is the production path: the backend assigns rarity/tier
-    ///      after validating the purchase and AI artwork off-chain.
+    /// @notice Mint a **Playable** veSneaker. Reserved for the official store.
+    /// @dev This is the only path that produces a token usable in staking, the
+    ///      tab arena, the game, and the workshop.
     function mintAuthorized(
         address to,
         string calldata uri,
@@ -79,20 +150,41 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
         uint8 rarity,
         uint8 tier
     ) external onlyRole(MINTER_ROLE) whenNotPaused returns (uint256) {
-        return _mintSneaker(to, uri, proofHash, rarity, tier);
+        return _mintSneaker(to, uri, proofHash, rarity, tier, SneakerKind.Playable);
     }
 
-    /// @notice Self-service mint using a one-time proof hash.
-    /// @dev Only available when publicMintEnabled is true. Acceptable for
-    ///      Amoy testing and early beta. In production, use mintAuthorized.
-    function mintWithProof(
+    /// @notice Mint a **Collectible** with full uniqueness proofs. Production
+    ///      path: the backend computes the fingerprints after validating the
+    ///      artwork off-chain.
+    /// @param proofHash SHA-256 of the artwork data URL (exact re-mint guard).
+    /// @param designHash Semantic fingerprint of the sneaker (same-pair guard).
+    /// @param styleKey Style combination handed out for this render (exclusivity guard).
+    function mintCollectible(
+        address to,
         string calldata uri,
         bytes32 proofHash,
+        bytes32 designHash,
+        bytes32 styleKey,
+        uint8 rarity,
+        uint8 tier
+    ) external onlyRole(MINTER_ROLE) whenNotPaused returns (uint256) {
+        return _mintCollectible(to, uri, proofHash, designHash, styleKey, rarity, tier);
+    }
+
+    /// @notice Self-service collectible mint with one-time proofs.
+    /// @dev Only available when `publicMintEnabled` is true. Acceptable for Amoy
+    ///      testing and early beta; in production prefer `mintCollectible`, so
+    ///      the backend — not the caller — computes the fingerprints.
+    function mintCollectibleWithProof(
+        string calldata uri,
+        bytes32 proofHash,
+        bytes32 designHash,
+        bytes32 styleKey,
         uint8 rarity,
         uint8 tier
     ) external whenNotPaused returns (uint256) {
         require(publicMintEnabled, "SneakerMint: public mint disabled");
-        return _mintSneaker(msg.sender, uri, proofHash, rarity, tier);
+        return _mintCollectible(msg.sender, uri, proofHash, designHash, styleKey, rarity, tier);
     }
 
     // ─────────────────────────── Views ───────────────────────────
@@ -100,6 +192,23 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
     function traitsOf(uint256 tokenId) external view returns (SneakerTraits memory) {
         _requireOwned(tokenId);
         return _traits[tokenId];
+    }
+
+    /// @notice Whether a token may be staked, played, and equipped.
+    function isPlayable(uint256 tokenId) external view returns (bool) {
+        _requireOwned(tokenId);
+        return kindOf[tokenId] == SneakerKind.Playable;
+    }
+
+    /// @notice Whether a token is AI artwork, restricted to the marketplace.
+    function isCollectible(uint256 tokenId) external view returns (bool) {
+        _requireOwned(tokenId);
+        return kindOf[tokenId] == SneakerKind.Collectible;
+    }
+
+    /// @notice Whether a uniqueness fingerprint has already been consumed.
+    function isFingerprintUsed(bytes32 designHash, bytes32 styleKey) external view returns (bool) {
+        return usedDesigns[designHash] || usedStyles[styleKey];
     }
 
     function totalMinted() external view returns (uint256) {
@@ -113,7 +222,8 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
         string calldata uri,
         bytes32 proofHash,
         uint8 rarity,
-        uint8 tier
+        uint8 tier,
+        SneakerKind kind
     ) internal returns (uint256) {
         require(to != address(0), "SneakerMint: zero recipient");
         require(proofHash != bytes32(0), "SneakerMint: empty proof");
@@ -123,10 +233,33 @@ contract SneakerMint is ERC721, ERC721Enumerable, ERC721URIStorage, Pausable, Ac
 
         usedProofs[proofHash] = true;
         uint256 tokenId = ++_nextTokenId;
+        kindOf[tokenId] = kind;
         _traits[tokenId] = SneakerTraits({rarity: rarity, tier: tier, proofHash: proofHash});
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
         emit SneakerMinted(to, tokenId, proofHash, rarity, tier);
+        return tokenId;
+    }
+
+    function _mintCollectible(
+        address to,
+        string calldata uri,
+        bytes32 proofHash,
+        bytes32 designHash,
+        bytes32 styleKey,
+        uint8 rarity,
+        uint8 tier
+    ) internal returns (uint256) {
+        require(designHash != bytes32(0), "SneakerMint: empty design hash");
+        require(styleKey != bytes32(0), "SneakerMint: empty style key");
+        require(!usedDesigns[designHash], "SneakerMint: design already minted");
+        require(!usedStyles[styleKey], "SneakerMint: style already used");
+
+        usedDesigns[designHash] = true;
+        usedStyles[styleKey] = true;
+
+        uint256 tokenId = _mintSneaker(to, uri, proofHash, rarity, tier, SneakerKind.Collectible);
+        emit CollectibleMinted(to, tokenId, designHash, styleKey, rarity, tier);
         return tokenId;
     }
 
