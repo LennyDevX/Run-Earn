@@ -138,8 +138,8 @@ export default function TabChallengePanel() {
               <div className="w-full">
                 <div className="h-2 overflow-hidden rounded-full bg-foreground/8">
                   <span
-                    className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-300 ease-out"
-                    style={{ width: `${Math.round((points / MAX_TAB_LEVEL.points) * 100)}%` }}
+                    className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-300 ease-out"
+                    style={{ transform: `scaleX(${Math.round((points / MAX_TAB_LEVEL.points) * 100) / 100})` }}
                   />
                 </div>
                 <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-foreground/45">
@@ -212,7 +212,7 @@ export default function TabChallengePanel() {
                         setSessionStarted(false);
                       }}
                       aria-pressed={isActive}
-                      className={`w-44 shrink-0 cursor-pointer rounded-2xl border p-3 text-left transition-all duration-300 active:scale-95 ${
+                      className={`w-44 shrink-0 cursor-pointer rounded-2xl border p-3 text-left transition-[transform,color,background-color,border-color,fill,stroke] duration-300 active:scale-95 ${
                         isActive
                           ? "border-brand/40 bg-brand/8"
                           : "border-foreground/8 bg-background hover:border-foreground/20"

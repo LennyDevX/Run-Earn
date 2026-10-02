@@ -183,7 +183,7 @@ export default function ModStorefront() {
             return (
               <article
                 key={design.index.toString()}
-                className="group animate-fade-up flex flex-col justify-between gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
+                className="group animate-fade-up flex flex-col justify-between gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 transition-[transform,box-shadow] duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
                 style={{ animationDelay: `${index * 90}ms` }}
               >
                 <div>

@@ -97,8 +97,8 @@ export default function GameLaunchOverlay({ onDone }: { onDone: () => void }) {
 
         <div className="mt-2 h-2.5 overflow-hidden rounded-full border border-brand/25 bg-background/70 p-[2px]">
           <span
-            className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-100 ease-out"
-            style={{ width: `${progress}%` }}
+            className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-100 ease-out"
+            style={{ transform: `scaleX(${progress / 100})` }}
           />
         </div>
 

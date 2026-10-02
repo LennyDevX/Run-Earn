@@ -127,8 +127,8 @@ export default function HoloSneakerCard({
               aria-label={`${label} condition`}
             >
               <span
-                className={`block h-full rounded-full transition-[width] duration-700 ease-out ${band.bar}`}
-                style={{ width: `${Math.max(3, wearPercent)}%` }}
+                className={`block h-full w-full origin-left rounded-full transition-transform duration-700 ease-out ${band.bar}`}
+                style={{ transform: `scaleX(${Math.max(0.03, wearPercent / 100)})` }}
               />
             </div>
             {isWorn ? (
@@ -145,8 +145,8 @@ export default function HoloSneakerCard({
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/8">
               <span
-                className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-700 ease-out"
-                style={{ width: `${power.score}%` }}
+                className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-700 ease-out"
+                style={{ transform: `scaleX(${power.score / 100})` }}
               />
             </div>
           </div>

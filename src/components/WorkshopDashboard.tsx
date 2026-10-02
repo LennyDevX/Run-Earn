@@ -180,7 +180,7 @@ export default function WorkshopDashboard({
                     workshop.setSelectedSneakerId(sneaker.tokenId);
                     centerInScrollRow(event.currentTarget);
                   }}
-                  className={`flex w-32 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-3xl border p-4 transition-all active:scale-95 ${
+                  className={`flex w-32 shrink-0 cursor-pointer flex-col items-center gap-2 rounded-3xl border p-4 transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                     isSelected
                       ? "border-mint/50 bg-mint/10 shadow-md shadow-mint/10"
                       : "border-foreground/10 bg-background hover:border-foreground/25"
@@ -395,8 +395,8 @@ export default function WorkshopDashboard({
                 </div>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                   <span
-                    className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-700 ease-out"
-                    style={{ width: `${tabPower?.score ?? 0}%` }}
+                    className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-700 ease-out"
+                    style={{ transform: `scaleX(${(tabPower?.score ?? 0) / 100})` }}
                   />
                 </div>
                 <p className="mt-2.5 text-[11px] leading-relaxed text-foreground/55">
@@ -427,8 +427,8 @@ export default function WorkshopDashboard({
                   aria-label="veSneaker condition"
                 >
                   <span
-                    className={`block h-full rounded-full transition-[width] duration-700 ease-out ${conditionBand(bonuses?.conditionBps ?? 10_000).bar}`}
-                    style={{ width: `${Math.max(3, conditionPercent(bonuses?.conditionBps ?? 10_000))}%` }}
+                    className={`block h-full w-full origin-left rounded-full transition-transform duration-700 ease-out ${conditionBand(bonuses?.conditionBps ?? 10_000).bar}`}
+                    style={{ transform: `scaleX(${Math.max(0.03, conditionPercent(bonuses?.conditionBps ?? 10_000) / 100)})` }}
                   />
                 </div>
                 <p className="mt-2.5 text-[11px] leading-relaxed text-foreground/55">

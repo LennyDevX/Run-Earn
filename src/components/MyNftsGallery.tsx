@@ -38,7 +38,7 @@ export default function MyNftsGallery() {
         </p>
         <Link
           href="/mint"
-          className="rounded-full bg-magma px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-all hover:scale-105"
+          className="rounded-full bg-magma px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-transform hover:scale-105"
         >
           Create my first NFT
         </Link>
@@ -53,7 +53,7 @@ export default function MyNftsGallery() {
         return (
           <article
             key={sneaker.id}
-            className="group animate-fade-up flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
+            className="group animate-fade-up flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 transition-[transform,box-shadow] duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
             style={{ animationDelay: `${index * 90}ms` }}
           >
             <div className="relative overflow-hidden rounded-2xl bg-background">
@@ -90,7 +90,7 @@ export default function MyNftsGallery() {
               type="button"
               onClick={() => setAvatarNft(sneaker.id)}
               disabled={!wallet.isConnected}
-              className={`flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
+              className={`flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-full border text-xs font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 profile.avatarKind === "nft" && profile.avatarSneakerId === sneaker.id
                   ? "border-mint/40 bg-mint/10 text-mint"
                   : "border-foreground/15 text-foreground/60 hover:border-foreground/30 hover:text-foreground"

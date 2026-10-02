@@ -136,8 +136,14 @@ export default function SneakerMintStudio() {
   const [error, setError] = useState<string | null>(null);
 
   // Keep the active step centered inside the horizontal step row on mobile,
-  // including when the wizard advances programmatically.
+  // including when the wizard advances programmatically. Skipped on mount: the
+  // row starts at scroll 0, so the first run would only move it for no reason.
+  const stepRowSettled = useRef(false);
   useEffect(() => {
+    if (!stepRowSettled.current) {
+      stepRowSettled.current = true;
+      return;
+    }
     const chip = stepsRowRef.current?.children[step];
     if (chip instanceof HTMLElement) centerInScrollRow(chip);
   }, [step]);
@@ -355,7 +361,7 @@ export default function SneakerMintStudio() {
               type="button"
               onClick={() => void generateArtwork()}
               disabled={isGenerating}
-              className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-sky/20 disabled:cursor-wait disabled:opacity-60 dark:text-ink"
+              className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-[transform,box-shadow] hover:scale-[1.02] hover:shadow-lg hover:shadow-sky/20 disabled:cursor-wait disabled:opacity-60 dark:text-ink"
             >
               {isGenerating ? "Generating artwork..." : "Generate NFT artwork with AI"}
             </button>
@@ -441,7 +447,7 @@ export default function SneakerMintStudio() {
                 type="button"
                 onClick={() => void mintSneaker()}
                 disabled={isMinting}
-                className="flex-1 rounded-full bg-magma px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-all hover:scale-[1.02] disabled:cursor-wait disabled:opacity-60"
+                className="flex-1 rounded-full bg-magma px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-magma/25 transition-transform hover:scale-[1.02] disabled:cursor-wait disabled:opacity-60"
               >
                 {isMinting ? "Minting..." : `Mint on ${NETWORK === "polygon" ? "Polygon" : "Amoy"}`}
               </button>
@@ -464,7 +470,7 @@ export default function SneakerMintStudio() {
             </a>
           ) : null}
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/my-nfts" className="rounded-full bg-mint px-6 py-3 text-sm font-semibold text-ink transition-all hover:scale-105">
+            <Link href="/my-nfts" className="rounded-full bg-mint px-6 py-3 text-sm font-semibold text-ink transition-transform hover:scale-105">
               View my collection
             </Link>
             <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setGenerated(null); setMintedHash(null); setStep(0); }} className="rounded-full border border-foreground/15 px-6 py-3 text-sm font-semibold transition-colors hover:border-foreground/30">

@@ -182,7 +182,7 @@ export default function MarketplaceDashboard() {
                   setActiveTab(tab.id);
                   centerInScrollRow(event.currentTarget);
                 }}
-                className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+                className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                   activeTab === tab.id
                     ? "bg-foreground text-background shadow-md"
                     : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -276,7 +276,7 @@ export default function MarketplaceDashboard() {
                   return (
                     <div
                       key={sneaker.tokenId.toString()}
-                      className="flex flex-col justify-between overflow-hidden rounded-3xl border border-foreground/10 bg-background p-5 transition-all duration-300 hover:border-foreground/20 hover:shadow-lg"
+                      className="flex flex-col justify-between overflow-hidden rounded-3xl border border-foreground/10 bg-background p-5 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-foreground/20 hover:shadow-lg"
                     >
                       <div>
                         <div className="flex items-center justify-between">
@@ -440,7 +440,7 @@ export default function MarketplaceDashboard() {
                 type="button"
                 disabled={market.isLoading || !offerAmountInput || !offerTokenId}
                 onClick={handleMakeOffer}
-                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
+                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
               >
                 {market.isLoading ? "Sending offer..." : "Place offer"}
               </button>

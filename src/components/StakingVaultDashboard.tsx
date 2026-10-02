@@ -228,7 +228,7 @@ export default function StakingVaultDashboard() {
       {/* Top Overview KPI Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* KPI 1: Active APY */}
-        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-mint/30 hover:shadow-xl hover:shadow-mint/5">
+        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-mint/30 hover:shadow-xl hover:shadow-mint/5">
           <div className="flex items-center justify-between">
             <span className="font-pixel text-[9px] text-foreground/50">TOTAL ACTIVE APY</span>
             <span className="rounded-full bg-mint/15 px-2.5 py-0.5 text-[10px] font-bold text-mint">
@@ -246,14 +246,14 @@ export default function StakingVaultDashboard() {
           </div>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
             <div
-              className="h-full rounded-full bg-mint transition-all duration-700"
-              style={{ width: `${Math.min(100, (Number(effectiveApy) / Number(MAX_APY_BPS)) * 100)}%` }}
+              className="h-full w-full origin-left rounded-full bg-mint transition-transform duration-700"
+              style={{ transform: `scaleX(${Math.min(1, Number(effectiveApy) / Number(MAX_APY_BPS))})` }}
             />
           </div>
         </div>
 
         {/* KPI 2: Accumulated Rewards */}
-        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-sky/30 hover:shadow-xl hover:shadow-sky/5">
+        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-sky/30 hover:shadow-xl hover:shadow-sky/5">
           <div className="flex items-center justify-between">
             <span className="font-pixel text-[9px] text-foreground/50">ACCUMULATED REWARDS</span>
             <span className="flex size-2 rounded-full bg-sky" />
@@ -278,7 +278,7 @@ export default function StakingVaultDashboard() {
         </div>
 
         {/* KPI 3: Staked Principal */}
-        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-foreground/20 hover:shadow-xl hover:shadow-foreground/5">
+        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-foreground/20 hover:shadow-xl hover:shadow-foreground/5">
           <div className="flex items-center justify-between">
             <span className="font-pixel text-[9px] text-foreground/50">STAKED PRINCIPAL</span>
             <span className="rounded-full bg-foreground/10 px-2 py-0.5 text-[9px] font-semibold text-foreground/60">
@@ -300,7 +300,7 @@ export default function StakingVaultDashboard() {
         </div>
 
         {/* KPI 4: Sneaker Boosts */}
-        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-polygon-purple/30 hover:shadow-xl hover:shadow-polygon-purple/5">
+        <div className="group relative overflow-hidden rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-polygon-purple/30 hover:shadow-xl hover:shadow-polygon-purple/5">
           <div className="flex items-center justify-between">
             <span className="font-pixel text-[9px] text-foreground/50">LOCKED SNEAKERS</span>
             <span className="rounded-full bg-polygon-purple/15 px-2 py-0.5 text-[9px] font-semibold text-polygon-purple">
@@ -333,7 +333,7 @@ export default function StakingVaultDashboard() {
                 setActiveTab("deposit");
                 centerInScrollRow(event.currentTarget);
               }}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 activeTab === "deposit"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -347,7 +347,7 @@ export default function StakingVaultDashboard() {
                 setActiveTab("claim");
                 centerInScrollRow(event.currentTarget);
               }}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 activeTab === "claim"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -361,7 +361,7 @@ export default function StakingVaultDashboard() {
                 setActiveTab("withdraw");
                 centerInScrollRow(event.currentTarget);
               }}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 activeTab === "withdraw"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -375,7 +375,7 @@ export default function StakingVaultDashboard() {
                 setActiveTab("model");
                 centerInScrollRow(event.currentTarget);
               }}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-all active:scale-95 ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-full px-5 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 activeTab === "model"
                   ? "bg-foreground text-background shadow-md"
                   : "border border-foreground/10 text-foreground/60 hover:text-foreground"
@@ -450,7 +450,7 @@ export default function StakingVaultDashboard() {
                 type="button"
                 disabled={staking.isLoading || !agreeLock || !depositInput || Number(depositInput) <= 0}
                 onClick={() => void handleDeposit()}
-                className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-all hover:scale-[1.01] hover:shadow-mint/30 disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-[transform,box-shadow] hover:scale-[1.01] hover:shadow-mint/30 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {staking.isLoading ? "Confirming transaction..." : "Deposit & Stake POL"}
               </button>
@@ -517,7 +517,7 @@ export default function StakingVaultDashboard() {
                 type="button"
                 disabled={staking.isLoading || (!isConfigured ? false : staking.stats.pendingRewards === 0n)}
                 onClick={() => void handleClaim()}
-                className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {staking.isLoading ? "Claiming..." : "Claim All Accumulated POL"}
               </button>
@@ -601,7 +601,7 @@ export default function StakingVaultDashboard() {
                 type="button"
                 disabled={staking.isLoading || isLockActive || !withdrawInput || Number(withdrawInput) <= 0}
                 onClick={() => void handleWithdraw()}
-                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
+                className="cursor-pointer rounded-full bg-sky px-6 py-4 text-sm font-bold text-white shadow-lg shadow-sky/20 transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink"
               >
                 {staking.isLoading ? "Processing Withdrawal..." : isLockActive ? `Locked (${remainingLockDays}d remaining)` : "Withdraw POL to Wallet"}
               </button>
@@ -688,7 +688,7 @@ export default function StakingVaultDashboard() {
                 return (
                   <div
                     key={sneaker.tokenId.toString()}
-                    className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border p-5 transition-all duration-300 ${
+                    className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border p-5 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 ${
                       isLocked
                         ? "border-mint/30 bg-mint/5 shadow-md shadow-mint/5"
                         : "border-foreground/10 bg-background hover:border-foreground/20 hover:shadow-lg"

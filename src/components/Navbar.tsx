@@ -91,7 +91,7 @@ function ProfileButton() {
       href="/profile"
       aria-label="Open your profile"
       aria-current={active ? "page" : undefined}
-      className={`flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all active:scale-95 ${
+      className={`flex size-11 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
         active
           ? "border-brand/60 bg-brand/10 shadow-sm shadow-brand/20"
           : "border-foreground/15 bg-surface text-foreground/70 hover:border-foreground/30 hover:text-foreground"

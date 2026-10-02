@@ -6,7 +6,7 @@ import { usePolygonWallet } from "@/components/Providers";
 import { sneakerModsAbi, sneakerWorkshopAbi } from "@/lib/contracts";
 import { SLOT_COUNT, type WorkshopBonusSnapshot } from "@/lib/mods";
 import { useContractTransaction } from "@/hooks/useContractTransaction";
-import { useOwnedSneakers } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 import { useOwnedMods } from "@/hooks/useOwnedMods";
 
 const workshopAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS;
@@ -43,11 +43,7 @@ export function useWorkshop() {
     [configured],
   );
 
-  const owned = useOwnedSneakers({
-    owner: wallet.address,
-    contractAddress: sneakerAddress,
-    publicClient: wallet.publicClient,
-  });
+  const owned = useSneakerOwnership();
   const ownedMods = useOwnedMods({
     owner: wallet.address,
     contractAddress: modsAddress,

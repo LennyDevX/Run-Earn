@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import HoloSneakerCard from "@/components/HoloSneakerCard";
+import { SkeletonArtworkCard, SkeletonRows } from "@/components/Skeleton";
 import { useArenaGate } from "@/hooks/useArenaGate";
 import { useRunnerRoster } from "@/hooks/useRunnerRoster";
 import {
@@ -103,15 +104,27 @@ export default function TabArena() {
   }
 
   if (roster.isLoading) {
+    // Same two-column shape as the loaded arena, so nothing shifts when the
+    // roster arrives.
     return (
-      <Panel label="TAB ARENA · LOADING">
-        <div className="flex items-center justify-center gap-3 py-14">
-          <span className="size-2 animate-ping rounded-full bg-brand" />
-          <span className="font-mono text-[11px] tracking-[0.18em] text-foreground/50 uppercase">
-            Reading roster…
-          </span>
-        </div>
-      </Panel>
+      <div
+        className="grid gap-4 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Loading your roster"
+      >
+        <Panel label="RUNNER">
+          <SkeletonArtworkCard lines={3} />
+        </Panel>
+        <Panel label="TAP ARENA">
+          <div className="flex flex-col items-center gap-6 py-2">
+            <span className="skeleton block size-56 rounded-full sm:size-64" aria-hidden />
+            <div className="w-full max-w-lg">
+              <SkeletonRows count={2} />
+            </div>
+          </div>
+        </Panel>
+      </div>
     );
   }
 
@@ -241,7 +254,7 @@ export default function TabArena() {
                         setStarted(false);
                       }}
                       aria-pressed={active}
-                      className={`w-20 shrink-0 cursor-pointer rounded-xl border p-2 text-center transition-all active:scale-95 ${
+                      className={`w-20 shrink-0 cursor-pointer rounded-xl border p-2 text-center transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                         active
                           ? "border-brand/45 bg-brand/10"
                           : "border-foreground/10 bg-background hover:border-foreground/25"
@@ -315,8 +328,8 @@ export default function TabArena() {
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/8">
                 <span
-                  className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-300 ease-out"
-                  style={{ width: `${points === 0 ? 0 : Math.max(3, levelProgress)}%` }}
+                  className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-300 ease-out"
+                  style={{ transform: `scaleX(${points === 0 ? 0 : Math.max(0.03, levelProgress / 100)})` }}
                 />
               </div>
 
@@ -374,7 +387,7 @@ export default function TabArena() {
             return (
               <li
                 key={level.level}
-                className={`rounded-xl border px-2 py-3 text-center transition-all duration-300 ${
+                className={`rounded-xl border px-2 py-3 text-center transition-[background-color,border-color,opacity] duration-300 ${
                   cleared
                     ? "border-mint/40 bg-mint/10"
                     : isCurrent

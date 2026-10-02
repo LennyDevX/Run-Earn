@@ -5,14 +5,14 @@ import Link from "next/link";
 import { getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import HoloSneakerCard from "@/components/HoloSneakerCard";
+import { SkeletonCardGrid, SkeletonRows } from "@/components/Skeleton";
 import { useOwnedMods } from "@/hooks/useOwnedMods";
-import { useOwnedSneakers } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { sneakerWorkshopAbi } from "@/lib/contracts";
 import { ABILITY_LABELS, NO_AUX, slotInfo } from "@/lib/mods";
 import { bpsToPercent, sneakerPower, TAB_CHALLENGE } from "@/lib/tab-challenge";
 
-const mintAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
 const modsAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MODS_ADDRESS;
 const workshopAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS;
 
@@ -32,11 +32,10 @@ type SneakerPowerRow = {
 
 export default function PlayerGameProfile() {
   const wallet = usePolygonWallet();
-  const mintAddress = useMemo(() => resolve(mintAddressEnv), []);
   const modsAddress = useMemo(() => resolve(modsAddressEnv), []);
   const workshopAddress = useMemo(() => resolve(workshopAddressEnv), []);
 
-  const owned = useOwnedSneakers({ owner: wallet.address, contractAddress: mintAddress, publicClient: wallet.publicClient });
+  const owned = useSneakerOwnership();
   const ownedMods = useOwnedMods({ owner: wallet.address, contractAddress: modsAddress, publicClient: wallet.publicClient });
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
 
@@ -45,14 +44,14 @@ export default function PlayerGameProfile() {
 
   const readPower = useCallback(async () => {
     // Collectibles are art — the runner profile only counts veSneakers.
-    if (!wallet.address || owned.sneakers.length === 0) {
+    if (!wallet.address || owned.playable.length === 0) {
       setPowerRows([]);
       return;
     }
     setIsReadingPower(true);
     try {
       const rows = await Promise.all(
-        owned.sneakers.filter((sneaker) => sneaker.kind === 0).map(async (sneaker) => {
+        owned.playable.map(async (sneaker) => {
           const [conditionBps, equippedMods] = workshopAddress
             ? await Promise.all([
                 wallet.publicClient
@@ -91,7 +90,7 @@ export default function PlayerGameProfile() {
     } finally {
       setIsReadingPower(false);
     }
-  }, [owned.sneakers, wallet.address, wallet.publicClient, workshopAddress]);
+  }, [owned.playable, wallet.address, wallet.publicClient, workshopAddress]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void readPower());
@@ -203,8 +202,8 @@ export default function PlayerGameProfile() {
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/8">
               <span
-                className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-1000 ease-out"
-                style={{ width: `${xpProgress}%` }}
+                className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-1000 ease-out"
+                style={{ transform: `scaleX(${xpProgress / 100})` }}
               />
             </div>
           </div>
@@ -212,14 +211,14 @@ export default function PlayerGameProfile() {
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
           {[
-            { label: "veSneakers", value: owned.sneakers.filter((s) => s.kind === 0).length.toString(), accent: "text-astra" },
+            { label: "veSneakers", value: owned.playable.length.toString(), accent: "text-astra" },
             { label: "Mods owned", value: ownedMods.mods.length.toString(), accent: "text-sol" },
             { label: "Avg. power", value: `${averagePower}/100`, accent: "text-brand" },
             { label: "Best ceiling", value: `+${bpsToPercent(bestCeiling)}`, accent: "text-mint" },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="flex flex-col justify-center gap-1 rounded-3xl border border-foreground/8 bg-surface p-5 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5"
+              className="flex flex-col justify-center gap-1 rounded-3xl border border-foreground/8 bg-surface p-5 transition-[transform,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5"
             >
               <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
                 {stat.label}
@@ -247,9 +246,10 @@ export default function PlayerGameProfile() {
         </div>
 
         {owned.isLoading || isReadingPower ? (
-          <p className="rounded-3xl border border-dashed border-foreground/15 bg-surface px-8 py-12 text-center text-sm text-foreground/55">
-            Loading your collection…
-          </p>
+          // Shaped like the real grid so the swap is a fade, not a jump.
+          <div aria-busy="true" aria-live="polite" aria-label="Loading your veSneakers">
+            <SkeletonCardGrid count={3} />
+          </div>
         ) : powerRows.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-foreground/15 bg-surface px-8 py-12 text-center">
             <p className="text-sm text-foreground/60">
@@ -304,7 +304,11 @@ export default function PlayerGameProfile() {
             Burned in the workshop for one-shot effects — repairs, surges, temp boosts, and energy.
           </p>
 
-          {consumables.length === 0 ? (
+          {ownedMods.isLoading ? (
+            <div className="mt-5" aria-busy="true" aria-label="Loading consumables">
+              <SkeletonRows count={3} />
+            </div>
+          ) : consumables.length === 0 ? (
             <p className="mt-5 rounded-2xl bg-background px-4 py-6 text-center text-xs text-foreground/45">
               No consumables yet. Buy them from the mod store or claim achievement badges.
             </p>

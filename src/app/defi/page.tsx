@@ -119,7 +119,7 @@ export default function DefiPage() {
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-foreground/8">
                   <div
-                    className={`h-full rounded-full ${tier.bar} ${tier.width} transition-all duration-700`}
+                    className={`h-full rounded-full ${tier.bar} ${tier.width}`}
                   />
                 </div>
               </div>

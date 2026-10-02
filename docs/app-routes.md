@@ -486,3 +486,25 @@ npx hardhat test
 ```
 
 Manual checks per route are listed in the `.devin/skills/polygon-frontend-evm` skill.
+
+## API hardening
+
+Every route calls the limiter **before** doing any paid or expensive work, and
+returns a real `Retry-After` on 429. Full architecture:
+`airen-security-hardening` skill.
+
+| Route | Limit | Notes |
+| --- | --- | --- |
+| `/api/generate-sneaker` | 5 / 10 min | Two paid Gemini passes per call; also draws from the global `GENERATION_DAILY_BUDGET` |
+| `/api/subgraph` | 30 / min | Proxies a paid Graph query |
+| `/api/tab-session` | 10 / min | Public signing endpoint |
+| `/api/pol-price` | 30 / min | Outbound Uniswap call |
+
+The limiter uses Redis when `UPSTASH_REDIS_REST_URL` (or the Vercel KV
+`KV_REST_API_URL`) is present, and falls back to in-process memory otherwise.
+**Without Redis the limit is per-instance**, which is fine locally and useless on
+Vercel — install Upstash for Redis from the Vercel Marketplace before the beta.
+
+Response headers come from `next.config.ts`: framing, referrer, permissions, and
+HSTS are enforced; the CSP ships as `Report-Only` until the reports are clean. See
+`docs/security-and-performance.md`.

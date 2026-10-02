@@ -6,7 +6,8 @@ import { usePolygonWallet } from "@/components/Providers";
 import { sneakerMarketplaceAbi, sneakerMintAbi } from "@/lib/contracts";
 import { resolveSneakerArtwork } from "@/lib/sneaker-artwork";
 import { useContractTransaction } from "@/hooks/useContractTransaction";
-import { useOwnedSneakers, type OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import type { OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 
 const marketplaceAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MARKETPLACE_ADDRESS;
 const sneakerMintAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
@@ -67,11 +68,9 @@ export function useMarketplace() {
     [configured],
   );
 
-  const owned = useOwnedSneakers({
-    owner: wallet.address,
-    contractAddress: sneakerAddress,
-    publicClient: wallet.publicClient,
-  });
+  // Both kinds list here: veSneakers at a seller-set price, collectibles at the
+  // appraiser's. This is the one surface that must NOT filter to `playable`.
+  const owned = useSneakerOwnership();
 
   const refresh = useCallback(async () => {
     if (!wallet.address || !marketplaceAddress || !wallet.publicClient) {

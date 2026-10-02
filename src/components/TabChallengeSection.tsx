@@ -107,7 +107,7 @@ export default function TabChallengeSection() {
                       setPoints(0);
                       setTaps(0);
                     }}
-                    className={`flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-all active:scale-95 ${
+                    className={`flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                       active
                         ? "border-astra/45 bg-astra/12 text-astra"
                         : "border-foreground/10 text-foreground/50 hover:border-foreground/25"
@@ -172,8 +172,8 @@ export default function TabChallengeSection() {
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/8">
                 <span
-                  className="block h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-300 ease-out"
-                  style={{ width: `${points === 0 ? 0 : Math.max(4, progress)}%` }}
+                  className="block h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-300 ease-out"
+                  style={{ transform: `scaleX(${points === 0 ? 0 : Math.max(0.04, progress / 100)})` }}
                 />
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -214,7 +214,7 @@ export default function TabChallengeSection() {
                 return (
                   <li
                     key={level.level}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-300 ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition-[background-color,border-color] duration-300 ${
                       cleared
                         ? "border-mint/30 bg-mint/8"
                         : isNext

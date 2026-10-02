@@ -6,7 +6,7 @@ import { isAddress, type Address } from "viem";
 import { explorerTransactionUrl, NETWORK_LABEL, usePolygonWallet } from "@/components/Providers";
 import { useProfile } from "@/hooks/useProfile";
 import { useMintedSneakers } from "@/hooks/useMintedSneakers";
-import { useOwnedSneakers } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 import { useOwnedMods } from "@/hooks/useOwnedMods";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
@@ -21,7 +21,6 @@ import {
 import { modEffectLabel, SLOTS } from "@/lib/mods";
 import { RARITIES } from "@/lib/sneaker-nft";
 
-const SNEAKER_MINT = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
 const SNEAKER_MODS = process.env.NEXT_PUBLIC_SNEAKER_MODS_ADDRESS;
 
 function shortAddress(address: string) {
@@ -33,11 +32,7 @@ export default function ProfileDashboard() {
   const owner = wallet.address ?? null;
   const { profile, avatarUrl, setUsername, setAvatarUpload, setAvatarNft, clearAvatar } = useProfile(owner);
   const { sneakers: minted } = useMintedSneakers(owner);
-  const { sneakers: ownedSneakers } = useOwnedSneakers({
-    owner,
-    contractAddress: SNEAKER_MINT && isAddress(SNEAKER_MINT) ? (SNEAKER_MINT as Address) : null,
-    publicClient: wallet.publicClient,
-  });
+  const { sneakers: ownedSneakers } = useSneakerOwnership();
   const { mods: ownedMods } = useOwnedMods({
     owner,
     contractAddress: SNEAKER_MODS && isAddress(SNEAKER_MODS) ? (SNEAKER_MODS as Address) : null,
@@ -231,8 +226,8 @@ export default function ProfileDashboard() {
           </div>
           <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-foreground/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-sky via-mint to-mint transition-all duration-700"
-              style={{ width: `${progress.pct}%` }}
+              className="h-full w-full origin-left rounded-full bg-gradient-to-r from-sky via-mint to-mint transition-transform duration-700"
+              style={{ transform: `scaleX(${progress.pct / 100})` }}
             />
           </div>
           <p className="mt-4 text-xs leading-relaxed text-foreground/55">
@@ -327,7 +322,7 @@ export default function ProfileDashboard() {
             <button
               type="button"
               onClick={() => setAvatarTab("nft")}
-              className={`min-h-9 cursor-pointer rounded-full px-4 text-xs font-semibold transition-all active:scale-95 ${
+              className={`min-h-9 cursor-pointer rounded-full px-4 text-xs font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 avatarTab === "nft" ? "bg-foreground text-background" : "border border-foreground/10 text-foreground/60 hover:text-foreground"
               }`}
             >
@@ -336,7 +331,7 @@ export default function ProfileDashboard() {
             <button
               type="button"
               onClick={() => setAvatarTab("upload")}
-              className={`min-h-9 cursor-pointer rounded-full px-4 text-xs font-semibold transition-all active:scale-95 ${
+              className={`min-h-9 cursor-pointer rounded-full px-4 text-xs font-semibold transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                 avatarTab === "upload" ? "bg-foreground text-background" : "border border-foreground/10 text-foreground/60 hover:text-foreground"
               }`}
             >
@@ -356,7 +351,7 @@ export default function ProfileDashboard() {
                     type="button"
                     onClick={() => setAvatarNft(sneaker.id)}
                     aria-pressed={selected}
-                    className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 transition-all active:scale-95 ${
+                    className={`group relative cursor-pointer overflow-hidden rounded-2xl border-2 transition-[transform,color,background-color,border-color,fill,stroke] active:scale-95 ${
                       selected ? "border-mint shadow-lg shadow-mint/15" : "border-transparent hover:border-foreground/25"
                     }`}
                   >

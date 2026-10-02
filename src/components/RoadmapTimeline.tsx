@@ -226,8 +226,8 @@ function ProgressConsole() {
         <div className="relative mt-7">
           <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-foreground/8">
             <span
-              className="h-full rounded-full bg-linear-to-r from-mint via-brand to-astra transition-[width] duration-[1600ms] ease-out"
-              style={{ width: armed ? `${percent}%` : "0%" }}
+              className="h-full w-full origin-left rounded-full bg-linear-to-r from-mint via-brand to-astra transition-transform duration-[1600ms] ease-out"
+              style={{ transform: `scaleX(${armed ? percent / 100 : 0})` }}
             />
           </div>
           <div aria-hidden className="mt-2 flex justify-between font-mono text-[10px] text-foreground/35">
@@ -255,7 +255,7 @@ function PhaseRail({ onJump }: { onJump: (id: string) => void }) {
               <button
                 type="button"
                 onClick={() => onJump(phase.id)}
-                className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-surface p-4 text-left transition-all duration-500 hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5 ${accent.border}`}
+                className={`relative flex w-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-surface p-4 text-left transition-[transform,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5 ${accent.border}`}
               >
                 <Corners className={accent.corner} />
                 <span className="flex items-center justify-between gap-2">
@@ -272,8 +272,8 @@ function PhaseRail({ onJump }: { onJump: (id: string) => void }) {
                 </span>
                 <span className="mt-3 block h-1 overflow-hidden rounded-full bg-foreground/8">
                   <span
-                    className={`block h-full rounded-full ${accent.bar} transition-[width] duration-1000 ease-out`}
-                    style={{ width: `${ratio}%` }}
+                    className={`block h-full w-full origin-left rounded-full ${accent.bar} transition-transform duration-1000 ease-out`}
+                    style={{ transform: `scaleX(${ratio / 100})` }}
                   />
                 </span>
                 <span className="mt-2 block font-mono text-[10px] text-foreground/40">
@@ -311,7 +311,7 @@ function MilestoneRow({
         <span className={`relative size-2 rounded-full ${meta.dot}`} />
       </span>
       <Reveal delay={delay}>
-        <article className="group relative overflow-hidden rounded-2xl border border-foreground/8 bg-background p-5 transition-all duration-500 hover:-translate-y-1 hover:border-foreground/20 hover:shadow-xl hover:shadow-ink/5">
+        <article className="group relative overflow-hidden rounded-2xl border border-foreground/8 bg-background p-5 transition-[transform,box-shadow,color,background-color,border-color,fill,stroke] duration-500 hover:-translate-y-1 hover:border-foreground/20 hover:shadow-xl hover:shadow-ink/5">
           <Corners className={tones.corner} />
           <span
             aria-hidden
@@ -412,8 +412,8 @@ function PhaseBlock({
                 <div className="w-32">
                   <div className="h-1.5 overflow-hidden rounded-full bg-foreground/8">
                     <span
-                      className={`block h-full rounded-full ${accent.bar} transition-[width] duration-1000 ease-out`}
-                      style={{ width: `${ratio}%` }}
+                      className={`block h-full w-full origin-left rounded-full ${accent.bar} transition-transform duration-1000 ease-out`}
+                      style={{ transform: `scaleX(${ratio / 100})` }}
                     />
                   </div>
                   <p className="mt-2 font-mono text-[10px] text-foreground/40">
@@ -423,7 +423,7 @@ function PhaseBlock({
                 <StatusChip status={phase.status} />
                 <span
                   aria-hidden
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-all duration-500 group-hover:bg-foreground/5 ${accent.border} ${accent.text} ${open ? "rotate-180" : ""}`}
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-full border transition-[color,background-color,border-color,fill,stroke] duration-500 group-hover:bg-foreground/5 ${accent.border} ${accent.text} ${open ? "rotate-180" : ""}`}
                 >
                   <svg
                     viewBox="0 0 24 24"

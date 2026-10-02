@@ -212,7 +212,7 @@ export default function VeSneakerStorefront() {
               setFilter(item);
               centerInScrollRow(event.currentTarget);
             }}
-            className={`min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
+            className={`min-h-11 shrink-0 cursor-pointer rounded-full border px-4 text-xs font-semibold transition-[transform,color,background-color,border-color,fill,stroke] duration-300 active:scale-95 ${
               filter === item
                 ? item === "All"
                   ? "border-brand/40 bg-brand/10 text-brand"
@@ -238,7 +238,7 @@ export default function VeSneakerStorefront() {
           return (
             <article
               key={row.name}
-              className="group animate-fade-up flex flex-col gap-4 rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
+              className="group animate-fade-up flex flex-col gap-4 rounded-3xl border border-foreground/10 bg-surface p-6 transition-[transform,box-shadow] duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8"
               style={{ animationDelay: `${i * 70}ms` }}
             >
               <div className={`relative overflow-hidden rounded-2xl border border-foreground/10 bg-ink ${

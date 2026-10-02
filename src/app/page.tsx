@@ -123,13 +123,13 @@ export default function Home() {
             >
               <Link
                 href="/collection"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-brand px-7 text-sm font-bold text-paper dark:text-ink shadow-lg shadow-brand/25 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-brand/30 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-brand px-7 text-sm font-bold text-paper dark:text-ink shadow-lg shadow-brand/25 transition-[transform,box-shadow] duration-300 hover:scale-105 hover:shadow-xl hover:shadow-brand/30 sm:flex-none sm:py-3.5"
               >
                 Explore collection
               </Link>
               <Link
                 href="/defi"
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-brand/30 px-7 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:border-brand/60 hover:bg-brand/5 sm:flex-none sm:py-3.5"
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-brand/30 px-7 text-sm font-semibold transition-[transform,color,background-color,border-color,fill,stroke] duration-300 hover:scale-105 hover:border-brand/60 hover:bg-brand/5 sm:flex-none sm:py-3.5"
               >
                 How it works
               </Link>
@@ -190,7 +190,7 @@ export default function Home() {
           {FEATURES.map((feature) => (
             <article
               key={feature.title}
-              className="group flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
+              className="group flex flex-col gap-5 rounded-3xl border border-foreground/8 bg-surface p-6 transition-[transform,box-shadow] duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
               <span
                 className={`size-3 rounded-full ${feature.accent} transition-transform duration-500 group-hover:scale-150`}
@@ -261,7 +261,7 @@ export default function Home() {
           {POLYGON_FEATURES.map((feature) => (
             <article
               key={feature.title}
-              className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
+              className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 text-center transition-[transform,box-shadow] duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-foreground/8 sm:p-8"
             >
               <span className="text-gradient text-3xl font-bold tracking-tight">
                 {feature.stat}

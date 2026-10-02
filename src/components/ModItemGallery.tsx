@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import ModItemCard from "@/components/ModItemCard";
+import { SkeletonCardGrid } from "@/components/Skeleton";
 import { useModEconomy } from "@/hooks/useModEconomy";
 import { useOwnedMods } from "@/hooks/useOwnedMods";
 import { usePolPrice } from "@/hooks/usePolPrice";
@@ -203,7 +204,7 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
                 centerInScrollRow(event.currentTarget);
               }}
               aria-pressed={active}
-              className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-all duration-300 active:scale-95 ${
+              className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs font-semibold transition-[transform,color,background-color,border-color,fill,stroke] duration-300 active:scale-95 ${
                 active
                   ? "border-mint/40 bg-mint/10 text-mint"
                   : "border-foreground/10 text-foreground/60 hover:border-foreground/30 hover:text-foreground"
@@ -216,7 +217,13 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
         })}
       </div>
 
-      {/* Grid */}
+      {/* Grid — skeletons first so the shop does not jump when the read lands. */}
+      {isReading && designs.length === 0 ? (
+        <div aria-busy="true" aria-live="polite" aria-label="Loading the item line">
+          <SkeletonCardGrid count={4} columns="sm:grid-cols-2 lg:grid-cols-4" />
+        </div>
+      ) : null}
+
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {visibleItems.map((item) => {
           const design = designBySlotTier.get(`${item.slot}:${item.tier}`) ?? null;
@@ -256,7 +263,6 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
 
       {notice ? <p className="rounded-2xl bg-mint/15 px-4 py-3 text-xs font-semibold text-mint">{notice}</p> : null}
       {error ? <p className="rounded-2xl bg-magma/15 px-4 py-3 text-xs font-semibold text-magma">{error}</p> : null}
-      {isReading ? <p className="font-mono text-[11px] text-foreground/40">Reading the store…</p> : null}
     </section>
   );
 }

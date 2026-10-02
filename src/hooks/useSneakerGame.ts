@@ -5,7 +5,8 @@ import { encodeFunctionData, getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { sneakerGameAbi } from "@/lib/contracts";
 import { useContractTransaction } from "@/hooks/useContractTransaction";
-import { useOwnedSneakers, type OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import type { OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 
 const gameAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_GAME_ADDRESS;
 const sneakerMintAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
@@ -73,11 +74,7 @@ export function useSneakerGame() {
     [configured],
   );
 
-  const owned = useOwnedSneakers({
-    owner: wallet.address,
-    contractAddress: sneakerAddress,
-    publicClient: wallet.publicClient,
-  });
+  const owned = useSneakerOwnership();
 
   const refresh = useCallback(async () => {
     if (!wallet.address || !gameAddress || !wallet.publicClient) {
@@ -118,7 +115,7 @@ export function useSneakerGame() {
       setTotalRedeemedPoints(redeemed as bigint);
 
       // Only playable veSneakers have game state.
-      const playable = owned.sneakers.filter((s) => s.kind === 0);
+      const playable = owned.playable;
       const tokenIds = playable.map((s) => s.tokenId);
       const readStat = (functionName: string, tokenId: bigint, fallback: bigint | number | boolean) =>
         wallet.publicClient
@@ -186,7 +183,7 @@ export function useSneakerGame() {
     } finally {
       setIsReading(false);
     }
-  }, [gameAddress, owned.sneakers, wallet.address, wallet.publicClient]);
+  }, [gameAddress, owned.playable, wallet.address, wallet.publicClient]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());

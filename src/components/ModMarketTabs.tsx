@@ -40,7 +40,7 @@ function ModCard({ tokenId, traits, children }: { tokenId: bigint; traits: impor
   const slot = slotInfo(traits.slot);
   const rarityObj = RARITIES[Number(traits.tier) % RARITIES.length];
   return (
-    <div className="flex flex-col justify-between overflow-hidden rounded-3xl border border-foreground/10 bg-background p-5 transition-all duration-300 hover:border-foreground/20 hover:shadow-lg">
+    <div className="flex flex-col justify-between overflow-hidden rounded-3xl border border-foreground/10 bg-background p-5 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-foreground/20 hover:shadow-lg">
       <div>
         <div className="flex items-center justify-between">
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${rarityObj?.accent ?? "bg-foreground/10"}`}>
@@ -311,7 +311,7 @@ export function TradesTab({ runAction }: { runAction: ActionRunner }) {
             ))}
           </div>
           <button type="button" disabled={economy.isLoading} onClick={handleCreateSwap}
-            className="min-h-11 cursor-pointer rounded-full bg-magma px-6 text-sm font-bold text-white shadow-lg shadow-magma/25 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
+            className="min-h-11 cursor-pointer rounded-full bg-magma px-6 text-sm font-bold text-white shadow-lg shadow-magma/25 transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
             Create swap offer
           </button>
         </div>

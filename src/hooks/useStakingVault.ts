@@ -5,7 +5,8 @@ import { encodeFunctionData, getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { stakingAbi } from "@/lib/contracts";
 import { useContractTransaction } from "@/hooks/useContractTransaction";
-import { useOwnedSneakers, type OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import type { OwnedSneaker } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 
 const stakingVaultAddress = process.env.NEXT_PUBLIC_STAKING_VAULT_ADDRESS;
 const sneakerMintAddress = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
@@ -55,11 +56,7 @@ export function useStakingVault() {
     () => configured ? getAddress(sneakerMintAddress as string) : null,
     [configured],
   );
-  const owned = useOwnedSneakers({
-    owner: wallet.address,
-    contractAddress: sneakerAddress,
-    publicClient: wallet.publicClient,
-  });
+  const owned = useSneakerOwnership();
 
   const refresh = useCallback(async () => {
     if (!wallet.address || !stakingAddress) {
@@ -91,14 +88,14 @@ export function useStakingVault() {
         minLockSeconds: (minLock as bigint) || 2592000n,
         stakedTokenIds: stakedTokenIds as bigint[],
         // Staking is veSneaker-only.
-        ownedSneakers: owned.sneakers.filter((s) => s.kind === 0),
+        ownedSneakers: owned.playable,
       });
     } catch (cause) {
       setReadError(cause instanceof Error ? cause.message : "Could not read the staking vault.");
     } finally {
       setIsReading(false);
     }
-  }, [owned.sneakers, stakingAddress, wallet.address, wallet.publicClient]);
+  }, [owned.playable, stakingAddress, wallet.address, wallet.publicClient]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());
@@ -129,7 +126,7 @@ export function useStakingVault() {
   const lockNFT = useCallback((tokenId: bigint) => send("stake", [tokenId]), [send]);
   const unlockNFT = useCallback((tokenId: bigint) => send("unstake", [tokenId]), [send]);
 
-  const statsWithOwned = { ...stats, ownedSneakers: owned.sneakers.filter((s) => s.kind === 0) };
+  const statsWithOwned = { ...stats, ownedSneakers: owned.playable };
   return {
     configured,
     stakingAddress,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clientKey, consumeDailyBudget, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { GoogleGenAI } from "@google/genai";
 import {
   STYLE_COMPOSITIONS,
@@ -14,6 +15,14 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
+
+/// Each call runs two paid Gemini passes, so the throttle is tight. Ten minutes
+/// is long enough for a genuine collector to retry a bad photo a few times.
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+/// Global daily ceiling. Per-IP limits cannot stop a botnet spreading requests
+/// across addresses; this can, because it does not care who is asking.
+const DAILY_GENERATION_BUDGET = Number(process.env.GENERATION_DAILY_BUDGET ?? 300);
 
 /// Vision pass — reads the source sneaker and grades it.
 const ANALYSIS_MODEL = process.env.GEMINI_ANALYSIS_MODEL ?? "gemini-3-flash-preview";
@@ -159,6 +168,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const limited = await rateLimit(clientKey(request, "generate"), RATE_LIMIT, RATE_WINDOW_MS);
+  if (!limited.ok) {
+    return tooManyRequests(limited, "Too many generations. Wait a few minutes and try again.");
+  }
+
+  const budget = await consumeDailyBudget("generate-sneaker", DAILY_GENERATION_BUDGET);
+  if (!budget.ok) {
+    return NextResponse.json(
+      { error: "The daily generation budget is spent. Try again tomorrow." },
+      { status: 429, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -246,6 +268,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Never cache a generation: each response is a paid, one-off render.
     return NextResponse.json({
       imageBase64: image.data,
       mimeType: image.mime_type ?? "image/png",
@@ -266,7 +289,7 @@ export async function POST(request: NextRequest) {
       // The style handed to this render; the studio folds it into the styleKey.
       stylePalette: style.palette,
       styleComposition: style.composition,
-    });
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Generation failed.";
     return NextResponse.json({ error: message }, { status: 502 });

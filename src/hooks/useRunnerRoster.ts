@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress, type Address } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
-import { useOwnedSneakers } from "@/hooks/useOwnedSneakers";
+import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 import { sneakerWorkshopAbi } from "@/lib/contracts";
 import { sneakerPower, type SneakerPower } from "@/lib/tab-challenge";
 import type { VeSneakerFamilyId } from "@/lib/ve-sneakers";
 
-const mintAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MINT_ADDRESS;
 const workshopAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_WORKSHOP_ADDRESS;
 
 export type Runner = {
@@ -27,20 +26,13 @@ export type Runner = {
 /// the strongest pair is selected by default.
 export function useRunnerRoster() {
   const wallet = usePolygonWallet();
-  const mintAddress = useMemo<Address | null>(
-    () => (mintAddressEnv && isAddress(mintAddressEnv) ? getAddress(mintAddressEnv) : null),
-    [],
-  );
   const workshopAddress = useMemo<Address | null>(
     () => (workshopAddressEnv && isAddress(workshopAddressEnv) ? getAddress(workshopAddressEnv) : null),
     [],
   );
 
-  const owned = useOwnedSneakers({
-    owner: wallet.address,
-    contractAddress: mintAddress,
-    publicClient: wallet.publicClient,
-  });
+  // Shared across the tree — see SneakerOwnershipProvider.
+  const owned = useSneakerOwnership();
 
   const [runners, setRunners] = useState<Runner[]>([]);
   const [isReading, setIsReading] = useState(false);
@@ -48,7 +40,7 @@ export function useRunnerRoster() {
 
   const refresh = useCallback(async () => {
     // Collectibles are art, not runners — they never enter the arena.
-    if (!wallet.address || owned.sneakers.length === 0) {
+    if (!wallet.address || owned.playable.length === 0) {
       setRunners([]);
       setSelectedId(null);
       return;
@@ -56,7 +48,7 @@ export function useRunnerRoster() {
     setIsReading(true);
     try {
       const rows = await Promise.all(
-        owned.sneakers.filter((sneaker) => sneaker.kind === 0).map(async (sneaker) => {
+        owned.playable.map(async (sneaker) => {
           const [conditionBps, equippedMods] = workshopAddress
             ? await Promise.all([
                 wallet.publicClient
@@ -107,7 +99,7 @@ export function useRunnerRoster() {
     } finally {
       setIsReading(false);
     }
-  }, [owned.sneakers, wallet.address, wallet.publicClient, workshopAddress]);
+  }, [owned.playable, wallet.address, wallet.publicClient, workshopAddress]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void refresh());

@@ -70,6 +70,24 @@ export default function MintShowcase({ className = "" }: { className?: string })
   const active = useMemo(() => SHOWCASE[index], [index]);
   const accentVar = `var(--color-${active.accent ?? "brand"})`;
 
+  /// Only the frames that can be on screen get mounted.
+  ///
+  /// Every frame is absolutely positioned over the same square, so they all sit
+  /// inside the viewport at once — `loading="lazy"` defers nothing and all eight
+  /// images downloaded on first paint, adding ~115 KiB to `/mint`.
+  ///
+  /// Three are needed, not two: the outgoing frame has to stay mounted for the
+  /// duration of the fade, otherwise the crossfade degrades to a fade-in from
+  /// the backdrop. One extra image buys the effect back.
+  const mountedFrames = useMemo(() => {
+    const total = SHOWCASE.length;
+    return [
+      (index - 1 + total) % total,
+      index,
+      (index + 1) % total,
+    ];
+  }, [index]);
+
   return (
     <div
       ref={containerRef}
@@ -87,24 +105,29 @@ export default function MintShowcase({ className = "" }: { className?: string })
           style={{ backgroundColor: `color-mix(in srgb, ${accentVar} 22%, transparent)` }}
         />
 
-        {SHOWCASE.map((entry, entryIndex) => (
-          <div
-            key={entry.src}
-            className={`absolute inset-0 transition-opacity duration-700 ease-out ${
-              entryIndex === index ? "opacity-100" : "opacity-0"
-            }`}
-            aria-hidden={entryIndex !== index}
-          >
-            <Image
-              src={entry.src}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 90vw, 40vw"
-              loading={entryIndex === 0 ? "eager" : "lazy"}
-              className="object-contain p-6 sm:p-8"
-            />
-          </div>
-        ))}
+        {mountedFrames.map((frameIndex) => {
+          const entry = SHOWCASE[frameIndex];
+          return (
+            <div
+              key={entry.src}
+              className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+                frameIndex === index ? "opacity-100" : "opacity-0"
+              }`}
+              aria-hidden={frameIndex !== index}
+            >
+              <Image
+                src={entry.src}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 90vw, 40vw"
+                // The first frame is the LCP candidate; the rest arrive as the
+                // rotation reaches them.
+                loading={frameIndex === 0 ? "eager" : "lazy"}
+                className="object-contain p-6 sm:p-8"
+              />
+            </div>
+          );
+        })}
 
         {/* Readout */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between gap-3">
@@ -135,7 +158,7 @@ export default function MintShowcase({ className = "" }: { className?: string })
             {SHOWCASE.map((entry, entryIndex) => (
               <span
                 key={entry.src}
-                className={`h-1 rounded-full transition-all duration-500 ${
+                className={`h-1 rounded-full transition-[width,background-color] duration-500 ${
                   entryIndex === index ? "w-5" : "w-1.5 bg-paper/25"
                 }`}
                 style={entryIndex === index ? { backgroundColor: accentVar } : undefined}

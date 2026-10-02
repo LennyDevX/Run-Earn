@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAddress, keccak256, encodePacked, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { getAddress } from "viem";
+import { clientKey, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,12 @@ const ARENA_ADDRESS = process.env.NEXT_PUBLIC_SNEAKER_TAB_ARENA_ADDRESS;
 /// Signature lifetime — long enough to cover a slow wallet confirmation.
 const SIGNATURE_TTL_SECONDS = 600;
 
+/// Signing is cheap, but the endpoint is public and an attacker could farm
+/// signatures to probe the arena. One session per day is the product rule, so a
+/// tight window costs an honest player nothing.
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 1000;
+
 /// Taps a player can physically land in one session. The client posts a score,
 /// so this is the cheap sanity gate before signing.
 const MAX_TAPS_PER_SESSION = 600;
@@ -49,6 +56,11 @@ function badRequest(message: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await rateLimit(clientKey(request, "tab-session"), RATE_LIMIT, RATE_WINDOW_MS);
+  if (!limited.ok) {
+    return tooManyRequests(limited, "Too many session requests. Slow down.");
+  }
+
   if (!SIGNER_KEY) {
     return NextResponse.json(
       { error: "Tab arena signing is not configured on this deployment." },

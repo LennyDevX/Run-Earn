@@ -185,7 +185,7 @@ export default function WalletButton() {
           disabled={wallet.isConnecting}
           aria-haspopup={isMobile ? "dialog" : "menu"}
           aria-expanded={connectOpen}
-          className="min-h-11 cursor-pointer rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-all duration-300 hover:scale-105 hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+          className="min-h-11 cursor-pointer rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-[transform,opacity] duration-300 hover:scale-105 hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
         >
           {wallet.isConnecting ? "Connecting..." : "Connect wallet"}
         </button>
@@ -236,7 +236,7 @@ export default function WalletButton() {
         <button
           type="button"
           onClick={() => void handleSwitchNetwork()}
-          className="min-h-11 cursor-pointer rounded-full bg-magma px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-105"
+          className="min-h-11 cursor-pointer rounded-full bg-magma px-5 py-2.5 text-sm font-semibold text-white transition-transform duration-300 hover:scale-105"
         >
           Switch to {NETWORK_LABEL}
         </button>
@@ -252,7 +252,7 @@ export default function WalletButton() {
         onClick={() => setOpen((value) => !value)}
         aria-haspopup={isMobile ? "dialog" : "menu"}
         aria-expanded={open}
-        className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background transition-all duration-300 hover:scale-105 hover:opacity-90"
+        className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background transition-[transform,opacity] duration-300 hover:scale-105 hover:opacity-90"
       >
         <span className="font-mono">{truncate(wallet.address)}</span>
       </button>

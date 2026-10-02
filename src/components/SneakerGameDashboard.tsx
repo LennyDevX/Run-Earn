@@ -99,7 +99,7 @@ export default function SneakerGameDashboard() {
 
       {/* KPI grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-mint/30 hover:shadow-xl hover:shadow-mint/5">
+        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-mint/30 hover:shadow-xl hover:shadow-mint/5">
           <span className="font-pixel text-[9px] text-foreground/50">VE RUNE BALANCE</span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-mint">{formatPoints(game.veRune)}</span>
@@ -108,7 +108,7 @@ export default function SneakerGameDashboard() {
           <p className="mt-2 text-xs text-foreground/50">Virtual points · redeemable for REN</p>
         </div>
 
-        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-sky/30 hover:shadow-xl hover:shadow-sky/5">
+        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-sky/30 hover:shadow-xl hover:shadow-sky/5">
           <span className="font-pixel text-[9px] text-foreground/50">REDEEMABLE REN</span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-sky">{formatPoints(redeemableRen)}</span>
@@ -119,7 +119,7 @@ export default function SneakerGameDashboard() {
           </p>
         </div>
 
-        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-polygon-purple/30 hover:shadow-xl hover:shadow-polygon-purple/5">
+        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-polygon-purple/30 hover:shadow-xl hover:shadow-polygon-purple/5">
           <span className="font-pixel text-[9px] text-foreground/50">ACTIVE SNEAKERS</span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-polygon-purple">{game.sneakers.length}</span>
@@ -130,7 +130,7 @@ export default function SneakerGameDashboard() {
           </p>
         </div>
 
-        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-all duration-300 hover:border-foreground/20 hover:shadow-xl hover:shadow-foreground/5">
+        <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-foreground/20 hover:shadow-xl hover:shadow-foreground/5">
           <span className="font-pixel text-[9px] text-foreground/50">LIFETIME REDEEMED</span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-foreground">{formatPoints(game.totalRedeemedPoints)}</span>
@@ -154,7 +154,7 @@ export default function SneakerGameDashboard() {
             type="button"
             disabled={!isConfigured || !game.params.redemptionEnabled || game.veRune < redemptionRate || game.isLoading}
             onClick={() => void runAction(() => game.redeem(game.veRune), "veRUNE redeemed for REN")}
-            className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-full bg-mint px-6 py-4 text-sm font-bold text-ink shadow-lg shadow-mint/20 transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {game.isLoading
               ? "Processing..."
@@ -198,7 +198,7 @@ export default function SneakerGameDashboard() {
                 return (
                   <div
                     key={sneaker.tokenId.toString()}
-                    className={`flex flex-col justify-between overflow-hidden rounded-3xl border p-5 transition-all duration-300 ${
+                    className={`flex flex-col justify-between overflow-hidden rounded-3xl border p-5 transition-[background-color,border-color] duration-300 ${
                       wornOut
                         ? "border-magma/30 bg-magma/5"
                         : canActivateNow
@@ -258,8 +258,8 @@ export default function SneakerGameDashboard() {
                         </div>
                         <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
                           <div
-                            className={`h-full rounded-full transition-all duration-700 ${wornOut ? "bg-magma" : durabilityPct <= 30 ? "bg-magma" : "bg-mint"}`}
-                            style={{ width: `${durabilityPct}%` }}
+                            className={`h-full w-full origin-left rounded-full transition-transform duration-700 ${wornOut ? "bg-magma" : durabilityPct <= 30 ? "bg-magma" : "bg-mint"}`}
+                            style={{ transform: `scaleX(${durabilityPct / 100})` }}
                           />
                         </div>
                       </div>

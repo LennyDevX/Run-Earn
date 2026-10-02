@@ -200,3 +200,26 @@ $env:FUND_AMOUNT = "10"
 $env:STAKING_VAULT_ADDRESS = "0x..."
 npx hardhat run scripts/fund-staking.ts --network amoy
 ```
+
+
+## Web hardening checks (before any deploy)
+
+Run these against a production build (`npm run build && npm run start`):
+
+1. **Headers are present.** `curl -sI http://127.0.0.1:3000/` should show
+   `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+   `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and
+   `Content-Security-Policy-Report-Only`. There should be **no** `X-Powered-By`.
+2. **The CSP is report-only, not enforcing.** If the header reads
+   `Content-Security-Policy` (without `-Report-Only`) the policy is live — confirm
+   that was intentional, because an unlisted origin will now block silently.
+3. **Rate limiting fires.** Loop `/api/pol-price` 34 times; expect 30 × 200 then
+   4 × 429 with a `Retry-After` header.
+4. **The spend budget runs before the paid call.** POST to
+   `/api/generate-sneaker` with no body seven times: the first five should be
+   `400` (bad form) with **zero Gemini tokens spent**, the next two `429`. If you
+   see `502` or a Gemini error instead, the throttle is running too late.
+5. **Redis is actually connected.** With Upstash configured, hammering a route
+   from two different instances must share one window. Without it the limiter logs
+   nothing and silently degrades to per-instance — check `backend` in the
+   `rateLimit()` result if you need certainty.

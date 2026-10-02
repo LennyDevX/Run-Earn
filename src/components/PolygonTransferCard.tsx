@@ -65,7 +65,7 @@ export default function PolygonTransferCard() {
           Amount (POL)
           <input value={amount} onChange={(event) => setAmount(event.target.value)} type="text" inputMode="decimal" placeholder="0.001" autoComplete="off" spellCheck={false} enterKeyHint="done" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-sm font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
         </label>
-        <button type="button" onClick={() => void sendPolygon()} disabled={!wallet.isConnected || isSending} className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-lg hover:shadow-sky/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink">
+        <button type="button" onClick={() => void sendPolygon()} disabled={!wallet.isConnected || isSending} className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-[transform,box-shadow] hover:scale-105 hover:shadow-lg hover:shadow-sky/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink">
           {isSending ? "Signing..." : "Send POL"}
         </button>
       </div>

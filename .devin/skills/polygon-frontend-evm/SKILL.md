@@ -288,3 +288,65 @@ exactly what is missing before a session starts.
 `ARENA_SIGNER_PRIVATE_KEY` may be read — never expose it as `NEXT_PUBLIC_*`, and
 never sign a score the contract would reject (it clamps anyway, but the server
 should reject first).
+
+
+## Performance conventions
+
+These came out of the pre-launch hardening pass. Full record:
+`docs/security-and-performance.md`.
+
+**Transitions must name their properties.** `transition-all` is gone from the
+codebase and must not come back — it transitions layout properties too. Pick
+`transition-transform`, `transition-colors`, or an explicit arbitrary list like
+`transition-[transform,box-shadow]` based on what the element actually changes.
+
+**Progress bars use `transform: scaleX()`, never `width`.** Animating `width`
+triggers layout and paint every frame; `scaleX` runs on the compositor. The
+pattern is `w-full origin-left transition-transform` plus
+`style={{ transform: `scaleX(${pct / 100})` }}`. Keep a floor
+(`Math.max(0.03, …)`) so a near-zero bar stays visible.
+
+**Loading states use `Skeleton`, not a text label.** A label collapses to one
+line and then jumps to the real content — a layout shift on every load. A
+skeleton with the **shape of the real content** reserves the space, so the swap is
+a fade. `src/components/Skeleton.tsx` has `SkeletonArtworkCard`,
+`SkeletonCardGrid`, `SkeletonRows`, and friends. Mark the container
+`aria-busy="true"` and `aria-live="polite"`; the skeletons themselves are
+`aria-hidden`.
+
+**Never call `scrollIntoView` to center something in a `.scroll-x` row.** It walks
+every scrollable ancestor including the document, so it moves the page whenever
+the target sits below the fold. `centerInScrollRow` scrolls the row directly.
+Reserve `scrollIntoView` for deliberate, user-initiated page jumps.
+
+**`useOwnedSneakers` now exposes `kind`** (0 = playable veSneaker, 1 = AI
+collectible). Every gameplay surface — workshop, game, arena, staking — must
+filter to `kind === 0`. The marketplace and appraiser take both.
+
+**Bundle note:** Next already splits per route. Do not add `next/dynamic` for
+route-level components; the wallet SDKs are the only things that needed lazy
+loading and they already have it.
+
+
+**Read sneaker ownership from `useSneakerOwnership()`, never by instantiating
+`useOwnedSneakers` directly.** `SneakerOwnershipProvider` (mounted inside the
+wallet context in `Providers.tsx`) holds one instance for the whole tree and
+exposes `sneakers`, `playable`, `collectibles`, `isLoading`, `error`, `refresh`.
+
+Before the provider, eight surfaces each ran their own copy and a page mounting
+three of them read the same wallet three times over. The hook itself batches with
+`multicall`, so per-token fan-out is gone too — a 20-sneaker wallet costs ~2 RPC
+calls instead of ~60.
+
+**Use `playable` on every gameplay surface.** It is the pre-filtered
+`kind === 0` list, so a consumer cannot forget the filter and offer an AI
+collectible as a runner. Only the marketplace wants `sneakers` (both kinds).
+
+`useSneakerOwnership` throws outside the provider on purpose — a silent empty
+list would look identical to "this wallet owns nothing".
+
+
+**Toolchain floor:** `next` 16.3.8 (September 2026 security release), `react` /
+`react-dom` 19.3.0, `viem` 2.55+, `@upstash/redis` for rate limiting. TypeScript
+stays on 5.x until 7.1 ships a programmatic compiler API — see
+`docs/security-and-performance.md` for why.

@@ -23,6 +23,7 @@ import {
 import { polygon, polygonAmoy } from "viem/chains";
 import { connectMetaMaskMobile, connectOkxMobile, disconnectMobileWallet, type BrowserEvmProvider } from "@/lib/wallet-connect";
 import { describeWalletError } from "@/lib/wallet-errors";
+import { SneakerOwnershipProvider } from "@/components/SneakerOwnershipProvider";
 
 export type PolygonNetwork = "polygon" | "amoy";
 export type WalletId = "metamask" | "okx" | `injected:${string}`;
@@ -327,5 +328,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     sendContractCall,
   }), [address, chainId, connect, disconnect, error, isConnecting, isMobile, sendContractCall, sendNative, switchToPolygon, walletOptions, walletType]);
 
-  return <WalletContext.Provider value={contextValue}>{children}</WalletContext.Provider>;
+  // Nested inside the wallet context so the ownership provider can read the
+  // connected address, and above every route so there is exactly one
+  // `useOwnedSneakers` instance for the whole tree.
+  return (
+    <WalletContext.Provider value={contextValue}>
+      <SneakerOwnershipProvider>{children}</SneakerOwnershipProvider>
+    </WalletContext.Provider>
+  );
 }

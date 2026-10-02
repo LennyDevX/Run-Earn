@@ -213,3 +213,23 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Every consumer that scales rarity by condition must divide by `BASIS_POINTS`
   (10000) and clamp to 100.
 - Mods never expire. Do not add an expiry to `SneakerMods`.
+
+
+## Web surface
+
+Contract-level security is above. For the **browser and edge** layer — response
+headers, the report-only CSP, the Redis rate limiter, and the daily AI spend
+budget — see the `airen-security-hardening` skill and
+`docs/security-and-performance.md`.
+
+Quick reference:
+
+- `X-Frame-Options: DENY` and friends are enforced from `next.config.ts`; the CSP
+  is `Report-Only` until the reports are clean.
+- Every `/api/*` route that costs money or proxies a paid service is rate limited
+  before doing any work.
+- `/api/generate-sneaker` also has a global daily budget, because per-IP limits
+  cannot stop a distributed caller.
+- Secrets (`GEMINI_API_KEY`, `ARENA_SIGNER_PRIVATE_KEY`, `UNISWAP_API_KEY`, the
+  Graph query key) are read only inside route handlers. Only addresses and
+  network config belong in `NEXT_PUBLIC_*`.
