@@ -84,10 +84,10 @@ export default function MarketplaceDashboard() {
     if (isCollectible) {
       // Collectibles are appraiser-priced — `list` reverts for them, so route
       // to the valued path and ignore the manual price field entirely.
-      void runAction(async () => {
-        await market.approveNft(tokenId);
-        return market.listAtAppraisal(market.sneakerAddress as `0x${string}`, tokenId);
-      }, `Collectible #${tokenId} listed at the appraised price`);
+      void runAction(
+        () => market.listAtAppraisal(market.sneakerAddress as `0x${string}`, tokenId),
+        `Collectible #${tokenId} listed at the appraised price`,
+      );
       return;
     }
     const price = parseAmount(priceInput);
@@ -95,11 +95,12 @@ export default function MarketplaceDashboard() {
       setActionError("Enter a valid POL price (minimum 0.001 POL).");
       return;
     }
-    void runAction(async () => {
-      // The NFT must be approved for the marketplace before listing.
-      await market.approveNft(tokenId);
-      return market.list(market.sneakerAddress as `0x${string}`, tokenId, price);
-    }, `NFT #${tokenId} listed`);
+    // The approval travels inside the same transaction as the listing — see
+    // `approveAndSend` in useMarketplace.
+    void runAction(
+      () => market.list(market.sneakerAddress as `0x${string}`, tokenId, price),
+      `NFT #${tokenId} listed`,
+    );
   }
 
   function handleCreateAuction(tokenId: bigint) {
@@ -112,10 +113,10 @@ export default function MarketplaceDashboard() {
       setActionError("Enter a valid starting price (minimum 0.001 POL).");
       return;
     }
-    void runAction(async () => {
-      await market.approveNft(tokenId);
-      return market.createAuction(market.sneakerAddress as `0x${string}`, tokenId, startPrice, auctionDuration);
-    }, `Auction for NFT #${tokenId} created`);
+    void runAction(
+      () => market.createAuction(market.sneakerAddress as `0x${string}`, tokenId, startPrice, auctionDuration),
+      `Auction for NFT #${tokenId} created`,
+    );
   }
 
   function handleMakeOffer() {

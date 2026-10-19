@@ -505,6 +505,25 @@ The limiter uses Redis when `UPSTASH_REDIS_REST_URL` (or the Vercel KV
 **Without Redis the limit is per-instance**, which is fine locally and useless on
 Vercel — install Upstash for Redis from the Vercel Marketplace before the beta.
 
+### Optional payment (x402)
+
+`/api/generate-sneaker` can also charge the caller in USDC. It is **off unless
+`X402_PAY_TO` is set**, and payment does not replace the throttle — the limit and
+the daily budget still run inside the handler, because a stolen wallet would
+otherwise buy unlimited generations. Verified against a production build:
+
+| `X402_PAY_TO` | Response to an unpaid POST |
+| --- | --- |
+| unset (default) | `400` from the handler, exactly as before |
+| set | `402 Payment Required` + a `payment-required` header carrying the x402 v2 requirements |
+
+The settlement asset is passed explicitly as `{ asset, amount }`, because the
+scheme's built-in asset table does not cover Amoy (`No default asset configured
+for network eip155:80002`). Config lives in `src/lib/x402.ts`; see the
+`airen-security-hardening` skill.
+
 Response headers come from `next.config.ts`: framing, referrer, permissions, and
-HSTS are enforced; the CSP ships as `Report-Only` until the reports are clean. See
+HSTS are enforced, and **the CSP is enforced too** — it is no longer
+`Report-Only`. An origin missing from `buildCsp()` breaks in the browser, usually
+as a wallet that refuses to connect with no visible error. See
 `docs/security-and-performance.md`.

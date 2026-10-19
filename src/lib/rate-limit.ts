@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -178,8 +178,12 @@ export function clientKey(request: NextRequest, scope: string) {
 }
 
 /// Standard 429 with the headers a client needs to back off correctly.
+///
+/// Returns `NextResponse` rather than a bare `Response` so every route can hand
+/// the same type back to its callers — the x402 wrapper requires a
+/// `Promise<NextResponse>` and a plain `Response` would not satisfy it.
 export function tooManyRequests(result: RateLimitResult, message: string) {
-  return Response.json(
+  return NextResponse.json(
     { error: message },
     {
       status: 429,

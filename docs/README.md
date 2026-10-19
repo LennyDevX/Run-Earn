@@ -10,7 +10,9 @@ Solidity.
 | Doc | What it covers |
 | --- | --- |
 | [`app-routes.md`](app-routes.md) | Every route (`/mint`, `/collection` (veSneakers + mod stores), `/workshop`, `/badges`, `/my-nfts`, `/marketplace`, `/game`, `/staking`, `/defi`, `/roadmap`, `/profile`, APIs): files, contracts, hooks, flows, edge cases, and how to add a route |
-| [`wallet-connectivity.md`](wallet-connectivity.md) | EIP-6963 discovery, MetaMask Connect, OKX Universal Provider, chain guard, mobile handoff |
+| [`wallet-connectivity.md`](wallet-connectivity.md) | EIP-6963 discovery, MetaMask Connect, OKX Universal Provider, the thirdweb in-app wallet (email/social), chain guard, mobile handoff |
+| [`treasury.md`](treasury.md) | How the treasury works: the direct vs routed money paths (with a diagram), why a 0 POL balance can hide earned revenue, the two-step fee keeper, the scripts, and the `/treasury` public view |
+| [`thirdweb-gas-sponsorship.md`](thirdweb-gas-sponsorship.md) | In-app wallet gas sponsorship: the EIP-7702 setup, why an unconstrained paymaster is an unbounded spend, the `/api/verify-sponsorship` contract allowlist, dashboard steps, and how to verify |
 | [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, and the future mobile/UI/UX/performance roadmap |
 | [`subgraph-integration.md`](subgraph-integration.md) | The Graph Studio `nuxgraph` deployment, the `/api/subgraph` proxy, dynamic schema introspection |
 | [`uniswap-price-feed.md`](uniswap-price-feed.md) | Live POL/USD via the Uniswap Trading API, the `/api/pol-price` proxy, caching, and fallback behavior |
@@ -23,7 +25,7 @@ Solidity.
 | [`polygon-contract-roadmap.md`](polygon-contract-roadmap.md) | Shipped vs planned contracts and the recommended build/deploy order |
 | [`polygon-staking-model.md`](polygon-staking-model.md) | Native POL staking, rarity-based NFT boosts, reward reserve accounting, appraiser valuation |
 | [`veRune-tokenomics.md`](veRune-tokenomics.md) | 100M REN allocation, veRUNE accrual (power/health/energy stats, 24h activation, streaks, consumable abilities), veSneaker primary-sale pricing, redemption economics |
-| [`security-and-performance.md`](security-and-performance.md) | Pre-launch hardening record: security headers, report-only CSP, the Redis rate limiter, the daily spend budget, and the performance pass (skeletons, transform-only transitions, the `/mint` scroll fix) |
+| [`security-and-performance.md`](security-and-performance.md) | Pre-launch hardening record: security headers, the enforced CSP, the Redis rate limiter, the daily spend budget, and the performance pass (skeletons, transform-only transitions, the `/mint` scroll fix) |
 | [`mod-artwork-prompts.md`](mod-artwork-prompts.md) | Image-generation prompts for the 7 equippable mods, 7 consumables, and level-gated skill chips, plus the shared retro-futuristic pixel style block |
 | [`player-progression.md`](player-progression.md) | PlayerProgress XP/levels, skill NFTs (free claims + store copies + skill slot + consumable abilities), hybrid profile identity, seed-skills script |
 | [`polygon-test-runbook.md`](polygon-test-runbook.md) | Test matrix, Amoy deployment and verification runbook, funding steps |

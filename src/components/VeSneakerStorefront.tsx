@@ -9,6 +9,7 @@ import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
 import { usePolPrice } from "@/hooks/usePolPrice";
 import SneakerArtwork from "@/components/SneakerArtwork";
+import TrailsFundButton from "@/components/TrailsFundButton";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import { boostCeilingBps, bpsToPercent } from "@/lib/tab-challenge";
 import {
@@ -42,7 +43,22 @@ function formatPol(value: bigint, maxDigits = 2) {
   return num.toLocaleString("en-US", { maximumFractionDigits: maxDigits, minimumFractionDigits: num < 1 ? 2 : 0 });
 }
 
-export default function VeSneakerStorefront() {
+/// The Chainlink-derived price drifts from the stored one between syncs. Under
+/// 1% the difference is noise and not worth a line on the card; above it the
+/// buyer deserves to know the price is about to move.
+function oracleDrift(price: bigint, oraclePrice: bigint | null): bigint | null {
+  if (oraclePrice === null || price === 0n) return null;
+  const diff = oraclePrice > price ? oraclePrice - price : price - oraclePrice;
+  return diff * 100n >= price ? oraclePrice : null;
+}
+
+type Props = {
+  /// Trails API key, read server-side. The funding widget runs in the browser,
+  /// so Next cannot hand it an unprefixed variable on its own.
+  trailsApiKey?: string;
+};
+
+export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
   const wallet = usePolygonWallet();
   const store = useVeSneakerStore();
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
@@ -88,6 +104,8 @@ export default function VeSneakerStorefront() {
           active: onChain?.active ?? true,
           label: VE_TIER_LABEL[tier] ?? "Common",
           boost: VE_TIER_BOOST[tier] ?? "+0.5% APY",
+          usdTargetCents: onChain?.usdTargetCents ?? 0n,
+          oraclePrice: onChain?.oraclePrice ?? null,
         };
       }),
     [store.designs],
@@ -170,6 +188,9 @@ export default function VeSneakerStorefront() {
         </div>
       </div>
 
+      {/* Cross-chain funding — renders nothing while Trails is unconfigured. */}
+      <TrailsFundButton apiKey={trailsApiKey} label="New to POL? Add funds with a card or any token" />
+
       {/* Benefits */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-foreground/10 bg-surface p-5">
@@ -230,6 +251,7 @@ export default function VeSneakerStorefront() {
         {visible.map((row, i) => {
           const quantity = quantityByDesign[row.index] ?? 1;
           const soldOut = row.remaining <= 0n;
+          const drift = oracleDrift(row.price, row.oraclePrice);
           const designMissing = isConfigured && row.index >= store.designs.length;
           const levelLocked =
             row.requiredLevel > 0 && (!progress.configured || playerLevel < row.requiredLevel);
@@ -288,6 +310,16 @@ export default function VeSneakerStorefront() {
                     <div className="mt-1 text-[10px] font-semibold text-brand">VAULT DISCOUNT · {formatPol(row.price)} POL standard</div>
                   ) : null}
                   <div className="mt-1 text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.discountedPrice)) * polPrice.price.usd).toFixed(2)}</div>
+                  {row.usdTargetCents > 0n ? (
+                    <div className="mt-1 text-[10px] font-semibold text-brand">
+                      USD-ANCHORED · ${Number(row.usdTargetCents) / 100}
+                    </div>
+                  ) : null}
+                  {drift !== null ? (
+                    <div className="mt-1 text-[10px] font-semibold text-magma">
+                      ORACLE {formatPol(drift)} POL · SYNC DUE
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

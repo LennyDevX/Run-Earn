@@ -69,7 +69,15 @@ export function loadDeployment(networkName: string): DeploymentRecord {
 export function saveDeployment(record: DeploymentRecord) {
   mkdirSync(deploymentsDirectory, { recursive: true });
   const file = deploymentFile(record.network);
-  writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+  // Constructor args are bigints — wei amounts, APY bps, timestamps — and
+  // JSON.stringify throws on those by default. Decimal strings round-trip fine
+  // and the manifest is only ever read back for explorer verification.
+  const serialized = JSON.stringify(
+    record,
+    (_, value) => (typeof value === "bigint" ? value.toString() : value),
+    2,
+  );
+  writeFileSync(file, `${serialized}\n`, "utf8");
   return file;
 }
 

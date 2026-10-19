@@ -99,6 +99,12 @@ async function deployContract(
   name: ContractName,
   constructorArgs: readonly unknown[],
 ): Promise<Deployment> {
+  if (verifyOnly) {
+    const address = addressEnv(ADDRESS_ENV[name], ZERO);
+    if (address === ZERO) throw new Error(`${name} needs ${ADDRESS_ENV[name]} in the environment for VERIFY_ONLY.`);
+    console.log(`Recovered ${name}: ${address}`);
+    return { name, address, constructorArgs };
+  }
   console.log(`Deploying ${name}...`);
   const contract = await viem.deployContract(name, constructorArgs as never);
   const deployment = { name, address: getAddress(contract.address), constructorArgs };
@@ -107,6 +113,34 @@ async function deployContract(
 }
 
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
+
+/// `VERIFY_ONLY=true` rebuilds the manifest from the addresses already in `.env`
+/// and runs verification, without deploying or wiring anything.
+///
+/// It exists because a deploy can abort partway — one missing variable, one
+/// stale oracle — and the contracts that already landed still need verifying and
+/// recording. Re-running `DEPLOY_TARGET=all` would redeploy all fifteen and
+/// orphan the first set, so recovery has to be its own mode.
+const verifyOnly = process.env.VERIFY_ONLY === "true";
+
+/// Where each contract's address lives once deployed.
+const ADDRESS_ENV: Record<ContractName, string> = {
+  RENToken: "RUNE_TOKEN_ADDRESS",
+  SneakerMint: "SNEAKER_MINT_ADDRESS",
+  SneakerStaking: "STAKING_VAULT_ADDRESS",
+  SneakerAppraiser: "SNEAKER_APPRAISER_ADDRESS",
+  SneakerMarketplace: "MARKETPLACE_ADDRESS",
+  SneakerGame: "SNEAKER_GAME_ADDRESS",
+  VeSneakerStore: "VE_SNEAKER_STORE_ADDRESS",
+  SneakerMods: "SNEAKER_MODS_ADDRESS",
+  SneakerWorkshop: "SNEAKER_WORKSHOP_ADDRESS",
+  SneakerTabArena: "SNEAKER_TAB_ARENA_ADDRESS",
+  SneakerSwap: "SNEAKER_SWAP_ADDRESS",
+  ModStore: "MOD_STORE_ADDRESS",
+  PlayerProgress: "PLAYER_PROGRESS_ADDRESS",
+  FeeSplitter: "FEE_SPLITTER_ADDRESS",
+  SneakerVault: "SNEAKER_VAULT_ADDRESS",
+};
 
 /// Resolves a contract address from this run's deployments or an env fallback.
 function resolveAddress(deployments: Deployment[], name: ContractName, envName: string): Address {
@@ -450,6 +484,9 @@ async function main() {
   const progressAddress = resolveAddress(deployments, "PlayerProgress", "PLAYER_PROGRESS_ADDRESS");
 
   async function wire(name: string, write: () => Promise<`0x${string}`>) {
+    // Every wiring step goes through here, so one guard silences the whole
+    // section in verify-only mode.
+    if (verifyOnly) return;
     const hash = await write();
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`Wiring failed for ${name} (${hash}).`);
@@ -543,6 +580,34 @@ async function main() {
       const veStore = await viem.getContractAt("VeSneakerStore", veStoreAddress);
       await wire("VeSneakerStore.vault", () => veStore.write.setVault([vaultAddress], { account: wallet.account }));
     }
+  }
+
+  // ─── POL/USD feed wiring ──────────────────────────────────────
+  // USD-anchored pricing: a design keeps a USD target and its POL price is
+  // recomputed from the Chainlink oracle. Skipped entirely when no feed is
+  // configured — designs then keep the POL prices set at registration.
+  const polUsdFeed = addressEnv("POL_USD_FEED_ADDRESS", ZERO);
+  if (polUsdFeed !== ZERO && veStoreAddress !== ZERO) {
+    const veStore = await viem.getContractAt("VeSneakerStore", veStoreAddress);
+    await wire("VeSneakerStore.polUsdFeed", () =>
+      veStore.write.setPolUsdFeed([polUsdFeed], { account: wallet.account }),
+    );
+
+    // The guard must clear the feed's heartbeat, or a sync reverts merely
+    // because the answer is a few minutes past due.
+    const staleness = BigInt(process.env.POL_USD_FEED_MAX_STALENESS_SECONDS ?? 7_200);
+    const syncInterval = BigInt(process.env.POL_USD_PRICE_SYNC_INTERVAL_SECONDS ?? 21_600);
+    await wire("VeSneakerStore.priceFeedParams", () =>
+      veStore.write.setPriceFeedParams([staleness, syncInterval], { account: wallet.account }),
+    );
+
+    // The per-design USD targets are deliberately NOT set here. Designs are
+    // created by `scripts/mint-veSneakers.ts`, which runs after the deploy, so
+    // on a fresh chain there is nothing to target and `setDesignUsdTarget` would
+    // revert with "unknown design". That script applies the same USD ladder once
+    // the designs exist — and it maps the target by each design's *tier*, which
+    // the catalogue does not keep in index order (Astra is index 0 but Mythic).
+    console.log("USD targets are applied by scripts/mint-veSneakers.ts once designs exist");
   }
 
   const record: DeploymentRecord = {

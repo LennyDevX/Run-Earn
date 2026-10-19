@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import PolygonTransferCard from "@/components/PolygonTransferCard";
 import ProtocolBenefitsPanel from "@/components/ProtocolBenefitsPanel";
 import StakingVaultDashboard from "@/components/StakingVaultDashboard";
+import { trailsApiKey } from "@/lib/trails";
 
 export const metadata: Metadata = {
   title: "DeFi — Airen",
@@ -146,7 +147,7 @@ export default function DefiPage() {
           </div>
         </section>
 
-        <StakingVaultDashboard />
+        <StakingVaultDashboard trailsApiKey={trailsApiKey()} />
         <ProtocolBenefitsPanel />
 
         <div className="mt-10">

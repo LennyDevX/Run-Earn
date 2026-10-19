@@ -4,6 +4,7 @@ import { memo } from "react";
 
 const FOOTER_LINKS = [
   { href: "/roadmap", label: "Roadmap" },
+  { href: "/treasury", label: "Treasury" },
   { href: "/collection", label: "Collection" },
   { href: "/marketplace", label: "Marketplace" },
 ] as const;

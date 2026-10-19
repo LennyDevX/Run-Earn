@@ -21,6 +21,18 @@ interface IVaultAccessView {
     function perkCount() external view returns (uint256);
 }
 
+/// @dev Minimal Chainlink aggregator view. Declared here rather than pulling in
+///      the Chainlink contracts package for one struct — same pattern as the
+///      vault views above.
+interface IChainlinkAggregator {
+    function decimals() external view returns (uint8);
+
+    function latestRoundData()
+        external
+        view
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+}
+
 /// @title VeSneakerStore — primary sale of virtual sneakers (veSneakers) for POL.
 /// @notice veSneakers are the playable NFTs of the Airen virtual sneaker
 ///      economy. Anyone can buy them with native POL — fully virtual assets. Once
@@ -34,6 +46,16 @@ interface IVaultAccessView {
 contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     uint256 public constant BASIS_POINTS = 10_000;
     uint16 public constant MAX_BATCH = 20;
+    /// @dev USD targets are stored in cents, so a price target is always an
+    ///      integer and no amount is ever held as a float.
+    uint256 public constant USD_CENTS = 100;
+    /// @dev 1 POL in wei.
+    uint256 public constant WEI_PER_POL = 1e18;
+
+    /// @notice Lets a keeper refresh feed-derived prices without holding full
+    ///      admin rights. Design edits, minting, and treasury changes stay
+    ///      admin-only.
+    bytes32 public constant PRICE_SYNC_ROLE = keccak256("PRICE_SYNC_ROLE");
 
     struct Design {
         string name;
@@ -63,6 +85,26 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     /// designIndex => required vault perk id + 1 (0 = no access gate).
     mapping(uint256 designIndex => uint256 perkIdPlusOne) public requiredPerkPlusOne;
 
+    /// @notice Chainlink POL/USD aggregator. The zero address disables feed
+    ///      pricing entirely — designs then keep whatever POL price they were
+    ///      given, which is the behaviour every existing deployment has.
+    address public polUsdFeed;
+    /// @notice Reject a feed answer older than this. A stale oracle is worse
+    ///      than no oracle, because it prices at a market that no longer exists
+    ///      and nothing in the transaction would look wrong.
+    /// @dev Must exceed the feed's heartbeat with margin, or a sync can revert
+    ///      simply because the answer is a few minutes past due — which freezes
+    ///      pricing at the last good value. Two hours is twice the usual
+    ///      Chainlink heartbeat. Set it from the actual feed spec.
+    uint256 public maxFeedStaleness = 2 hours;
+    /// @notice Minimum gap between permissionless syncs. Inside the window only
+    ///      an admin or a `PRICE_SYNC_ROLE` holder may refresh.
+    uint256 public priceSyncInterval = 6 hours;
+    /// @notice designIndex => USD target in cents (0 = not USD-priced).
+    mapping(uint256 designIndex => uint256 usdCents) public usdTargetCents;
+    /// @notice designIndex => timestamp of the last feed-derived price write.
+    mapping(uint256 designIndex => uint256 syncedAt) public lastPriceSyncAt;
+
     event DesignAdded(uint256 indexed designIndex, string name, uint8 rarity, uint8 tier, uint256 price, uint16 maxSupply);
     event DesignUpdated(uint256 indexed designIndex, uint256 price, uint16 maxSupply, bool active);
     event DesignPerkRequirementUpdated(uint256 indexed designIndex, uint256 indexed perkId, bool required);
@@ -73,6 +115,10 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
     event ProgressUpdated(address indexed progress);
     event VaultUpdated(address indexed vault);
     event ProceedsWithdrawn(address indexed to, uint256 amount);
+    event PolUsdFeedUpdated(address indexed feed);
+    event PriceFeedParamsUpdated(uint256 maxFeedStaleness, uint256 priceSyncInterval);
+    event UsdTargetUpdated(uint256 indexed designIndex, uint256 usdCents);
+    event PriceSynced(uint256 indexed designIndex, uint256 newPrice, uint256 feedPrice, uint256 usdCents);
 
     constructor(address admin, address nftAddress, address payable treasury_) {
         require(admin != address(0), "VeSneakerStore: zero admin");
@@ -212,6 +258,119 @@ contract VeSneakerStore is Pausable, AccessControl, ReentrancyGuard {
 
         firstTokenId = _mintCopies(design, designIndex, to, quantity);
         emit VeSneakerReserved(designIndex, to, quantity, firstTokenId);
+    }
+
+    // ──────────────────── USD-target pricing (Chainlink) ─────────
+
+    /// @notice Point the store at a POL/USD aggregator. Zero disables feed
+    ///      pricing and every design falls back to its stored POL price.
+    function setPolUsdFeed(address feed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        polUsdFeed = feed;
+        emit PolUsdFeedUpdated(feed);
+    }
+
+    /// @notice Tune the staleness guard and the permissionless sync window.
+    function setPriceFeedParams(uint256 maxStaleness, uint256 syncInterval)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(maxStaleness > 0, "VeSneakerStore: zero staleness");
+        maxFeedStaleness = maxStaleness;
+        priceSyncInterval = syncInterval;
+        emit PriceFeedParamsUpdated(maxStaleness, syncInterval);
+    }
+
+    /// @notice Give a design a USD target. The stored POL price is deliberately
+    ///      left alone — call `syncDesignPrice` (or `syncAllPrices`) to apply
+    ///      it, so setting a target can never revert on a stale feed. Pass 0 to
+    ///      clear the target and return the design to its manual price.
+    function setDesignUsdTarget(uint256 designIndex, uint256 usdCents)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _requireDesign(designIndex);
+        usdTargetCents[designIndex] = usdCents;
+        emit UsdTargetUpdated(designIndex, usdCents);
+    }
+
+    /// @notice Rewrite a design's POL price from its USD target and the live
+    ///      feed. Callable by anyone once `priceSyncInterval` has elapsed: the
+    ///      result is a pure function of the oracle, so there is nothing to
+    ///      grief, and it lets the price self-heal without a keeper. An admin
+    ///      or `PRICE_SYNC_ROLE` holder can force it at any time.
+    function syncDesignPrice(uint256 designIndex) public returns (uint256 newPrice) {
+        return _syncDesignPrice(designIndex, false);
+    }
+
+    /// @notice Refresh every design that has a USD target. Privileged only,
+    ///      because one not-yet-due design would otherwise revert the sweep.
+    function syncAllPrices() external returns (uint256 synced) {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || hasRole(PRICE_SYNC_ROLE, msg.sender),
+            "VeSneakerStore: not price syncer"
+        );
+        for (uint256 i = 0; i < _designs.length; i++) {
+            if (usdTargetCents[i] == 0) continue;
+            _syncDesignPrice(i, true);
+            synced++;
+        }
+    }
+
+    /// @notice Latest POL/USD answer, scaled by the feed's own decimals.
+    ///      Reverts when the feed is unset, the answer is non-positive, or the
+    ///      answer is older than `maxFeedStaleness`.
+    function polUsdPrice() public view returns (uint256 answer, uint8 decimals) {
+        address feed = polUsdFeed;
+        require(feed != address(0), "VeSneakerStore: feed not set");
+        (, int256 latest, , uint256 updatedAt, ) = IChainlinkAggregator(feed).latestRoundData();
+        require(latest > 0, "VeSneakerStore: invalid feed answer");
+        require(updatedAt > 0 && block.timestamp - updatedAt <= maxFeedStaleness, "VeSneakerStore: stale feed");
+        return (uint256(latest), IChainlinkAggregator(feed).decimals());
+    }
+
+    /// @notice What the design would cost if it were synced right now. Read-only,
+    ///      so the UI can show a drift hint without spending gas.
+    function livePriceOf(uint256 designIndex) external view returns (uint256) {
+        uint256 target = usdTargetCents[designIndex];
+        require(target > 0, "VeSneakerStore: no USD target");
+        (uint256 feedPrice, uint8 feedDecimals) = polUsdPrice();
+        return _priceFromUsd(target, feedPrice, feedDecimals);
+    }
+
+    /// @notice Convert a USD target in cents to a POL amount in wei.
+    ///      `feedPrice` is USD per POL scaled by `feedDecimals`, so:
+    ///        POL   = (usdCents / 100) / (feedPrice / 10^feedDecimals)
+    ///        price = usdCents * 10^feedDecimals * 1e18 / (100 * feedPrice)
+    ///      At $0.09764/POL this turns a $40 target into 409.67 POL.
+    function _priceFromUsd(uint256 usdCents, uint256 feedPrice, uint8 feedDecimals)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (usdCents * (uint256(10) ** feedDecimals) * WEI_PER_POL) / (USD_CENTS * feedPrice);
+    }
+
+    function _syncDesignPrice(uint256 designIndex, bool privileged) internal returns (uint256 newPrice) {
+        Design storage design = _requireDesign(designIndex);
+        uint256 target = usdTargetCents[designIndex];
+        require(target > 0, "VeSneakerStore: no USD target");
+
+        if (!privileged) {
+            uint256 last = lastPriceSyncAt[designIndex];
+            bool due = last == 0 || block.timestamp >= last + priceSyncInterval;
+            require(
+                due || hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || hasRole(PRICE_SYNC_ROLE, msg.sender),
+                "VeSneakerStore: price sync not due"
+            );
+        }
+
+        (uint256 feedPrice, uint8 feedDecimals) = polUsdPrice();
+        newPrice = _priceFromUsd(target, feedPrice, feedDecimals);
+        require(newPrice > 0, "VeSneakerStore: zero price");
+
+        design.price = newPrice;
+        lastPriceSyncAt[designIndex] = block.timestamp;
+        emit PriceSynced(designIndex, newPrice, feedPrice, target);
     }
 
     // ─────────────────────────── Purchase ────────────────────────

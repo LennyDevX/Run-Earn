@@ -32,6 +32,18 @@ const WALLET_ORIGINS = [
   // WalletConnect's verify API. Harmless to allow and a common silent breakage.
   "https://verify.walletconnect.com",
   "https://verify.walletconnect.org",
+  // thirdweb's in-app wallet. These are the domains the SDK itself treats as its
+  // own (see `THIRDWEB_DOMAINS` in `thirdweb/src/utils/fetch.ts`), covering the
+  // auth API, the bundler/paymaster, and IPFS-backed wallet icons.
+  //
+  // **Omitting them is silent and total.** With the CSP enforced, every request
+  // the SDK makes is blocked and surfaces as a bare "Failed to fetch" — and the
+  // OAuth popup completes on thirdweb's side (the user even gets the
+  // confirmation email) while the app never receives the session, because the
+  // callback fetch is blocked too. That is the failure this file's own header
+  // comment warns about.
+  "https://*.thirdweb.com",
+  "https://*.ipfscdn.io",
 ];
 
 /// Public RPC endpoints the app falls back to when the configured one is
@@ -86,14 +98,16 @@ function buildCsp() {
     // Tailwind ships a stylesheet, but the app also sets inline style attributes
     // for gradients, progress widths, and per-piece accent colors.
     "style-src 'self' 'unsafe-inline'",
-    // AI artwork arrives as data: URLs and uploaded photos as blob:.
-    "img-src 'self' data: blob:",
+    // AI artwork arrives as data: URLs and uploaded photos as blob:. thirdweb
+    // serves wallet and token icons from its own CDN.
+    "img-src 'self' data: blob: https://*.thirdweb.com https://*.ipfscdn.io",
     "font-src 'self' data:",
     "media-src 'self' data: blob:",
     `connect-src ${connect.join(" ")}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
-    "frame-src 'self' https://*.walletconnect.com https://*.metamask.io https://*.okx.com",
+    // The embedded in-app wallet renders inside an iframe on thirdweb's origin.
+    "frame-src 'self' https://*.walletconnect.com https://*.metamask.io https://*.okx.com https://*.thirdweb.com",
     // Clickjacking: nothing may embed the app.
     "frame-ancestors 'none'",
     "base-uri 'self'",
@@ -107,10 +121,22 @@ const nextConfig: NextConfig = {
   /// Drop the `X-Powered-By: Next.js` fingerprint. Zero cost, one less hint.
   poweredByHeader: false,
 
+  turbopack: {
+    /// `@coinbase/cdp-sdk` imports `@x402/svm/exact/client` without declaring it
+    /// as a dependency. It is reachable only through thirdweb's Base Account
+    /// wallet, which this Polygon-only app never uses, but Turbopack must still
+    /// resolve every dynamic import — so the build fails outright without this.
+    /// See `src/lib/stubs/x402-svm.ts` for why it is stubbed instead of
+    /// installed.
+    resolveAlias: {
+      "@x402/svm/exact/client": "./src/lib/stubs/x402-svm.ts",
+    },
+  },
+
   async headers() {
     const securityHeaders = [
-      // The CSP itself is Report-Only, but the framing lock is enforced now —
-      // nothing legitimate embeds Airen, so there is no migration risk.
+      // The framing lock is enforced now — nothing legitimate embeds Airen, so
+      // there is no migration risk.
       { key: "X-Frame-Options", value: "DENY" },
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -149,6 +175,13 @@ const nextConfig: NextConfig = {
         headers: [{ key: "X-Content-Type-Options", value: "nosniff" }],
       },
     ];
+  },
+
+  /// `/.well-known/*` is a convention, not a route Next will resolve on its own
+  /// from a dot-prefixed folder. Rewriting keeps the public path conventional
+  /// while the handler stays a normal route file.
+  async rewrites() {
+    return [{ source: "/.well-known/x402", destination: "/api/x402-manifest" }];
   },
 };
 

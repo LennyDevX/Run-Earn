@@ -220,10 +220,15 @@ export function useMarketplace() {
     [marketplaceAddress, transaction],
   );
 
-  const approveNft = useCallback(
-    async (tokenId: bigint) => {
-      if (!sneakerAddress) throw new Error("The SneakerMint contract is not configured.");
-      const data = encodeFunctionData({
+  /// ERC-721 `approve` for the marketplace — encoded rather than sent, because it
+  /// travels inside the same transaction as the action it enables.
+  ///
+  /// It targets the collection being listed rather than a hardcoded sneaker
+  /// address, so listing a mod approves the mods contract instead of silently
+  /// approving the wrong one.
+  const approveData = useCallback(
+    (collection: Address, tokenId: bigint) =>
+      encodeFunctionData({
         abi: [
           {
             type: "function",
@@ -238,28 +243,59 @@ export function useMarketplace() {
         ] as const,
         functionName: "approve",
         args: [marketplaceAddress as Address, tokenId],
-      });
-      return transaction.execute({ to: sneakerAddress, data });
+      }),
+    [marketplaceAddress],
+  );
+
+  /// The marketplace call, encoded for the same reason.
+  const marketCallData = useCallback(
+    (functionName: "list" | "listAtAppraisal" | "createAuction", args: readonly unknown[]) =>
+      encodeFunctionData({ abi: sneakerMarketplaceAbi, functionName, args } as never),
+    [],
+  );
+
+  /// `approve` + the action is one intent, so it goes out as **one transaction**
+  /// on a wallet that can batch (the in-app EIP-7702 smart account) and as two
+  /// prompts when it cannot. Batching also makes it atomic — a failing `list` no
+  /// longer leaves a stray approval behind.
+  ///
+  /// The approval used to be a separate call the component had to remember, which
+  /// meant every new listing surface could forget it and revert on `list` with no
+  /// clue why. Owning it here removes that trap.
+  const approveAndSend = useCallback(
+    (
+      collection: Address,
+      tokenId: bigint,
+      functionName: "list" | "listAtAppraisal" | "createAuction",
+      args: readonly unknown[],
+    ) => {
+      if (!marketplaceAddress) throw new Error("The marketplace is not configured.");
+      return transaction.executeBatch([
+        { to: collection, data: approveData(collection, tokenId) },
+        { to: marketplaceAddress, data: marketCallData(functionName, args) },
+      ]);
     },
-    [marketplaceAddress, sneakerAddress, transaction],
+    [approveData, marketCallData, marketplaceAddress, transaction],
   );
 
   const list = useCallback(
-    (collection: Address, tokenId: bigint, price: bigint) => send("list", [collection, tokenId, price]),
-    [send],
+    (collection: Address, tokenId: bigint, price: bigint) =>
+      approveAndSend(collection, tokenId, "list", [collection, tokenId, price]),
+    [approveAndSend],
   );
   /// List an AI collectible at the appraiser's price. The seller supplies no
   /// number — the contract derives it, and `list` reverts for collectibles.
   const listAtAppraisal = useCallback(
-    (collection: Address, tokenId: bigint) => send("listAtAppraisal", [collection, tokenId]),
-    [send],
+    (collection: Address, tokenId: bigint) =>
+      approveAndSend(collection, tokenId, "listAtAppraisal", [collection, tokenId]),
+    [approveAndSend],
   );
   const buy = useCallback((listingId: bigint, price: bigint) => send("buy", [listingId], price), [send]);
   const cancelListing = useCallback((listingId: bigint) => send("cancelListing", [listingId]), [send]);
   const createAuction = useCallback(
     (collection: Address, tokenId: bigint, startPrice: bigint, durationSeconds: bigint) =>
-      send("createAuction", [collection, tokenId, startPrice, durationSeconds]),
-    [send],
+      approveAndSend(collection, tokenId, "createAuction", [collection, tokenId, startPrice, durationSeconds]),
+    [approveAndSend],
   );
   const bid = useCallback((auctionId: bigint, amount: bigint) => send("bid", [auctionId], amount), [send]);
   const settleAuction = useCallback((auctionId: bigint) => send("settleAuction", [auctionId]), [send]);
@@ -296,6 +332,5 @@ export function useMarketplace() {
     makeOffer,
     acceptOffer,
     cancelOffer,
-    approveNft,
   };
 }

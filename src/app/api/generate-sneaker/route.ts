@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withX402 } from "@x402/next";
 import { clientKey, consumeDailyBudget, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { X402_ROUTE_PATH, x402RouteConfig, x402Server } from "@/lib/x402";
 import { GoogleGenAI } from "@google/genai";
 import {
   STYLE_COMPOSITIONS,
@@ -160,7 +162,7 @@ function expectedDistribution(total: number): number[] {
 
 // ─────────────────────────── Route ─────────────────────────────────────────
 
-export async function POST(request: NextRequest) {
+export async function generateCollectible(request: NextRequest): Promise<NextResponse> {
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
       { error: "GEMINI_API_KEY is not configured on the server." },
@@ -295,3 +297,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
+
+// ─────────────────────────── Payment wrapper ───────────────────────────────
+//
+// With `X402_PAY_TO` unset this is the same free, rate-limited handler as
+// before — the switch is deliberately off by default. With it set, the caller
+// pays USDC per generation and the throttle drops to a backstop rather than the
+// only barrier. See `src/lib/x402.ts`.
+
+const resourceServer = x402Server();
+
+export const POST = resourceServer
+  ? withX402(generateCollectible, { [X402_ROUTE_PATH]: x402RouteConfig() }, resourceServer)
+  : generateCollectible;
+

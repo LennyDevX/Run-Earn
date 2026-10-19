@@ -151,15 +151,131 @@ never roll over.
    `ARENA_SIGNER_PRIVATE_KEY`, `UNISWAP_API_KEY`, and the Graph query key are
    server-only. Only addresses and network config belong in `NEXT_PUBLIC_*`.
 
+## Paid endpoints (x402)
+
+`/api/generate-sneaker` can charge the caller in USDC through x402. The wiring
+lives in `src/lib/x402.ts` and is **off unless `X402_PAY_TO` is set**.
+
+- **Payment is never the only gate.** The rate limit and the daily budget still
+  run inside the handler. Payment raises the cost of abuse; it does not replace
+  the throttle, because a stolen wallet would otherwise buy unlimited
+  generations.
+- **Settlement follows success.** The wrapper settles only when the handler
+  returns a status below 400, so a rejected photo (400), a spent budget (429) or
+  a model failure (502) never charges the caller.
+- **Pass the asset explicitly.** `price` is `{ asset, amount }`, not a `"$0.75"`
+  money string: the scheme's built-in asset table does not cover Amoy and throws
+  `No default asset configured for network eip155:80002`. An unknown network
+  therefore has no asset, and x402 stays disabled rather than guessing an
+  address for a payment.
+- **The route path in the config must equal the served path exactly**, or the
+  handler runs unprotected and the SDK only logs a warning.
+  `X402_ROUTE_PATH` is the single source for both sides.
+- **The middleware does not consume the request body.** `NextAdapter.getBody()`
+  is defined but never called, and it clones the request first — the multipart
+  photo still reaches `request.formData()`.
+- **The settlement asset needs its EIP-712 domain.** The client ships the domain
+  for the SDK's default assets and cannot know it for anything else; without it
+  the payer cannot build a payload at all. `ASSET_DOMAINS` in `src/lib/x402.ts`
+  carries the verified entry for native USDC (`name = "USD Coin"`,
+  `version = "2"` — hashing that domain reproduces the token's own
+  `DOMAIN_SEPARATOR()`). Any other asset needs `X402_ASSET_NAME` /
+  `X402_ASSET_VERSION`, verified the same way.
+
+### Paying with USDC.e does not work
+
+**The bridged USDC.e (`0x2791Bca1…4174`) cannot settle an x402 payment.** It
+reports `name() = "USD Coin (PoS)"` but exposes no `version()`, and none of 30
+plausible name/version combinations hash to its `DOMAIN_SEPARATOR()`. The client
+rejects it first on `spendControls` ("only default assets or entries in
+spendControls.allowedAssets"), and once that is disabled the facilitator answers
+`unexpected_error`.
+
+Use native USDC (`0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359`). To confirm a
+token is usable, don't trust `name()` — hash the candidate domain and compare it
+to the contract's `DOMAIN_SEPARATOR()`:
+
+```js
+keccak256(abi.encode(TYPE_HASH, keccak256(name), keccak256(version), chainId, token))
+```
+
+`scripts/x402-smoke-test.mjs` runs the whole paid flow end to end against a
+running server.
+
+### Verifying a token supports EIP-3009
+
+Both Polygon USDC contracts are upgradeable proxies, so the explorer returns the
+*proxy* ABI and a `name`/`transferWithAuthorization` lookup proves nothing. Probe
+the function through the proxy instead and compare against a selector that
+certainly does not exist (`0xdeadbeef`): if `authorizationState(address,bytes32)`
+returns data while the control reverts, the implementation has it.
+
+**Note: this test shows USDC.e *does* implement EIP-3009.** The blocker is the
+domain, not the standard — an easy wrong conclusion to reach from the ABI alone.
+
+## Cross-chain funding (Trails)
+
+`TrailsFundButton` mounts the `0xtrails` widget on `/collection` and `/staking`.
+Two rules, both load-bearing:
+
+- **It renders nothing unless `NEXT_PUBLIC_TRAILS_API_KEY` is set.** An
+  unconfigured widget must not change the page at all.
+- **The SDK is fetched on click, never on mount.** It is ~2.3 MB across three
+  chunks. Verify with the production build that `/collection` and `/staking`
+  do not reference them in the initial HTML — `next/dynamic` alone is not
+  enough if the component renders the widget eagerly.
+
+The key is intentionally browser-visible: the widget is a client component.
+
+## Gas sponsorship (thirdweb)
+
+The in-app wallet runs with `sponsorGas: true`. **On its own that sponsors every
+transaction from every in-app wallet** — the in-app wallet is created by anyone
+with an email address, so an unconstrained paymaster is an unbounded,
+unauthenticated gas budget.
+
+`/api/verify-sponsorship` is the control. thirdweb calls it before sponsoring and
+reads `{ isAllowed }` from the body.
+
+- **HTTP 200 either way.** A non-200 is read as a verifier outage, not a decision.
+- **Fail closed.** No configured contract addresses means every request is
+  refused. An unconfigured deployment must never sponsor for the whole network.
+- **Read both target shapes.** A single call arrives under `userOp.targets`, a
+  batched one under `userOp.data.targets`. Checking only one silently stops
+  sponsoring either the single-call or the batched path.
+- **A mixed batch is refused whole.** Sponsoring it would pay for the foreign call
+  too.
+- **`Referer: https://api.thirdweb.com` is not authentication.** It is a
+  client-supplied header. The route is safe public because it holds no secret and
+  changes no state.
+- **Do not rate limit it by IP.** thirdweb calls it per user transaction from its
+  own addresses, so an IP limit throttles every user at once. It costs nothing and
+  proxies nothing, so the usual "limit before paid work" rule does not apply.
+- **No sender or calldata in the logs.** This runs per user transaction and the
+  wallet address is personal data.
+
+The full policy, dashboard steps, and verification method are in
+`docs/thirdweb-gas-sponsorship.md`.
+
 ## Known gaps
 
-- **24 `npm audit` findings remain, none critical.** Five are `high`:
-  `adm-zip`, `brace-expansion`, `js-yaml`, `serialize-javascript` (all Hardhat /
-  Mocha tooling) and `undici` (Next's server tree). None reach the browser.
+- **39 `npm audit` findings remain, none critical; 14 are `high`.** Five are the
+  pre-existing tooling findings (`adm-zip`, `brace-expansion`, `js-yaml`,
+  `serialize-javascript`, `undici`) that never reach the browser. The rest
+  arrived with `0xtrails`, which is itself flagged `high` through
+  `@meshconnect/web-link-sdk` → `@meshconnect/node-api` → `axios` (prototype
+  pollution in the fetch adapter that "can alter outbound requests"). The widget
+  is client-side and click-gated, so the code only runs when a visitor opens the
+  funding flow — but this is the dependency to re-check on every bump, and the
+  first candidate to drop if the exchange-connection feature is not needed.
 - **TypeScript 7 cannot be adopted yet.** 7.0 ships no programmatic compiler API
   and `typescript-eslint` hard-crashes on it. Blocked until 7.1. The
   `tsconfig.json` is already 7-ready if you want to verify with
   `npx -y @typescript/native-preview`.
+- **x402's paid path has never been exercised end to end.** The 402 challenge
+  and the free path are both verified against a production build, but no real
+  payer has settled a generation. Test with a funded Amoy wallet before
+  enabling it on mainnet.
 
 ## Next.js advisories
 
@@ -180,5 +296,5 @@ same-day patch and a scheduled bump.
 releases.** v16.3.8 was 2 days old when adopted; a patch with no API change is
 worth the freshness risk.
 
-Current state: `next` 16.3.8, `react` / `react-dom` 19.3.0, 24 audit findings,
+Current state: `next` 16.3.8, `react` / `react-dom` 19.3.0, 39 audit findings,
 0 critical.

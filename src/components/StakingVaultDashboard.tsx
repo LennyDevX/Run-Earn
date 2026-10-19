@@ -12,6 +12,7 @@ import { useNftAppraisal } from "@/hooks/useNftAppraisal";
 import { RARITIES } from "@/lib/sneaker-nft";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import SneakerArtwork from "@/components/SneakerArtwork";
+import TrailsFundButton from "@/components/TrailsFundButton";
 
 type Tab = "deposit" | "claim" | "withdraw" | "model";
 
@@ -49,7 +50,13 @@ function parseDepositAmount(input: string): bigint {
   }
 }
 
-export default function StakingVaultDashboard() {
+type Props = {
+  /// Trails API key, read server-side. The funding widget runs in the browser,
+  /// so Next cannot hand it an unprefixed variable on its own.
+  trailsApiKey?: string;
+};
+
+export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
   const wallet = usePolygonWallet();
   const staking = useStakingVault();
   const walletOverview = useWalletOverview();
@@ -454,6 +461,9 @@ export default function StakingVaultDashboard() {
               >
                 {staking.isLoading ? "Confirming transaction..." : "Deposit & Stake POL"}
               </button>
+
+              {/* Cross-chain funding — renders nothing while Trails is unconfigured. */}
+              <TrailsFundButton apiKey={trailsApiKey} label="No POL yet? Add funds with a card or any token" />
             </div>
 
             {/* Real-Time Earnings Calculator */}

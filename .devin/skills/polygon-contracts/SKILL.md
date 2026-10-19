@@ -105,6 +105,72 @@ Consumers scale rarity by condition — `SneakerGame._effectiveRarity`, `Sneaker
 - `reserveMint(designIndex, to, quantity)` allocates copies to the treasury without payment, counting against the design supply.
 - Unique proof per copy: `keccak256(abi.encodePacked("vesneaker", designIndex, serial))`.
 - Prices are USD targets converted at `POL_USD_PRICE`: $40 (Common) → $150 (Mythic), geometric progression — 410 / 635 / 993 / 1536 POL at POL = $0.09764. Supply default 1000 per design. Tune with `VE_PRICE_*_USD` or pin `VE_PRICE_*_POL`.
+
+### USD-anchored pricing (Chainlink)
+
+A POL price frozen at deploy time drifts as POL moves. `VeSneakerStore` can instead
+hold a **USD target** per design and recompute the POL price from a Chainlink
+POL/USD aggregator. Set `POL_USD_FEED_ADDRESS` and the deploy script wires it and
+stores the `VE_PRICE_*_USD` ladder as targets.
+
+- `setDesignUsdTarget(designIndex, usdCents)` — admin. Stores the target and
+  **does not touch the price**, so it can never revert on a stale feed. Call
+  `syncDesignPrice` (or `syncAllPrices`) to apply it.
+- `syncDesignPrice(designIndex)` — callable by **anyone once
+  `priceSyncInterval` has elapsed** (never-synced counts as due), and by an admin
+  or `PRICE_SYNC_ROLE` holder at any time. The result is a pure function of the
+  oracle, so there is nothing to grief and the price self-heals without a keeper.
+- `syncAllPrices()` — privileged only, because one not-due design would otherwise
+  revert the whole sweep.
+- `livePriceOf(designIndex)` — read-only view for the UI. `polUsdPrice()` exposes
+  the raw `(answer, decimals)`.
+- `_priceFromUsd` = `usdCents * 10^feedDecimals * 1e18 / (100 * feedPrice)`.
+  Feed decimals are read from the aggregator, not assumed to be 8.
+
+**The staleness guard must clear the feed's heartbeat with margin.** If
+`maxFeedStaleness` (default 2 hours) is shorter than the heartbeat, a sync reverts
+merely because the answer is a few minutes past due — which **freezes pricing at
+the last good value**. A stale oracle is worse than none, so it reverts rather
+than pricing at a dead market, but the guard has to be sized from the actual feed
+spec.
+
+**`buy()` is deliberately untouched.** It still requires `msg.value == total`
+against the stored price, so there is no race between the quote a buyer sees and
+the transaction they sign. The price only moves on an explicit sync.
+
+A design with no target keeps its manual POL price, so an unwired store behaves
+exactly as it did before.
+
+**Feed addresses (verified on-chain).**
+
+| Network | Address | Status |
+| --- | --- | --- |
+| Polygon mainnet | `0xAB594600376Ec9fD91F8e885dADF0CE036862dE0` | ✅ `description()` = "MATIC / USD", 8 decimals, live |
+| Polygon Amoy | — | ❌ **no POL/USD feed exists** |
+
+Two traps here:
+
+1. **Mainnet's feed is labelled "MATIC / USD", not "POL / USD".** POL replaced
+   MATIC 1:1 and Chainlink never renamed the aggregator. It is the only USD feed
+   for the native asset in the 125-entry mainnet directory — do not go hunting
+   for a "POL/USD" entry and conclude there is none.
+2. **Polygon's own Chainlink guide prints a dead Amoy address**,
+   `0x001382149eBa3441043c1c66972b4772963f5D43`. It has bytecode, so a
+   `getBytecode` check passes, but every call reverts and `aggregator()` returns
+   the zero address. Chainlink's Amoy directory has 17 feeds and none quotes POL.
+   **Do not wire a feed on Amoy** — leave `POL_USD_FEED_ADDRESS` empty so designs
+   keep their manual POL prices.
+
+The authoritative source is Chainlink's feed directory, not a docs snippet:
+
+```bash
+curl -s https://reference-data-directory.vercel.app/feeds-matic-mainnet.json
+curl -s https://reference-data-directory.vercel.app/feeds-polygon-testnet-amoy.json
+```
+
+Always confirm against the live chain before enabling: read `description()`,
+`decimals()`, `latestRoundData()` and check `updatedAt` is recent.
+
 - The initial Astra/Sol/Luna family designs live in `veSneakerDesigns()` and are registered by `scripts/mint-veSneakers.ts`; set `VE_SNEAKER_ASSET_BASE_URL` to a public HTTPS origin before creating NFT metadata.
 - The frontend `VE_SNEAKER_CATALOG` must match the first three registered design indices. Existing stores retain legacy indices; never reorder them. `VE_UPDATE_DESIGN_URIS=true` explicitly refreshes those first three metadata URIs for future mints.
 

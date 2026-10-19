@@ -78,10 +78,8 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
       const next: DesignRow[] = [];
       rows.forEach((raw, i) => {
         if (!raw) return;
-        const [, , slot, , tier, , , consumable, price, maxSupply, minted, , active] = raw as readonly [
-          string, string, number, number, number, number, number, boolean,
-          bigint, number, number, number, boolean,
-        ];
+        // `designs` is a struct, so viem returns a named object.
+        const { slot, tier, consumable, price, maxSupply, minted, active } = raw;
         if (consumable) return; // consumables live in the dashboard, not the equip gallery
         next.push({
           index: BigInt(i),

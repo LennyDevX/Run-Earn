@@ -22,6 +22,12 @@ export type VeSneakerDesign = {
   requiredPerkPlusOne: bigint;
   perkEligible: boolean | null;
   active: boolean;
+  /// USD target in cents (0 when the design is priced directly in POL).
+  usdTargetCents: bigint;
+  /// What the Chainlink feed says the design should cost right now, or `null`
+  /// when there is no target, no feed, or a stale answer. A stale oracle is a
+  /// normal state, so it reads as "unknown" rather than as a zero price.
+  oraclePrice: bigint | null;
 };
 
 export function useVeSneakerStore() {
@@ -63,7 +69,7 @@ export function useVeSneakerStore() {
       const rows = await Promise.all(
         Array.from({ length: Number(count) }, async (_, index) => {
           const designIndex = BigInt(index);
-          const [raw, requiredPerkPlusOne] = await Promise.all([
+          const [raw, requiredPerkPlusOne, usdTargetCents] = await Promise.all([
             wallet.publicClient.readContract({
               address: storeAddress,
               abi: veSneakerStoreAbi,
@@ -76,18 +82,17 @@ export function useVeSneakerStore() {
               functionName: "requiredPerkPlusOne",
               args: [designIndex],
             }),
+            wallet.publicClient.readContract({
+              address: storeAddress,
+              abi: veSneakerStoreAbi,
+              functionName: "usdTargetCents",
+              args: [designIndex],
+            }),
           ]);
-          const [name, uri, rarity, tier, price, maxSupply, minted, requiredLevel, active] = raw as readonly [
-            string,
-            string,
-            number,
-            number,
-            bigint,
-            number,
-            number,
-            number,
-            boolean,
-          ];
+          // `designs` returns a struct, so viem hands back a named object — the
+          // positional form only ever worked because the ABI wrongly declared
+          // the members as flat outputs.
+          const { name, uri, rarity, tier, price, maxSupply, minted, requiredLevel, active } = raw;
           const perkEligible = requiredPerkPlusOne === 0n
             ? true
             : !wallet.address || !hasVault
@@ -98,6 +103,18 @@ export function useVeSneakerStore() {
                   functionName: "isEligible",
                   args: [wallet.address, requiredPerkPlusOne - 1n],
                 });
+          // `livePriceOf` reverts when the feed is unset or its answer is stale.
+          // That is an expected state, not an error, so it degrades to null.
+          const oraclePrice = usdTargetCents > 0n
+            ? await wallet.publicClient
+                .readContract({
+                  address: storeAddress,
+                  abi: veSneakerStoreAbi,
+                  functionName: "livePriceOf",
+                  args: [designIndex],
+                })
+                .catch(() => null)
+            : null;
           return {
             designIndex,
             name,
@@ -112,6 +129,8 @@ export function useVeSneakerStore() {
             requiredPerkPlusOne,
             perkEligible,
             active,
+            usdTargetCents,
+            oraclePrice,
           };
         }),
       );

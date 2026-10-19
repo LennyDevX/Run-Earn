@@ -56,12 +56,13 @@ export function useBadges() {
       );
       const rows = await Promise.all(
         ids.map(async (id) => {
-          const raw = (await wallet.publicClient.readContract({
+          // `achievements` is a struct, so viem returns a named object.
+          const raw = await wallet.publicClient.readContract({
             address: modsAddress,
             abi: sneakerModsAbi,
             functionName: "achievements",
             args: [id],
-          })) as readonly unknown[];
+          });
           const [meets, claimed] = wallet.address
             ? await Promise.all([
                 wallet.publicClient
@@ -84,14 +85,14 @@ export function useBadges() {
             : [false, false];
           return {
             id,
-            kind: Number(raw[0]),
-            threshold: raw[1] as bigint,
-            slot: Number(raw[2]),
-            tier: Number(raw[4]),
-            effectBps: Number(raw[5]),
-            aux: Number(raw[6]),
-            consumable: Boolean(raw[7]),
-            active: Boolean(raw[9]),
+            kind: Number(raw.kind),
+            threshold: raw.threshold,
+            slot: Number(raw.slot),
+            tier: Number(raw.tier),
+            effectBps: Number(raw.effectBps),
+            aux: Number(raw.aux),
+            consumable: raw.consumable,
+            active: raw.active,
             meets: Boolean(meets),
             claimed: Boolean(claimed),
           } satisfies BadgeAchievement;

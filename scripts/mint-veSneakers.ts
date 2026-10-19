@@ -5,6 +5,7 @@ import {
   assertNetwork,
   assertSignerBalance,
   bigintEnv,
+  numberEnv,
   optionalEnv,
   polUsdPrice,
   veSneakerDesigns,
@@ -181,6 +182,54 @@ async function main() {
       }
       const total = await store.read.designCount();
       console.log(`\nRegistered ${total} designs.`);
+    }
+  }
+
+  // ─── USD targets for the Chainlink feed ────────────────────────
+  // A design keeps a USD target and the store recomputes its POL price from the
+  // POL/USD aggregator. Registration is the only place designs are created, so
+  // the targets are applied here rather than in the deploy script.
+  //
+  // The target comes from the design's *tier*, not its index: the catalogue is
+  // ordered Astra (Mythic), Sol (Rare), Luna (Epic), so mapping by index would
+  // price Astra — index 0 — as a Common.
+  const feedAddress = addressEnv("POL_USD_FEED_ADDRESS", "0x0000000000000000000000000000000000000000" as Address);
+  if (feedAddress !== "0x0000000000000000000000000000000000000000") {
+    const designTotal = Number(await store.read.designCount());
+    const tierUsdEnv = ["VE_PRICE_COMMON_USD", "VE_PRICE_RARE_USD", "VE_PRICE_EPIC_USD", "VE_PRICE_MYTHIC_USD"];
+    let applied = 0;
+
+    for (const [index, design] of designs.entries()) {
+      if (index >= designTotal) break;
+      const usd = numberEnv(tierUsdEnv[design.tier], 0);
+      if (usd <= 0) continue;
+      const cents = BigInt(Math.round(usd * 100));
+      const hash = await store.write.setDesignUsdTarget([BigInt(index), cents], { account: wallet.account });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error(`setDesignUsdTarget failed for design ${index} (${hash}).`);
+      console.log(`USD target — ${design.name}: $${usd}`);
+      applied++;
+    }
+
+    if (applied > 0) {
+      // Best-effort: a stale oracle answer must not fail an otherwise good
+      // registration. The targets are stored either way and a later sync
+      // applies them.
+      try {
+        const hash = await store.write.syncAllPrices({ account: wallet.account });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") throw new Error("syncAllPrices reverted.");
+        console.log(`\nSynced ${applied} prices from the POL/USD feed:`);
+        for (const [index, design] of designs.entries()) {
+          if (index >= designTotal) break;
+          console.log(`  ${design.name}: ${formatPol(await store.read.priceOf([BigInt(index)]))} POL`);
+        }
+      } catch (error) {
+        console.warn(
+          `\nPrice sync skipped: ${error instanceof Error ? error.message : error}\n` +
+            "USD targets are stored. Call syncAllPrices() once the feed answer is fresh.",
+        );
+      }
     }
   }
 

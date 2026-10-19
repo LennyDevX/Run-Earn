@@ -164,3 +164,98 @@ describe("VeSneakerStore (TypeScript integration)", () => {
     );
   });
 });
+
+/// The USD-anchored pricing path, exercised against the aggregator stub declared
+/// in `test/VeSneakerStore.t.sol`. Covers the operational flow the deploy script
+/// runs: store a target, then sync the POL price from the oracle.
+describe("VeSneakerStore POL/USD feed (TypeScript integration)", () => {
+  let viem: any;
+  let admin: any;
+  let alice: any;
+  let treasury: any;
+  let testClient: any;
+
+  const COMMON_PRICE = 410_000_000_000_000_000_000n;
+  const RARE_PRICE = 635_000_000_000_000_000_000n;
+  /// $0.09764 per POL with 8 decimals, the shape Chainlink reports.
+  const POL_USD_8DEC = 9_764_000n;
+
+  before(async () => {
+    const connection = await hre.network.create();
+    viem = connection.viem;
+    [admin, alice, treasury] = await viem.getWalletClients();
+    testClient = await viem.getTestClient();
+  });
+
+  async function deployWithFeed(answer: bigint = POL_USD_8DEC) {
+    const nft = await viem.deployContract("SneakerMint", ["Airen Sneakers", "ASNEAK", admin.account.address]);
+    const store = await viem.deployContract("VeSneakerStore", [
+      admin.account.address,
+      nft.address,
+      treasury.account.address,
+    ]);
+    const publicClient = await viem.getPublicClient();
+    const latest = await publicClient.getBlock({ blockTag: "latest" });
+    const feed = await viem.deployContract("MockAggregator", [8, answer, latest.timestamp]);
+    await store.write.setPolUsdFeed([feed.address], { account: admin.account });
+    await store.write.addDesign(["Ember Trail", URI, 20n, 0n, COMMON_PRICE, 1000n], { account: admin.account });
+    await store.write.addDesign(["Sky Drift", URI, 45n, 1n, RARE_PRICE, 1000n], { account: admin.account });
+    return { nft, store, feed };
+  }
+
+  it("keeps the manual price until a USD target is set", async () => {
+    const { store } = await deployWithFeed();
+    assert.equal(await store.read.priceOf([0n]), COMMON_PRICE);
+    assert.equal(await store.read.usdTargetCents([0n]), 0n);
+  });
+
+  it("prices a design from its USD target and the oracle", async () => {
+    const { store } = await deployWithFeed();
+    await store.write.setDesignUsdTarget([0n, 4_000n], { account: admin.account });
+    // Storing a target must not move the price on its own.
+    assert.equal(await store.read.priceOf([0n]), COMMON_PRICE);
+
+    await store.write.syncDesignPrice([0n], { account: admin.account });
+    const price = await store.read.priceOf([0n]);
+    // $40 at $0.09764/POL is ~409.67 POL.
+    assert.ok(price > 409n * 10n ** 18n && price < 410n * 10n ** 18n, `unexpected price ${price}`);
+  });
+
+  it("exposes the oracle price without writing it", async () => {
+    const { store } = await deployWithFeed(100_000_000n); // $1.00 per POL
+    await store.write.setDesignUsdTarget([0n, 4_000n], { account: admin.account });
+
+    assert.equal(await store.read.livePriceOf([0n]), 40n * 10n ** 18n);
+    assert.equal(await store.read.priceOf([0n]), COMMON_PRICE);
+  });
+
+  it("sweeps every design that has a target", async () => {
+    const { store } = await deployWithFeed(100_000_000n);
+    await store.write.setDesignUsdTarget([0n, 4_000n], { account: admin.account });
+    await store.write.setDesignUsdTarget([1n, 6_200n], { account: admin.account });
+    await store.write.syncAllPrices({ account: admin.account });
+
+    assert.equal(await store.read.priceOf([0n]), 40n * 10n ** 18n);
+    assert.equal(await store.read.priceOf([1n]), 62n * 10n ** 18n);
+  });
+
+  it("rejects a stale oracle answer", async () => {
+    const { store } = await deployWithFeed();
+    await store.write.setDesignUsdTarget([0n, 4_000n], { account: admin.account });
+
+    // The default guard is 2 hours.
+    await testClient.increaseTime({ seconds: 3 * 60 * 60 });
+    await testClient.mine({ blocks: 1 });
+
+    await assert.rejects(store.read.livePriceOf([0n]));
+  });
+
+  it("gates a permissionless sync by the interval", async () => {
+    const { store } = await deployWithFeed();
+    await store.write.setDesignUsdTarget([0n, 4_000n], { account: admin.account });
+    await store.write.syncDesignPrice([0n], { account: admin.account });
+
+    // Inside the 6h window only an admin or a keeper may refresh.
+    await assert.rejects(store.write.syncDesignPrice([0n], { account: alice.account }));
+  });
+});

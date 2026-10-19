@@ -463,6 +463,16 @@ summary {
   scroll-snap-align: start;
 }
 
+/* ──────────────────────── Start CTA — pinned bright ramp ────────────────────
+   `--brand-cyan` and `--family-astra` darken in light mode so they read as
+   accents against a pale background. The progress bars can follow them; this
+   button cannot, because it paints near-black text on top — a dark teal or
+   purple stop makes that text unreadable. The stops below are the dark-mode
+   values, pinned so the CTA keeps its contrast in both themes. */
+.cta-gradient {
+  background-image: linear-gradient(90deg, #4ce5c0 0%, #48d5ff 52%, #c17aff 100%);
+}
+
 /* ─────────────────────────── Signature gradient text ───────────────────────
    The default accent treatment for hero and section titles. Stops are
    theme-aware so the same class reads correctly on light and dark surfaces. */

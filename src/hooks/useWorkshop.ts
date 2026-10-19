@@ -161,25 +161,29 @@ export function useWorkshop() {
     [workshopAddress, transaction],
   );
 
-  const approveMods = useCallback(
-    async (modId: bigint) => {
-      if (!modsAddress || !workshopAddress) throw new Error("The mods contract is not configured.");
-      const data = encodeFunctionData({
-        abi: sneakerModsAbi,
-        functionName: "approve",
-        args: [workshopAddress, modId],
-      });
-      return transaction.execute({ to: modsAddress, data });
-    },
-    [modsAddress, transaction, workshopAddress],
-  );
-
+  /// `approve` + `equip` is a single intent, so it goes out as **one
+  /// transaction** when the wallet can batch (the in-app EIP-7702 smart account)
+  /// and as two prompts when it cannot. Batching also makes it atomic — a
+  /// failing `equip` no longer leaves a stray approval behind.
   const equip = useCallback(
     async (sneakerId: bigint, modId: bigint) => {
-      await approveMods(modId);
-      return send("equip", [sneakerId, modId]);
+      if (!modsAddress || !workshopAddress) throw new Error("The mods contract is not configured.");
+      return transaction.executeBatch([
+        {
+          to: modsAddress,
+          data: encodeFunctionData({ abi: sneakerModsAbi, functionName: "approve", args: [workshopAddress, modId] }),
+        },
+        {
+          to: workshopAddress,
+          data: encodeFunctionData({
+            abi: sneakerWorkshopAbi,
+            functionName: "equip",
+            args: [sneakerId, modId],
+          } as never),
+        },
+      ]);
     },
-    [approveMods, send],
+    [modsAddress, transaction, workshopAddress],
   );
   const unequip = useCallback(
     (sneakerId: bigint, slot: number) => send("unequip", [sneakerId, slot]),

@@ -350,3 +350,109 @@ list would look identical to "this wallet owns nothing".
 `react-dom` 19.3.0, `viem` 2.55+, `@upstash/redis` for rate limiting. TypeScript
 stays on 5.x until 7.1 ships a programmatic compiler API — see
 `docs/security-and-performance.md` for why.
+
+
+## Struct returns: declare the tuple, not the members
+
+**A Solidity function that returns a struct has ONE output of type `tuple` with
+`components` — never a list of flat outputs.** Writing the members flat produces
+an ABI that looks right, typechecks, and decodes garbage.
+
+It only breaks when a member is **dynamic** (`string`, `bytes`, or an array).
+Then the struct's head carries offsets, viem reads those offsets as if they were
+the leading scalar fields, and every value lands one slot late. The symptom is
+either a nonsense decode or:
+
+```
+Number "1401039926555618996719n" is not in safe integer range
+```
+
+which is the price overflowing a `uint16` that is actually holding an offset.
+
+A struct of **static members only** (`uintN`, `address`, `bool`, `bytes32`)
+encodes identically flat, so those are fine — and that is why the trap survives
+review: most structs in this codebase are static, so the flat form appears to
+work.
+
+**viem returns a named object for a single tuple output, not an array:**
+
+```ts
+const { name, uri, rarity, tier, price } = await publicClient.readContract({
+  address: storeAddress, abi: veSneakerStoreAbi, functionName: "designs", args: [0n],
+});
+```
+
+Three getters in `src/lib/contracts.ts` were wrong this way and are now fixed:
+`VeSneakerStore.designs`, `ModStore.designs`, `SneakerMods.achievements`. All
+three have a `string` member. Their consumers had to switch from positional
+destructuring to named.
+
+**How to check a new ABI.** Fetch what the compiler actually emitted — the
+contract is verified, so the explorer has it:
+
+```bash
+curl "https://api.etherscan.io/v2/api?chainid=137&module=contract&action=getabi\
+&address=<contract>&apikey=$POLYGONSCAN_API_KEY"
+```
+
+Then look for `outputs[0].type === "tuple"`. Do not trust a flat declaration just
+because the fields match in order and count.
+
+## Cross-chain funding (Trails)
+
+`TrailsFundButton` (`src/components/TrailsFundButton.tsx`) is the escape hatch
+for a visitor who has no POL: it opens the `0xtrails` widget so they can fund
+their wallet from a card, Apple Pay, an exchange balance, or any token on any
+chain, landing as POL on Polygon. It is mounted on `/collection` (above the
+benefits grid) and `/staking` (under the deposit button).
+
+Two rules it must keep:
+
+- **It renders `null` while no Trails key is configured.** The widget is an
+  addition, not a dependency — an unconfigured build must behave exactly as one
+  without it.
+- **The SDK loads on click.** `0xtrails` is ~2.3 MB across three chunks
+  (Sequence, Mesh, Radix, a shadow-root UI). The initial HTML for `/collection`
+  and `/staking` must not reference those chunks. `next/dynamic` alone does not
+  guarantee this — the component has to gate the render behind state, and you
+  should confirm with the production build:
+
+  ```bash
+  npx next start -p 3123 &
+  curl -s http://localhost:3123/collection | grep -o 'src="[^"]*\.js"'
+  ```
+
+**The key is read on the server.** The widget authenticates from the browser, and
+Next does not expose an unprefixed variable to client code, so `src/lib/trails.ts`
+reads `TRAILS_API_KEY` (falling back to `NEXT_PUBLIC_TRAILS_API_KEY`) and the
+three pages — `/collection`, `/staking`, `/defi` — pass it down as a prop.
+`StakingVaultDashboard` and `VeSneakerStorefront` therefore take an optional
+`trailsApiKey`. Treat the value as publishable: it is serialized into the page's
+payload for anyone who visits. If the Trails dashboard supports domain
+allowlisting, enable it.
+
+Destination is configurable — `NEXT_PUBLIC_TRAILS_DEST_CHAIN_ID` (default 137)
+and `NEXT_PUBLIC_TRAILS_DEST_TOKEN` (default `POL`) — so staging can point at
+Amoy without a code change.
+
+The widget funds the visitor's **own wallet**; it does not pay the store
+directly. `VeSneakerStore.buy` requires `msg.value == total` in native POL and
+its `receive()` reverts, so a plain transfer to the contract cannot work and the
+`to.calldata` path would have to attach native value — which is why the funding
+step is deliberately separate from the purchase step.
+
+
+## USD-anchored store prices
+
+`useVeSneakerStore` exposes `usdTargetCents` (0 when the design is priced
+directly in POL) and `oraclePrice` — what the Chainlink feed says the design
+should cost right now, or `null`.
+
+`livePriceOf` **reverts** when the feed is unset or its answer is stale, so the
+hook catches it and degrades to `null`. Never render a stale oracle as a zero
+price; "unknown" and "free" must not look the same.
+
+`/collection` surfaces the difference above 1% (`oracleDrift` in
+`VeSneakerStorefront.tsx`) as `ORACLE <n> POL · SYNC DUE`. The contract
+deliberately keeps `buy` on the stored price, so the buyer pays the listed figure
+until an explicit sync lands — the hint is information, not a live quote.

@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import VeSneakerStorefront from "@/components/VeSneakerStorefront";
 import ModStorefront from "@/components/ModStorefront";
+import { trailsApiKey } from "@/lib/trails";
 
 export const metadata: Metadata = {
   title: "Astra · Sol · Luna — Airen veSneakers",
@@ -37,7 +38,7 @@ export default function CollectionPage() {
           </p>
         </section>
 
-        <VeSneakerStorefront />
+        <VeSneakerStorefront trailsApiKey={trailsApiKey()} />
 
         <div className="mt-12 sm:mt-16">
           <ModStorefront />

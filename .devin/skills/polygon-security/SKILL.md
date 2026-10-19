@@ -136,6 +136,28 @@ Use this skill before merging or deploying any EVM contract, NFT mint flow, nati
 - Confirm `receive()` reverts so POL cannot be stranded, and that `withdrawProceeds` is a last-resort admin hatch.
 - Verify the frontend catalog order matches the on-chain design index; a mismatch would mis-price designs.
 
+### Chainlink POL/USD pricing (VeSneakerStore)
+
+- **Never let the price move inside `buy`.** `buy` must keep reading the stored
+  price, so the quote a buyer sees and the transaction they sign cannot diverge.
+  A feed read inside `buy` would open a slippage race for no benefit.
+- **`polUsdPrice` must reject non-positive answers and stale ones.** `answer <= 0`
+  is a real Chainlink failure mode, and `updatedAt == 0` must not be read as
+  "fresh". Division by a zero answer would revert anyway; reject it explicitly so
+  the reason is legible.
+- **Read `decimals()` from the aggregator.** Assuming 8 is a silent 10^10
+  mispricing if a feed ever reports differently.
+- **The staleness guard must exceed the feed's heartbeat.** A guard shorter than
+  the heartbeat makes every sync revert, freezing prices at the last value.
+  Default is 2 hours; set it from the feed spec, not by taste.
+- **`setDesignUsdTarget` must not sync.** It stores the target only, so an admin
+  can stage a repricing while the feed is stale instead of being blocked by it.
+- **`syncAllPrices` must be privileged**, because a single not-due design would
+  revert the whole sweep. `syncDesignPrice` may stay permissionless once the
+  interval has elapsed — the computation is deterministic from the oracle.
+- **A design with no target keeps its manual price**, so an unwired store is
+  unchanged. Verify that path explicitly.
+
 ### Subgraph and API security
 
 - The Graph deploy key and query API key are different credentials.
@@ -224,8 +246,12 @@ budget — see the `airen-security-hardening` skill and
 
 Quick reference:
 
-- `X-Frame-Options: DENY` and friends are enforced from `next.config.ts`; the CSP
-  is `Report-Only` until the reports are clean.
+- `X-Frame-Options: DENY` and friends are enforced from `next.config.ts`, and the
+  CSP is **enforced too** — no longer `Report-Only`. An origin missing from
+  `buildCsp()` fails in the browser, usually as a wallet that will not connect.
+- `/api/generate-sneaker` can optionally charge in USDC via x402
+  (`src/lib/x402.ts`, off unless `X402_PAY_TO` is set). Payment supplements the
+  throttle, never replaces it.
 - Every `/api/*` route that costs money or proxies a paid service is rate limited
   before doing any work.
 - `/api/generate-sneaker` also has a global daily budget, because per-IP limits

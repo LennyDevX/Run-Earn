@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import StakingVaultDashboard from "@/components/StakingVaultDashboard";
+import { trailsApiKey } from "@/lib/trails";
 
 export const metadata: Metadata = {
   title: "Staking Dashboard — Airen",
@@ -41,7 +42,7 @@ export default function StakingPage() {
         </section>
 
         {/* Staking Dashboard Terminal */}
-        <StakingVaultDashboard />
+        <StakingVaultDashboard trailsApiKey={trailsApiKey()} />
       </main>
 
       <Footer />

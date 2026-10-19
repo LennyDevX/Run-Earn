@@ -67,6 +67,11 @@ const MENU_GROUPS = [
     label: "Project",
     links: [
       {
+        href: "/treasury",
+        label: "Treasury",
+        description: "Where revenue comes from, and what is still owed to it.",
+      },
+      {
         href: "/roadmap",
         label: "Roadmap",
         description: "What shipped and what is coming next.",
@@ -270,7 +275,7 @@ export default function Navbar() {
             <LaunchLink
               href="/play"
               aria-current={pathname === "/play" ? "page" : undefined}
-              className="group relative hidden min-h-11 items-center gap-2 overflow-hidden rounded-full bg-linear-to-r from-mint via-brand to-astra px-5 text-sm font-bold text-ink shadow-lg shadow-brand/25 transition-transform duration-300 hover:scale-105 active:scale-95 md:inline-flex"
+              className="cta-gradient group relative hidden min-h-11 items-center gap-2 overflow-hidden rounded-full px-5 text-sm font-bold text-ink shadow-lg shadow-brand/25 transition-transform duration-300 hover:scale-105 active:scale-95 md:inline-flex"
             >
               <span
                 aria-hidden

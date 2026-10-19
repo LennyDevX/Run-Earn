@@ -24,14 +24,25 @@ import { polygon, polygonAmoy } from "viem/chains";
 import { connectMetaMaskMobile, connectOkxMobile, disconnectMobileWallet, type BrowserEvmProvider } from "@/lib/wallet-connect";
 import { describeWalletError } from "@/lib/wallet-errors";
 import { SneakerOwnershipProvider } from "@/components/SneakerOwnershipProvider";
+import {
+  completeEmailAuth,
+  connectSocial,
+  disconnectInAppWallet,
+  inAppWalletAvailable,
+  sendBatchCalls,
+  startEmailAuth,
+  supportsBatching,
+  type InAppBatchCall,
+  type SocialStrategy,
+} from "@/lib/in-app-wallet";
 
 export type PolygonNetwork = "polygon" | "amoy";
-export type WalletId = "metamask" | "okx" | `injected:${string}`;
+export type WalletId = "metamask" | "okx" | "in-app" | `injected:${string}`;
 export type WalletOption = {
   id: WalletId;
   label: string;
   installed: boolean;
-  kind: "injected" | "mobile-sdk";
+  kind: "injected" | "mobile-sdk" | "embedded";
 };
 
 type EthereumProvider = BrowserEvmProvider & {
@@ -110,6 +121,18 @@ type PolygonWalletContext = {
   switchToPolygon: () => Promise<void>;
   sendNative: (to: Address, value: bigint) => Promise<Hash>;
   sendContractCall: (to: Address, data: Hex, value?: bigint) => Promise<Hash>;
+  /// In-app wallet (thirdweb): email/social onboarding with no browser
+  /// extension. False when `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` is unset, in which
+  /// case the option never appears and the SDK is never downloaded.
+  inAppAvailable: boolean;
+  startInAppEmail: (email: string) => Promise<void>;
+  completeInAppEmail: (email: string, code: string) => Promise<void>;
+  connectInAppSocial: (strategy: SocialStrategy) => Promise<void>;
+  /// True when the connected account can submit several calls in one
+  /// transaction. Only the in-app EIP-7702 smart account can; every other wallet
+  /// falls back to one prompt per call.
+  supportsBatching: boolean;
+  sendBatch: (calls: InAppBatchCall[]) => Promise<Hash>;
 };
 
 const WalletContext = createContext<PolygonWalletContext | null>(null);
@@ -177,6 +200,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       { id: "okx", label: "OKX Wallet", installed: okxInstalled, kind: okxInstalled ? "injected" : "mobile-sdk" },
       { id: "metamask", label: "MetaMask", installed: metamaskInstalled, kind: metamaskInstalled ? "injected" : "mobile-sdk" },
     ];
+    // Listed first-class rather than appended: for someone with no extension
+    // installed it is the only option that works, so it should not read as an
+    // afterthought at the bottom of the list.
+    if (inAppWalletAvailable()) {
+      options.unshift({ id: "in-app", label: "Email or social", installed: true, kind: "embedded" });
+    }
     for (const detail of discovered) {
       if (isProviderFor(detail, "okx") || isProviderFor(detail, "metamask")) continue;
       options.push({ id: `injected:${detail.info.uuid}`, label: detail.info.name, installed: true, kind: "injected" });
@@ -267,6 +296,52 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
   }, [attachProvider, discovered, isMobile, providerFor, syncWallet]);
 
+  /// Attaches an in-app provider and runs the same sync path as every other
+  /// wallet. From here down nothing distinguishes them — the hooks read the same
+  /// `address`, and `sendContractCall` reaches `eth_sendTransaction` on the
+  /// adapter.
+  const adoptInAppProvider = useCallback(async (provider: EthereumProvider) => {
+    attachProvider(provider);
+    setWalletType("in-app");
+    await syncWallet(provider);
+  }, [attachProvider, syncWallet]);
+
+  const startInAppEmail = useCallback(async (email: string) => {
+    setError(null);
+    try {
+      await startEmailAuth(email);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not send the verification code.");
+      throw cause;
+    }
+  }, []);
+
+  const completeInAppEmail = useCallback(async (email: string, code: string) => {
+    setIsConnecting(true);
+    setError(null);
+    try {
+      await adoptInAppProvider((await completeEmailAuth(email, code, CHAIN.id)) as unknown as EthereumProvider);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not complete sign-in.");
+      throw cause;
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [adoptInAppProvider]);
+
+  const connectInAppSocial = useCallback(async (strategy: SocialStrategy) => {
+    setIsConnecting(true);
+    setError(null);
+    try {
+      await adoptInAppProvider((await connectSocial(strategy, CHAIN.id)) as unknown as EthereumProvider);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not complete sign-in.");
+      throw cause;
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [adoptInAppProvider]);
+
   const switchToPolygon = useCallback(async () => {
     const provider = activeProvider.current;
     if (!provider) throw new Error("Connect your wallet before switching networks.");
@@ -282,13 +357,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   const disconnect = useCallback(() => {
     const currentType = walletType === "okx" || walletType === "metamask" ? walletType : null;
+    const wasInApp = walletType === "in-app";
     activeCleanup.current?.();
     activeCleanup.current = null;
     activeProvider.current = null;
     setAddress(null);
     setChainId(null);
     setWalletType(null);
-    void disconnectMobileWallet(currentType).catch(() => undefined);
+    // The in-app wallet keeps its own session in the SDK. Clearing local state
+    // alone would silently reconnect the same address on the next load.
+    if (wasInApp) void disconnectInAppWallet().catch(() => undefined);
+    else void disconnectMobileWallet(currentType).catch(() => undefined);
   }, [walletType]);
 
   const getActiveProvider = useCallback(async () => {
@@ -311,6 +390,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     return (await provider.request({ method: "eth_sendTransaction", params: [{ from: address, to, data, ...(value !== undefined ? { value: `0x${value.toString(16)}` } : {}) }] })) as Hash;
   }, [address, getActiveProvider]);
 
+  /// Several calls in one transaction. Re-verifies the chain first, exactly like
+  /// the single-call path — batching must not become a way to sign on the wrong
+  /// network.
+  const sendBatch = useCallback(async (calls: InAppBatchCall[]) => {
+    if (!address) throw new Error("Connect your wallet before signing.");
+    const currentChain = parseChainId(await activeProvider.current?.request({ method: "eth_chainId", params: [] }));
+    if (currentChain !== CHAIN.id) throw new Error(`Wrong network. Switch to ${NETWORK_LABEL} before signing.`);
+    return (await sendBatchCalls(calls, CHAIN.id)) as Hash;
+  }, [address]);
+
   const contextValue = useMemo<PolygonWalletContext>(() => ({
     address,
     chainId,
@@ -326,7 +415,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     switchToPolygon,
     sendNative,
     sendContractCall,
-  }), [address, chainId, connect, disconnect, error, isConnecting, isMobile, sendContractCall, sendNative, switchToPolygon, walletOptions, walletType]);
+    inAppAvailable: inAppWalletAvailable(),
+    startInAppEmail,
+    completeInAppEmail,
+    connectInAppSocial,
+    // Recomputed on every render: the capability belongs to the connected
+    // account, so it changes the moment a wallet connects or disconnects.
+    supportsBatching: supportsBatching(),
+    sendBatch,
+  }), [address, chainId, connect, completeInAppEmail, connectInAppSocial, disconnect, error, isConnecting, isMobile, sendBatch, sendContractCall, sendNative, startInAppEmail, switchToPolygon, walletOptions, walletType]);
 
   // Nested inside the wallet context so the ownership provider can read the
   // connected address, and above every route so there is exactly one

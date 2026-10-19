@@ -80,8 +80,8 @@ export default function ModStorefront() {
             }),
           ]);
           if (!raw) return null;
-          const [name, , slot, , tier, effectBps, , consumable, price, maxSupply, minted, requiredLevel, active] =
-            raw as readonly [string, string, number, number, number, number, number, boolean, bigint, number, number, number, boolean];
+          // `designs` is a struct, so viem returns a named object.
+          const { name, slot, tier, effectBps, consumable, price, maxSupply, minted, requiredLevel, active } = raw;
           const perkEligible = requiredPerkPlusOne === 0n
             ? true
             : !wallet.address

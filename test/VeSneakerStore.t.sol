@@ -28,6 +28,30 @@ contract MockVault {
     }
 }
 
+/// @dev Chainlink aggregator stub. The answer and the timestamp are settable so
+///      the staleness guard and the feed-decimals scaling can both be exercised
+///      without a live oracle.
+contract MockAggregator {
+    uint8 public decimals;
+    int256 public answer;
+    uint256 public updatedAt;
+
+    constructor(uint8 decimals_, int256 answer_, uint256 updatedAt_) {
+        decimals = decimals_;
+        answer = answer_;
+        updatedAt = updatedAt_;
+    }
+
+    function setAnswer(int256 answer_, uint256 updatedAt_) external {
+        answer = answer_;
+        updatedAt = updatedAt_;
+    }
+
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        return (1, answer, updatedAt, updatedAt, 1);
+    }
+}
+
 contract VeSneakerStoreTest is Test {
     SneakerMint nft;
     VeSneakerStore store;
@@ -396,5 +420,289 @@ contract VeSneakerStoreTest is Test {
         store.buyBatch{value: COMMON_PRICE * quantity}(0, quantity);
         assertEq(nft.balanceOf(alice), quantity);
         assertEq(store.designs(0).minted, quantity);
+    }
+
+    // ─────────── USD-target pricing (Chainlink) ───────────
+
+    /// $0.09764 per POL, as Chainlink reports it with 8 decimals.
+    uint256 constant POL_USD_8DEC = 9_764_000;
+
+    function _wireFeed(uint8 decimals_, int256 answer_) internal returns (MockAggregator feed) {
+        feed = new MockAggregator(decimals_, answer_, block.timestamp);
+        vm.prank(admin);
+        store.setPolUsdFeed(address(feed));
+    }
+
+    function test_SetPolUsdFeed_AdminOnly() public {
+        MockAggregator feed = new MockAggregator(8, int256(POL_USD_8DEC), block.timestamp);
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setPolUsdFeed(address(feed));
+
+        vm.prank(admin);
+        store.setPolUsdFeed(address(feed));
+        assertEq(store.polUsdFeed(), address(feed));
+    }
+
+    function test_PolUsdPrice_RevertFeedNotSet() public {
+        vm.expectRevert("VeSneakerStore: feed not set");
+        store.polUsdPrice();
+    }
+
+    function test_PolUsdPrice_ReturnsAnswerAndFeedDecimals() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        (uint256 answer, uint8 decimals) = store.polUsdPrice();
+        assertEq(answer, POL_USD_8DEC);
+        assertEq(decimals, 8);
+    }
+
+    function test_PolUsdPrice_RevertStaleFeed() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        // Default guard is 2 hours.
+        skip(3 hours);
+        vm.expectRevert("VeSneakerStore: stale feed");
+        store.polUsdPrice();
+    }
+
+    function test_PolUsdPrice_RevertNonPositiveAnswer() public {
+        MockAggregator feed = _wireFeed(8, 0);
+        vm.expectRevert("VeSneakerStore: invalid feed answer");
+        store.polUsdPrice();
+
+        feed.setAnswer(-1, block.timestamp);
+        vm.expectRevert("VeSneakerStore: invalid feed answer");
+        store.polUsdPrice();
+    }
+
+    function test_SetDesignUsdTarget_StoresWithoutTouchingPrice() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000); // $40
+
+        assertEq(store.usdTargetCents(0), 4_000);
+        // The manual POL price stands until an explicit sync, so setting a
+        // target can never revert on a stale feed.
+        assertEq(store.priceOf(0), COMMON_PRICE);
+    }
+
+    function test_SetDesignUsdTarget_AdminOnly() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setDesignUsdTarget(0, 4_000);
+    }
+
+    function test_SetDesignUsdTarget_RevertUnknownDesign() public {
+        vm.prank(admin);
+        vm.expectRevert("VeSneakerStore: unknown design");
+        store.setDesignUsdTarget(99, 4_000);
+    }
+
+    function test_SyncDesignPrice_ConvertsTargetAtFeedRate() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000); // $40
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        // $40 at $0.09764/POL is ~409.67 POL, matching the deploy-time ladder.
+        assertApproxEqRel(store.priceOf(0), 409.668 ether, 0.01 ether);
+    }
+
+    function test_SyncDesignPrice_ExactAtParityRate() public {
+        // At exactly $1.00 per POL a $40 target is exactly 40 POL.
+        _wireFeed(8, 100_000_000);
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        assertEq(store.priceOf(0), 40 ether);
+    }
+
+    function test_SyncDesignPrice_RevertNoTarget() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.expectRevert("VeSneakerStore: no USD target");
+        store.syncDesignPrice(0);
+    }
+
+    function test_SyncDesignPrice_RevertFeedNotSet() public {
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+
+        vm.prank(admin);
+        vm.expectRevert("VeSneakerStore: feed not set");
+        store.syncDesignPrice(0);
+    }
+
+    function test_SyncDesignPrice_PermissionlessWhenNeverSynced() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+
+        // Never synced counts as due, so a stranger can seed the price.
+        vm.prank(bob);
+        store.syncDesignPrice(0);
+        assertGt(store.priceOf(0), 0);
+    }
+
+    function test_SyncDesignPrice_RevertNotDueForStranger() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        // Inside the 6h window only a privileged caller may refresh.
+        vm.prank(bob);
+        vm.expectRevert("VeSneakerStore: price sync not due");
+        store.syncDesignPrice(0);
+    }
+
+    function test_SyncDesignPrice_KeeperRoleCanForce() public {
+        _wireFeed(8, int256(POL_USD_8DEC));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        store.grantRole(store.PRICE_SYNC_ROLE(), bob);
+        vm.stopPrank();
+
+        vm.prank(bob);
+        store.syncDesignPrice(0);
+        assertGt(store.priceOf(0), 0);
+    }
+
+    function test_SyncDesignPrice_PermissionlessAfterInterval() public {
+        MockAggregator feed = _wireFeed(8, int256(POL_USD_8DEC));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        skip(7 hours);
+        // Refresh the oracle too. This test is about the sync window, and a
+        // 7-hour-old answer would trip the staleness guard first — which is
+        // exactly the interaction the default guard has to be sized against.
+        feed.setAnswer(int256(POL_USD_8DEC), block.timestamp);
+
+        vm.prank(bob);
+        store.syncDesignPrice(0);
+        assertGt(store.priceOf(0), 0);
+    }
+
+    function test_SyncDesignPrice_TracksFeedMovement() public {
+        MockAggregator feed = _wireFeed(8, int256(POL_USD_8DEC));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        uint256 cheapPol = store.priceOf(0);
+
+        // POL doubles, so the same USD target now costs half as much POL.
+        feed.setAnswer(19_528_000, block.timestamp);
+        store.syncDesignPrice(0);
+        uint256 richPol = store.priceOf(0);
+        vm.stopPrank();
+
+        assertApproxEqRel(richPol, cheapPol / 2, 0.01 ether);
+    }
+
+    function test_SyncAllPrices_UpdatesOnlyTargetedDesigns() public {
+        _wireFeed(8, 100_000_000); // $1.00 per POL
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.setDesignUsdTarget(2, 9_700);
+        uint256 synced = store.syncAllPrices();
+        vm.stopPrank();
+
+        assertEq(synced, 2);
+        assertEq(store.priceOf(0), 40 ether);
+        assertEq(store.priceOf(2), 97 ether);
+        // Design 1 has no target and keeps its manual price.
+        assertEq(store.priceOf(1), RARE_PRICE);
+    }
+
+    function test_SyncAllPrices_RevertNonPrivileged() public {
+        _wireFeed(8, 100_000_000);
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+
+        vm.prank(bob);
+        vm.expectRevert("VeSneakerStore: not price syncer");
+        store.syncAllPrices();
+    }
+
+    function test_LivePriceOf_ReadsWithoutWriting() public {
+        _wireFeed(8, 100_000_000);
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+
+        assertEq(store.livePriceOf(0), 40 ether);
+        assertEq(store.priceOf(0), COMMON_PRICE);
+    }
+
+    function test_LivePriceOf_RevertNoTarget() public {
+        _wireFeed(8, 100_000_000);
+        vm.expectRevert("VeSneakerStore: no USD target");
+        store.livePriceOf(0);
+    }
+
+    function test_Buy_UsesSyncedPrice() public {
+        _wireFeed(8, 100_000_000); // $1.00 per POL
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        uint256 treasuryBefore = treasury.balance;
+        vm.deal(alice, 1_000 ether);
+        vm.prank(alice);
+        store.buy{value: 40 ether}(0);
+
+        assertEq(treasury.balance, treasuryBefore + 40 ether);
+    }
+
+    function test_SetPriceFeedParams_UpdatesGuards() public {
+        vm.prank(admin);
+        store.setPriceFeedParams(30 minutes, 1 hours);
+        assertEq(store.maxFeedStaleness(), 30 minutes);
+        assertEq(store.priceSyncInterval(), 1 hours);
+    }
+
+    function test_SetPriceFeedParams_RevertZeroStaleness() public {
+        vm.prank(admin);
+        vm.expectRevert("VeSneakerStore: zero staleness");
+        store.setPriceFeedParams(0, 1 hours);
+    }
+
+    function test_SetPriceFeedParams_AdminOnly() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        store.setPriceFeedParams(1 hours, 1 hours);
+    }
+
+    function test_FeedDisabled_DesignKeepsManualPrice() public {
+        // No feed wired: the store behaves exactly as it did before.
+        vm.prank(admin);
+        store.setDesignUsdTarget(0, 4_000);
+
+        vm.deal(alice, 10_000 ether);
+        vm.prank(alice);
+        store.buy{value: COMMON_PRICE}(0);
+        assertEq(store.priceOf(0), COMMON_PRICE);
+    }
+
+    function testFuzz_SyncDesignPrice_MatchesFormula(uint256 usdCents, uint256 feedPrice) public {
+        usdCents = bound(usdCents, 1, 1_000_000); // up to $10,000
+        feedPrice = bound(feedPrice, 1e4, 1e12); // $0.0001 .. $10,000 per POL
+
+        _wireFeed(8, int256(feedPrice));
+        vm.startPrank(admin);
+        store.setDesignUsdTarget(0, usdCents);
+        store.syncDesignPrice(0);
+        vm.stopPrank();
+
+        // price = usdCents * 10^decimals * 1e18 / (100 * feedPrice)
+        uint256 expected = (usdCents * 1e8 * 1e18) / (100 * feedPrice);
+        assertEq(store.priceOf(0), expected);
+        assertGt(store.priceOf(0), 0);
     }
 }
