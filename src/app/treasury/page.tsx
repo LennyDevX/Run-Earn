@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function TreasuryPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Navbar />
       <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
         <header className="mb-10 flex flex-col gap-3">

@@ -166,7 +166,7 @@ nozzle releasing a ribbon of pigment that curls into a small sneaker silhouette.
 - **Epic:** five iridescent swatches, violet pigment forming a full sneaker outline.
 - **Mythic:** a full holographic palette wheel, gold nozzle, pigment ribbon spiraling with sparkles.
 
-### 2.5 Core — `autoActive`
+### 2.5 Core — `autoActive` here
 
 > Keeps the sneaker earning without manual activation. Slot 4.
 

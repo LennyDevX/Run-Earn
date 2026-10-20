@@ -3,6 +3,7 @@ import { Chakra_Petch } from "next/font/google";
 import Providers from "@/components/Providers";
 import { GameLaunchProvider } from "@/components/GameLaunch";
 import MobileNav from "@/components/MobileNav";
+import InstallPrompt from "@/components/InstallPrompt";
 import "./globals.css";
 
 const chakraPetch = Chakra_Petch({
@@ -15,11 +16,18 @@ const chakraPetch = Chakra_Petch({
 /// `viewportFit: "cover"` is what makes `env(safe-area-inset-*)` resolve, so the
 /// bottom nav can sit above the iOS home indicator. Zoom is intentionally left
 /// enabled (maximumScale 5) for accessibility.
+///
+/// `interactiveWidget: "resizes-content"` makes the layout shrink when the
+/// on-screen keyboard opens, so a focused field stays visible instead of being
+/// covered. The default (`resizes-visual`) only shrinks the visual viewport, which
+/// leaves `position: fixed` elements — the bottom nav, the sheets — sitting behind
+/// the keyboard while the input they belong to is hidden.
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f2f7fa" },
     { media: "(prefers-color-scheme: dark)", color: "#060d17" },
@@ -60,6 +68,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
             {/* Single instance for the whole app so it never remounts on navigation. */}
             <MobileNav />
+            {/* Mounted here because Chrome fires `beforeinstallprompt` early —
+                a listener inside a route can miss it. */}
+            <InstallPrompt />
           </GameLaunchProvider>
         </Providers>
       </body>

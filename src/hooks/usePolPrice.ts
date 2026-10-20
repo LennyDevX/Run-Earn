@@ -30,7 +30,15 @@ export function usePolPrice() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/pol-price${force ? "?refresh=1" : ""}`, { cache: "no-store" });
+      // The route already sends `max-age=60, stale-while-revalidate=300`. Asking
+      // for `no-store` here threw that away, so every page view paid a full
+      // round trip for a number the browser was allowed to reuse. The normal
+      // path now lets the browser cache answer; only an explicit refresh
+      // (`?refresh=1`) bypasses it.
+      const response = await fetch(
+        `/api/pol-price${force ? "?refresh=1" : ""}`,
+        force ? { cache: "no-store" } : undefined,
+      );
       const data = (await response.json()) as PolPrice & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Could not load the POL price.");
       if (typeof data.usd !== "number" || !Number.isFinite(data.usd) || data.usd <= 0) {

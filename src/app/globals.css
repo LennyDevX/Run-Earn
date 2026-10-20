@@ -782,3 +782,127 @@ summary {
   box-shadow: 0 0 8px rgb(72 213 255 / 55%);
   animation: pixel-chase 1.2s linear infinite;
 }
+
+/* ─────────────────────── Mobile v2.0 platform features ──────────────────────
+   Each block degrades to the previous behaviour when the browser does not
+   support it, so nothing here is a dependency. */
+
+/* ── View transitions ──────────────────────────────────────────────────────
+   App Router navigations already run inside a React transition, so a plain
+   cross-fade needs no JS: the browser animates between the old and new route.
+   Short on purpose — a navigation that lingers feels slower than one that does
+   not animate at all. */
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: 160ms ease-out both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 200ms ease-in both vt-fade-in;
+}
+
+/* ── Text wrapping ─────────────────────────────────────────────────────────
+   `pretty` avoids a single orphaned word on the last line; `balance` evens out
+   headings. Both matter most at 320px, which is where the layout is tightest. */
+p,
+li {
+  text-wrap: pretty;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* ── Reduced transparency ──────────────────────────────────────────────────
+   The bottom nav and the sheets are translucent by design. A visitor who asks
+   the OS for less transparency is telling us the blur is a problem, so drop it
+   rather than merely reducing it. */
+@media (prefers-reduced-transparency: reduce) {
+  *,
+  *::before,
+  *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* ── Off-screen rendering ──────────────────────────────────────────────────
+   `contain-intrinsic-size` reserves a plausible height so the scrollbar does
+   not jump as items are realised. Apply to repeated cards, not to page
+   containers — skipping layout for the whole page would break anchors. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+/* ── Scroll-driven reveal ──────────────────────────────────────────────────
+   The `.reveal` block above is driven by an IntersectionObserver toggling
+   `data-visible`. Where the browser supports scroll-driven animations the same
+   effect runs off the compositor with no JS at all. The base rule is kept for
+   everything else, so this is an enhancement rather than a replacement. */
+@supports (animation-timeline: view()) {
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+    animation: reveal-in linear both;
+    animation-timeline: view();
+    animation-range: entry 8% cover 26%;
+  }
+}
+
+/* ── High contrast ─────────────────────────────────────────────────────────
+   The visual hierarchy leans on opacity: `text-foreground/45` for hints, /55 and
+   /60 for supporting copy, and hairline `border-foreground/8` separators. A
+   visitor who asks the OS for more contrast is telling us that hierarchy has
+   become unreadable — so lift the muted text to full foreground and strengthen
+   the separators rather than merely nudging them.
+
+   Attribute selectors are used because the opacity is baked into utility class
+   names, not into a token. `!important` is deliberate: an accessibility override
+   must win against every component-level class, and this is the one place in the
+   stylesheet where that is the correct trade. */
+@media (prefers-contrast: more) {
+  [class*="text-foreground/4"],
+  [class*="text-foreground/5"],
+  [class*="text-foreground/6"] {
+    color: var(--foreground) !important;
+  }
+
+  [class*="border-foreground/8"],
+  [class*="border-foreground/10"],
+  [class*="border-foreground/15"] {
+    border-color: color-mix(in srgb, var(--foreground) 45%, transparent) !important;
+  }
+
+  /* Muted surfaces lose their tint so content sits on a solid field. */
+  [class*="bg-foreground/5"] {
+    background-color: color-mix(in srgb, var(--foreground) 12%, transparent) !important;
+  }
+}

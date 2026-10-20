@@ -13,7 +13,8 @@ Solidity.
 | [`wallet-connectivity.md`](wallet-connectivity.md) | EIP-6963 discovery, MetaMask Connect, OKX Universal Provider, the thirdweb in-app wallet (email/social), chain guard, mobile handoff |
 | [`treasury.md`](treasury.md) | How the treasury works: the direct vs routed money paths (with a diagram), why a 0 POL balance can hide earned revenue, the two-step fee keeper, the scripts, and the `/treasury` public view |
 | [`thirdweb-gas-sponsorship.md`](thirdweb-gas-sponsorship.md) | In-app wallet gas sponsorship: the EIP-7702 setup, why an unconstrained paymaster is an unbounded spend, the `/api/verify-sponsorship` contract allowlist, dashboard steps, and how to verify |
-| [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, and the future mobile/UI/UX/performance roadmap |
+| [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, what Mobile v2.0 shipped, and the remaining mobile roadmap |
+| [`Plan_Mobile_v2.0.md`](Plan_Mobile_v2.0.md) | The mobile v2.0 plan: robustness gaps (no error/loading/404 boundaries), platform capabilities, retention, performance, inclusivity — with what was deliberately excluded and why |
 | [`subgraph-integration.md`](subgraph-integration.md) | The Graph Studio `nuxgraph` deployment, the `/api/subgraph` proxy, dynamic schema introspection |
 | [`uniswap-price-feed.md`](uniswap-price-feed.md) | Live POL/USD via the Uniswap Trading API, the `/api/pol-price` proxy, caching, and fallback behavior |
 

@@ -16,6 +16,9 @@ Related: [`app-routes.md`](app-routes.md) for per-route detail,
 | Profile shortcut | `ProfileButton` in `src/components/Navbar.tsx` (left of the theme toggle) |
 | Brand marks | Navbar chevron (`/LogoAirenBlack.webp` light, `/LogoAiren.webp` dark) and Footer wordmark (`/AirenBlack.webp` light, `/AirenWhite.png` dark) |
 | Reusable bottom sheet | `src/components/MoreSheet.tsx` |
+| Route skeletons | `src/components/RouteSkeleton.tsx`, rendered by 12 `loading.tsx` files |
+| Error boundaries | `src/app/error.tsx` (root) + per-group `error.tsx` in `/game`, `/workshop`, `/profile`, `/collection`, `/marketplace` |
+| 404 | `src/app/not-found.tsx` |
 | Safe-area tokens, reduced motion, touch hygiene, pixel-grid visual tokens | `src/app/globals.css` |
 | `viewport-fit=cover`, theme color, `appleWebApp` | `src/app/layout.tsx` (`export const viewport`) |
 | Installable manifest | `src/app/manifest.ts` → `/manifest.webmanifest` |
@@ -152,6 +155,134 @@ Manual pass (the checklist used for this work):
 
 ---
 
+# Mobile v2.0 — shipped
+
+Plan and rationale in [`Plan_Mobile_v2.0.md`](Plan_Mobile_v2.0.md).
+
+## Robustness
+
+Before this pass there was **no `error.tsx`, no `not-found.tsx` and no
+`loading.tsx` anywhere**. A render throw left a blank page — indistinguishable
+from the site being down, with no DevTools on a phone to explain it.
+
+- **Error boundaries** at the root and per group. Placed per group so a failing
+  dashboard does not take the navigation with it. The error string is never
+  rendered; only the digest, which correlates with the server log.
+- **Custom 404** with the five bottom-nav destinations, so a stale link is a
+  detour rather than a dead end.
+- **12 `loading.tsx` files** with skeletons shaped like the content. A spinner
+  says something is happening; a skeleton says what you are about to get, and the
+  layout does not jump when it lands.
+- **Optimistic nav highlight.** The App Router already runs navigation inside a
+  transition, so wrapping `<Link>` in `useTransition` would be a no-op. What was
+  missing is the tap acknowledging itself: the bar marks the destination active
+  on `onClick` and drops it when the pathname catches up.
+
+## Platform
+
+| Feature | Where | Notes |
+| --- | --- | --- |
+| View Transitions | `globals.css` | `@view-transition { navigation: auto }`. App Router navigations are already transitions, so a cross-fade needs no JS. 160ms out / 200ms in — a navigation that lingers feels slower than one that does not animate |
+| `interactiveWidget` | `layout.tsx` viewport | `resizes-content`, so a focused field stays visible instead of sitting behind the keyboard |
+| `text-wrap: pretty` / `balance` | `globals.css` | Matters most at 320px |
+| `prefers-reduced-transparency` | `globals.css` | Drops `backdrop-filter` entirely rather than reducing it |
+| Scroll-driven reveal | `globals.css` | `@supports (animation-timeline: view())` upgrades `.reveal` to compositor-driven. The `IntersectionObserver` path stays for everything else |
+| `dvh` | all viewport-height containers | `vh` jumps when the mobile URL bar collapses |
+
+### Deliberately not done
+
+- **Container queries.** The card grids already use breakpoints and the cards are
+  fluid; there is no case today where a card appears in both a 2-column and a
+  4-column context. Adding them would be code without a problem.
+- **`content-visibility`.** The `.cv-auto` utility exists, but every card grid
+  uses `animate-fade-up` and holds 3–10 items. Applying it now would risk scroll
+  jank for no measurable gain. Use it when a list gets long.
+- **Native `<dialog>` for `MoreSheet`.** The current sheet already implements the
+  focus trap, Escape, backdrop, scroll lock and safe-area padding correctly.
+  Rewriting it to gain what it already has is risk without payoff.
+
+---
+
+## Retention
+
+| Feature | Where | Notes |
+| --- | --- | --- |
+| **Mint draft** | `src/lib/mint-draft.ts` | **IndexedDB, not `localStorage`.** The photo is up to 8 MB and `localStorage` holds ~5 MB of UTF-16 *and cannot store a `Blob`* — base64 would inflate it by a third and blow the quota, failing exactly on the large photos that most need saving. Restores the photo, the paid artwork, the grade and every field after the wallet handoff reloads the page. A draft older than 24h is discarded, and it is cleared on a successful mint |
+| **Haptics** | `src/lib/haptics.ts` | `navigator.vibrate` is **Android-only** — iOS Safari does not implement it — so it is never the sole confirmation of anything. Patterns stay ≤10ms for a tap; anything longer reads as a notification. Skipped under `prefers-reduced-motion` |
+| **Web Share** | `src/lib/share.ts` | `navigator.share` → clipboard → nothing. Resolves to what actually happened, so "shared" and "copied" are never confused. An `AbortError` (the user dismissing the sheet) is `cancelled`, not a failure |
+| **Install prompt** | `src/components/InstallPrompt.tsx` | Mounted in the root layout because Chrome fires `beforeinstallprompt` early — a listener inside a route can miss it. Shown only from the **second visit**, and a dismissal is remembered. Hidden on iOS, which has no such event |
+
+### Deliberately not done
+
+- **Bottom-nav badges.** "3 sneakers ready to activate" needs the full game state, and `useSneakerGame` issues 12+ individual `readContract` calls rather than a multicall. Paying that on every route for a badge is the wrong trade — the right fix is a shared, multicall'd game-state context, which belongs to the performance phase.
+- **Amount presets on price fields.** Listing and auction fields are *prices*, not balance fractions; "25% of your balance" is meaningless there. The staking deposit already has presets, and the POL transfer now has `MAX` — which subtracts a gas reserve, because a native transfer's gas comes out of the balance being sent and sending the whole thing reverts.
+
+---
+
+## Performance
+
+Every dashboard read used to fan out one RPC request per item. The counts below are
+before → after, verified in the source:
+
+| Hook | Before | After |
+| --- | --- | --- |
+| `useSneakerGame` | 13 `readContract` (11 params + 9 per sneaker) | **0** — two multicalls |
+| `useStakingVault` | 7 reads against one contract | **0** — one multicall |
+| `useMarketplace` | 24 (mobile) / 64 (desktop) listing reads | **1 multicall** |
+| `useOwnedSneakers` | already batched | unchanged |
+
+A wallet with five sneakers opened ~56 RPC requests for one `/game` view. That is
+the single biggest mobile cost the app had.
+
+**Failure semantics are preserved deliberately.** `useSneakerGame` uses
+`allowFailure: false` for the parameters (a missing redemption rate would
+mis-render the whole dashboard, and the original threw) and `allowFailure: true`
+for per-token reads (one burned token must not blank out the rest, and the
+original caught each one). `useStakingVault` mixes both in one call, so the six
+position reads are checked explicitly and `minLockSeconds` keeps its 30-day
+fallback.
+
+**POL price cache.** `/api/pol-price` already sent
+`max-age=60, stale-while-revalidate=300`, but the client fetched with
+`cache: "no-store"` — which threw that away and made every page view wait for a
+full round trip. The normal path now lets the browser answer; only an explicit
+refresh bypasses it.
+
+**Lighthouse budget.** `lighthouserc.json` carries the mobile assertions
+(performance ≥ 0.85, accessibility ≥ 0.95, LCP ≤ 2.5s, CLS ≤ 0.1) with real
+throttling. There is **no CI runner in this repo**, so it is a budget rather than
+a pipeline: `npx @lhci/cli autorun` against a production build. When CI exists the
+command goes in unchanged.
+
+**A correction.** `fetchPriority` was added to the hero image and then removed:
+`next/image` accepts the prop and `get-img-props` includes it, but it does not
+reach the HTML in this Next/React version — checked against a production build.
+`priority` is what actually does something (it drops the `loading="lazy"`).
+
+## Inclusivity
+
+- **`prefers-contrast: more`** — the hierarchy leans on opacity (`text-foreground/45`
+  for hints, `/55` and `/60` for supporting copy, hairline `border-foreground/8`
+  separators). The override lifts muted text to full foreground and strengthens
+  the separators. It uses attribute selectors and `!important` because the opacity
+  is baked into utility class names — the one place in the stylesheet where that
+  is the right trade.
+- **`:focus-visible`** was already global in `globals.css`; the roadmap's claim
+  that it "relies on the browser default inside sheets" was wrong and is corrected
+  here.
+- **200% text size** — no fixed pixel heights remain in the components, so the
+  layouts reflow rather than clip. Still worth a visual pass on a real device.
+
+### Deliberately not done
+
+- **A "System" theme option.** The toggle is a two-position slider, and a slider
+  cannot express three states without becoming a different control. The default
+  already follows `prefers-color-scheme` when nothing is stored, so the only
+  visitor affected is one who toggled and wants to go back — a redesign, not a
+  tweak.
+
+---
+
 # Future roadmap
 
 Planned mobile work, grouped by theme. Nothing here is implemented yet.
@@ -160,9 +291,6 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 
 | Feature | Why | Notes |
 | --- | --- | --- |
-| **Haptic feedback** | Confirms taps without looking | `navigator.vibrate()` is Android-only; iOS needs a hidden `<input switch>` trick or a native wrapper. Feature-detect, keep patterns ≤ 10ms, and skip when `prefers-reduced-motion` is set. Use it on nav taps, activation, and purchase confirmation. |
-| **Web Share API** | Sharing is the cheapest growth loop | `navigator.share()` for a sneaker, a listing, or a referral link, with a `navigator.clipboard` fallback. Requires a user gesture and HTTPS. |
-| **Install prompt** | Move users into standalone mode | Capture `beforeinstallprompt`, show a dismissible banner after the second visit, and remember the dismissal in `localStorage`. |
 | **App shortcuts** | Jump straight to a task | Add `shortcuts` to `manifest.ts`: "Activate sneakers" → `/game`, "Mint" → `/mint`. |
 | **Push notifications** | The game is a 24h retention loop | Web Push (service worker + VAPID) to remind users their sneaker is ready to activate. Needs opt-in UX and a backend scheduler. |
 | **Share target** | Receive sneaker photos | `share_target` in the manifest so a photo can be shared from the gallery straight into the mint studio. |
@@ -174,17 +302,13 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 | Feature | Why |
 | --- | --- |
 | **Swipe actions on cards** | Swipe to list, unlock, or activate instead of hunting for a button. |
-| **Skeleton loaders** | Replace the `…` placeholders in the wallet popover and the dashboards; reduces perceived latency. |
-| **Optimistic UI + toasts** | Show the new state immediately and reconcile after the receipt, with a transaction toast stack instead of inline notices. |
+| **Optimistic UI + toasts** | Show the new state immediately and reconcile after the receipt. The nav highlight is already optimistic; what is missing is a transaction toast stack instead of inline notices. |
 | **Bottom-sheet filters** | On mobile, move the rarity filters into a sheet with counts. |
 | **Long-press preview** | Long-press a sneaker for a quick-look card with rarity, boost, and valuation. |
 | **Bottom nav badges** | Surface "3 sneakers ready to activate" on the Game tab. |
 | **Tablet layout** | A dedicated `md`-to-`lg` pass: two-column dashboards, larger canvases. |
 | **Landscape pass** | Keep the bottom bar but shorten the hero; test the mint wizard. |
-| **Number keypad presets** | Add a MAX button and 25/50/75/100 presets to every amount field (currently only staking). |
 | **Copy-to-clipboard addresses** | Tap an address to copy, with a toast confirmation. |
-| **Dark/light/system sync** | Offer "System" alongside light and dark instead of a binary toggle. |
-| **Larger-text support** | Verify layouts at 200% text size (`font-size` overrides) and avoid fixed heights. |
 
 ## Functionality
 
@@ -192,7 +316,6 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 | --- | --- |
 | **Offline shell** | A service worker caching the app shell so the catalog and game render offline; on-chain actions queue until reconnect. |
 | **Client-side image resize** | Downscale photos in the browser before uploading to `/api/generate-sneaker`: less mobile data, faster AI response, cheaper requests. |
-| **Draft persistence for the mint wizard** | Keep the photo, generated artwork, and form values in `localStorage` so a wallet handoff (which reloads the page) does not lose progress. |
 | **Background sync for pending transactions** | Do not lose a signed-but-unconfirmed transaction when the user switches apps. |
 | **In-app wallet browser detection** | Deep-link users into OKX/MetaMask in-app browsers instead of the SDK handoff when possible. |
 | **Deep links** | `airen://`-style or `?utm` links from notifications straight to `/game`. |
@@ -202,15 +325,10 @@ Planned mobile work, grouped by theme. Nothing here is implemented yet.
 
 | Feature | Why |
 | --- | --- |
-| **`viem` multicall for batch reads** | `useStakingVault`, `useMarketplace`, and `useSneakerGame` fan out one RPC call per token. Multicall collapses them into a single request — the single biggest mobile win. |
-| **Move the marketplace listing scan to the subgraph** | `useMarketplace` currently probes 24 listing slots on mobile (64 on desktop). An indexed query removes the fan-out entirely. |
-| **Stale-while-revalidate for the POL price** | Serve the cached price instantly and refresh in the background instead of blocking on `/api/pol-price`. |
 | **Virtualise long collections** | `/my-nfts` and `/collection` render every card; virtualise past ~50 items. |
-| **Route-level `loading.tsx` + prefetch** | Instant skeletons on navigation and prefetch on viewport entry for the bottom-nav targets. |
+| **Route prefetch on viewport entry** | `loading.tsx` now covers every route, so navigation has a skeleton. What is still missing is prefetching the bottom-nav targets before they are tapped. |
 | **Dynamic-import heavy dashboards** | Keep the initial bundle small; load each dashboard chunk on demand. |
-| **`next/image` for user artwork** | Serve AVIF/WebP with `sizes` and blur placeholders instead of raw base64 `<img>`. |
 | **Font strategy** | Chakra Petch now covers body, display, labels, and numeric readouts; keep `display: swap`, restrained pixel-grid details, and no layout shift from font metrics. |
-| **Lighthouse mobile budget in CI** | Track performance, accessibility, and best-practices scores per route and fail on regression. |
 | **Bundle analysis** | Add `@next/bundle-analyzer` and watch the client bundle per route. |
 
 ## Accessibility follow-ups

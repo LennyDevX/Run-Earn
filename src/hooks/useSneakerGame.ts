@@ -88,61 +88,94 @@ export function useSneakerGame() {
     setIsReading(true);
     setReadError(null);
     try {
+      // Two multicalls instead of ~11 + 9N individual reads. A wallet with five
+      // sneakers used to open 56 RPC requests for one page view; on a phone that
+      // is the difference between a dashboard that appears and one that crawls.
+      //
+      // The two failure modes are deliberately different:
+      //   - the parameters use `allowFailure: false`, because a missing
+      //     durability or redemption rate would silently mis-render the whole
+      //     dashboard. The original code let those throw, and so does this.
+      //   - the per-token reads use `allowFailure: true`, because one burned
+      //     token should not blank out every other sneaker. The original caught
+      //     each one and fell back; the fallbacks are preserved below.
+      const paramsResult = await wallet.publicClient.multicall({
+        allowFailure: false,
+        contracts: [
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "maxDurability" },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "wearPerActivation" },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "repairCostPoints" },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "redemptionRate" },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "redemptionEnabled" },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [0n] },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [1n] },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [2n] },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [3n] },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "veRuneBalance", args: [wallet.address] },
+          { address: gameAddress, abi: sneakerGameAbi, functionName: "totalRedeemed", args: [wallet.address] },
+        ],
+      });
       const [maxDurability, wearPerActivation, repairCostPoints, redemptionRate, redemptionEnabled, tier0, tier1, tier2, tier3, veRuneBalance, redeemed] =
-        await Promise.all([
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "maxDurability" }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "wearPerActivation" }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "repairCostPoints" }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "redemptionRate" }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "redemptionEnabled" }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [0n] }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [1n] }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [2n] }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "tierBasePointsPerDay", args: [3n] }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "veRuneBalance", args: [wallet.address] }),
-          wallet.publicClient.readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "totalRedeemed", args: [wallet.address] }),
-        ]);
+        paramsResult as [
+          number,
+          number,
+          bigint,
+          bigint,
+          boolean,
+          bigint,
+          bigint,
+          bigint,
+          bigint,
+          bigint,
+          bigint,
+        ];
 
       setParams({
-        maxDurability: BigInt(maxDurability as number),
-        wearPerActivation: BigInt(wearPerActivation as number),
-        repairCostPoints: repairCostPoints as bigint,
-        redemptionRate: redemptionRate as bigint,
-        redemptionEnabled: redemptionEnabled as boolean,
-        tierBasePointsPerDay: [tier0 as bigint, tier1 as bigint, tier2 as bigint, tier3 as bigint],
+        maxDurability: BigInt(maxDurability),
+        wearPerActivation: BigInt(wearPerActivation),
+        repairCostPoints,
+        redemptionRate,
+        redemptionEnabled,
+        tierBasePointsPerDay: [tier0, tier1, tier2, tier3],
       });
-      setVeRune(veRuneBalance as bigint);
-      setTotalRedeemedPoints(redeemed as bigint);
+      setVeRune(veRuneBalance);
+      setTotalRedeemedPoints(redeemed);
 
       // Only playable veSneakers have game state.
       const playable = owned.playable;
       const tokenIds = playable.map((s) => s.tokenId);
-      const readStat = (functionName: string, tokenId: bigint, fallback: bigint | number | boolean) =>
-        wallet.publicClient
-          .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName, args: [tokenId] } as never)
-          .catch(() => fallback);
-      const [states, pendings, canActives, secondsUntil, powers, healths, energies, maxEnergies, earnRates] = await Promise.all([
-        Promise.all(
-          tokenIds.map((tokenId) =>
-            wallet.publicClient
-              .readContract({ address: gameAddress, abi: sneakerGameAbi, functionName: "sneakers", args: [tokenId] })
-              .catch(() => null),
-          ),
-        ),
-        Promise.all(tokenIds.map((tokenId) => readStat("pendingPoints", tokenId, 0n))),
-        Promise.all(tokenIds.map((tokenId) => readStat("canActivate", tokenId, false))),
-        Promise.all(tokenIds.map((tokenId) => readStat("secondsUntilActivation", tokenId, 0n))),
-        Promise.all(tokenIds.map((tokenId) => readStat("powerOf", tokenId, 0n))),
-        Promise.all(tokenIds.map((tokenId) => readStat("healthOf", tokenId, 0))),
-        Promise.all(tokenIds.map((tokenId) => readStat("energyOf", tokenId, 0))),
-        Promise.all(tokenIds.map((tokenId) => readStat("maxEnergyOf", tokenId, 0))),
-        Promise.all(tokenIds.map((tokenId) => readStat("earnRatePerSecond", tokenId, 0n))),
-      ]);
+
+      const perToken =
+        tokenIds.length === 0
+          ? []
+          : await wallet.publicClient.multicall({
+              allowFailure: true,
+              contracts: tokenIds.flatMap((tokenId) => [
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "sneakers", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "pendingPoints", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "canActivate", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "secondsUntilActivation", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "powerOf", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "healthOf", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "energyOf", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "maxEnergyOf", args: [tokenId] },
+                { address: gameAddress, abi: sneakerGameAbi, functionName: "earnRatePerSecond", args: [tokenId] },
+              ]),
+            });
+
+      /// Nine reads per token, so the flat result is sliced back into groups.
+      const STRIDE = 9;
+      const pick = (index: number, offset: number) => perToken[index * STRIDE + offset];
+      const valueOr = <T,>(result: unknown, fallback: T): T =>
+        (result as { status: string; result?: T }).status === "success"
+          ? ((result as { result: T }).result as T)
+          : fallback;
 
       const next: GameSneaker[] = playable.map((sneaker, idx) => {
-        const raw = states[idx] as
-          | readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
-          | null;
+        const raw = valueOr<readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint] | null>(
+          pick(idx, 0),
+          null,
+        );
         const state: SneakerGameState = raw
           ? {
               lastActivationAt: raw[0],
@@ -167,14 +200,14 @@ export function useSneakerGame() {
         return {
           ...sneaker,
           state,
-          pending: pendings[idx] as bigint,
-          canActivate: canActives[idx] as boolean,
-          secondsUntilActivation: secondsUntil[idx] as bigint,
-          power: powers[idx] as bigint,
-          health: Number(healths[idx]),
-          energy: Number(energies[idx]),
-          maxEnergy: Number(maxEnergies[idx]),
-          earnRate: earnRates[idx] as bigint,
+          pending: valueOr(pick(idx, 1), 0n),
+          canActivate: valueOr(pick(idx, 2), false),
+          secondsUntilActivation: valueOr(pick(idx, 3), 0n),
+          power: valueOr(pick(idx, 4), 0n),
+          health: Number(valueOr(pick(idx, 5), 0)),
+          energy: Number(valueOr(pick(idx, 6), 0)),
+          maxEnergy: Number(valueOr(pick(idx, 7), 0)),
+          earnRate: valueOr(pick(idx, 8), 0n),
         };
       });
       setSneakers(next);

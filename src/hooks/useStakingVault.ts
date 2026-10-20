@@ -68,15 +68,34 @@ export function useStakingVault() {
     setReadError(null);
     try {
       const owner = wallet.address;
-      const [polPosition, position, pendingRewards, apyBps, reserve, stakedTokenIds, minLock] = await Promise.all([
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "polPositions", args: [owner] }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "positions", args: [owner] }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "pendingPOLRewards", args: [owner] }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "effectiveApyBps", args: [owner] }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "availablePOLRewards" }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "stakedTokenIds", args: [owner] }),
-        wallet.publicClient.readContract({ address: stakingAddress, abi: stakingAbi, functionName: "minLockSeconds" }).catch(() => 2592000n),
-      ]);
+      // One multicall instead of seven sequential reads against the same
+      // contract. On a phone that is the difference between one round trip and
+      // seven, for data that is always fetched together anyway.
+      //
+      // Failure handling preserves the original split: the six position reads
+      // threw on failure, `minLockSeconds` fell back to 30 days. A single
+      // `allowFailure` flag cannot express both, so the six are checked
+      // explicitly and the seventh keeps its fallback.
+      const results = await wallet.publicClient.multicall({
+        allowFailure: true,
+        contracts: [
+          { address: stakingAddress, abi: stakingAbi, functionName: "polPositions", args: [owner] },
+          { address: stakingAddress, abi: stakingAbi, functionName: "positions", args: [owner] },
+          { address: stakingAddress, abi: stakingAbi, functionName: "pendingPOLRewards", args: [owner] },
+          { address: stakingAddress, abi: stakingAbi, functionName: "effectiveApyBps", args: [owner] },
+          { address: stakingAddress, abi: stakingAbi, functionName: "availablePOLRewards" },
+          { address: stakingAddress, abi: stakingAbi, functionName: "stakedTokenIds", args: [owner] },
+          { address: stakingAddress, abi: stakingAbi, functionName: "minLockSeconds" },
+        ],
+      });
+      for (const result of results.slice(0, 6)) {
+        if (result.status === "failure") throw result.error;
+      }
+      const required = results.slice(0, 6) as Array<{ status: "success"; result: unknown }>;
+      const [polPosition, position, pendingRewards, apyBps, reserve, stakedTokenIds] = required.map((r) => r.result);
+      const minLockResult = results[6];
+      const minLock = (minLockResult.status === "success" ? (minLockResult.result as bigint) : 2592000n) || 2592000n;
+
       const polPosTuple = polPosition as readonly [bigint, bigint, bigint, bigint];
       setStats({
         principal: polPosTuple[0],
@@ -85,7 +104,7 @@ export function useStakingVault() {
         lockedCount: (position as readonly [bigint, bigint, bigint, bigint, bigint])[0],
         reserve: reserve as bigint,
         depositedAt: polPosTuple[2],
-        minLockSeconds: (minLock as bigint) || 2592000n,
+        minLockSeconds: minLock,
         stakedTokenIds: stakedTokenIds as bigint[],
         // Staking is veSneaker-only.
         ownedSneakers: owned.playable,

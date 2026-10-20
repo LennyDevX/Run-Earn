@@ -1,6 +1,6 @@
 {
   "name": "airen",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Airen — a virtual sneaker universe in pixel art on Polygon. Collect, stake, upgrade and trade veSneakers, with AI-minted collectibles and an open treasury.",
   "private": true,
   "type": "module",

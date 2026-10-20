@@ -1,0 +1,48 @@
+{
+  "//": "Mobile performance budget for Airen. There is no CI runner in this repo yet, so this file is the budget rather than a pipeline: run it locally with `npx @lhci/cli autorun` against a production build. When CI exists, wire the same command into it unchanged.",
+  "ci": {
+    "collect": {
+      "startServerCommand": "npm run start -- --port 3210",
+      "startServerReadyPattern": "Ready in",
+      "url": [
+        "http://localhost:3210/",
+        "http://localhost:3210/collection",
+        "http://localhost:3210/marketplace",
+        "http://localhost:3210/game"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "desktop",
+        "//": "Emulated mobile is the target, not desktop. The `mobile` preset throttles CPU and network, which is the only honest way to measure a phone.",
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 390,
+          "height": 844,
+          "deviceScaleFactor": 3,
+          "disabled": false
+        },
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638,
+          "cpuSlowdownMultiplier": 4
+        }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.85 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }],
+        "categories:best-practices": ["warn", { "minScore": 0.9 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "//": "CLS is an error rather than a warning because it is the one metric a skeleton or a late font swap can silently ruin, and it is what makes a mobile page feel broken even when it is fast."
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { encodeFunctionData, isAddress, keccak256, toHex, type Address, type Hex } from "viem";
 import { explorerTransactionUrl, NETWORK, usePolygonWallet } from "@/components/Providers";
+import { haptic } from "@/lib/haptics";
+import { clearMintDraft, loadMintDraft, saveMintDraft } from "@/lib/mint-draft";
+import { shareLink } from "@/lib/share";
 import {
   buildTokenUri,
   DEFAULT_SNEAKER_DESCRIPTION,
@@ -134,6 +137,76 @@ export default function SneakerMintStudio() {
   const [isMinting, setIsMinting] = useState(false);
   const [mintedHash, setMintedHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /// What the share attempt actually did. "Shared" and "copied" are different
+  /// outcomes and saying one when the other happened is a small lie the visitor
+  /// notices.
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  async function shareMint() {
+    const outcome = await shareLink({
+      title: "Airen — a virtual sneaker universe",
+      text: grade ? `I just minted a ${grade.tierLabel} sneaker on Airen.` : "I just minted a sneaker on Airen.",
+      url: typeof window === "undefined" ? "" : window.location.origin,
+    });
+    setShareNote(
+      outcome === "shared"
+        ? "Shared."
+        : outcome === "copied"
+          ? "Link copied."
+          : outcome === "unsupported"
+            ? "Sharing is not available on this browser."
+            : null,
+    );
+  }
+
+  /// Draft persistence. Connecting a wallet on mobile reloads the page, which
+  /// used to cost the photo, the paid artwork and every field. `draftLoaded`
+  /// gates the save effect so an empty first render cannot overwrite a stored
+  /// draft before it has been read back.
+  const draftLoaded = useRef(false);
+  const saveTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const draft = await loadMintDraft();
+      if (cancelled) return;
+      if (draft) {
+        if (draft.photo) {
+          // A `File` survives IndexedDB in most browsers, but reconstructing is
+          // cheap and covers the ones that hand back a plain `Blob`.
+          const file =
+            draft.photo instanceof File
+              ? draft.photo
+              : new File([draft.photo], "draft-photo", { type: draft.photo.type });
+          setPhotoFile(file);
+          // The preview was a blob URL, which is dead after a reload — rebuild it
+          // from the stored bytes rather than persisting a handle that cannot work.
+          setPhotoPreview(URL.createObjectURL(draft.photo));
+        }
+        setGenerated(draft.generated);
+        setGrade(draft.grade as MintGrade | null);
+        setName(draft.name);
+        setDescription(draft.description);
+        setStep(draft.step);
+      }
+      draftLoaded.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftLoaded.current) return;
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      void saveMintDraft({ photo: photoFile, generated, grade, name, description, step });
+    }, 400);
+    return () => {
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    };
+  }, [description, generated, grade, name, photoFile, step]);
 
   // Keep the active step centered inside the horizontal step row on mobile,
   // including when the wizard advances programmatically. Skipped on mount: the
@@ -287,6 +360,12 @@ export default function SneakerMintStudio() {
       });
       notifyMintedSneakersUpdated();
       setMintedHash(transactionHash ?? "local");
+      // The piece is minted, so the draft has served its purpose. Keeping it
+      // would restore a finished mint on the next visit.
+      void clearMintDraft();
+      // Android only; iOS has no `navigator.vibrate`. The screen already changed,
+      // so this is confirmation rather than the sole signal.
+      haptic("confirm");
       setStep(3);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not mint the NFT.");
@@ -473,10 +552,22 @@ export default function SneakerMintStudio() {
             <Link href="/my-nfts" className="rounded-full bg-mint px-6 py-3 text-sm font-semibold text-ink transition-transform hover:scale-105">
               View my collection
             </Link>
-            <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setGenerated(null); setMintedHash(null); setStep(0); }} className="rounded-full border border-foreground/15 px-6 py-3 text-sm font-semibold transition-colors hover:border-foreground/30">
+            <button
+              type="button"
+              onClick={() => void shareMint()}
+              className="rounded-full border border-foreground/15 px-6 py-3 text-sm font-semibold transition-colors hover:border-mint/50"
+            >
+              Share
+            </button>
+            <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setGenerated(null); setMintedHash(null); setStep(0); setShareNote(null); void clearMintDraft(); }} className="rounded-full border border-foreground/15 px-6 py-3 text-sm font-semibold transition-colors hover:border-foreground/30">
               Mint another
             </button>
           </div>
+          {shareNote ? (
+            <p aria-live="polite" className="text-xs text-foreground/50">
+              {shareNote}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

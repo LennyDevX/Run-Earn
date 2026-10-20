@@ -124,21 +124,24 @@ export function useMarketplace() {
       // Scan recent listing IDs for active listings owned by this wallet.
       // The contract does not expose an enumerable listing index, so we scan
       // the last N listing slots and keep the ones that match. Mobile scans a
-      // shorter window to keep the RPC fan-out cheap on cellular.
+      // shorter window to keep the payload small on cellular.
+      //
+      // **One multicall, not N reads.** This used to open 24 requests on mobile
+      // and 64 on desktop for a single page view; a `multicall` collapses them
+      // into one round trip. `allowFailure` is on because most slots are empty
+      // and the original caught each one individually.
       const scanLimit = wallet.isMobile ? 24 : 64;
       const listingIds = Array.from({ length: scanLimit }, (_, i) => BigInt(i + 1));
-      const listings = await Promise.all(
-        listingIds.map((listingId) =>
-          wallet.publicClient
-            .readContract({
-              address: marketplaceAddress,
-              abi: sneakerMarketplaceAbi,
-              functionName: "listings",
-              args: [listingId],
-            })
-            .catch(() => null),
-        ),
-      );
+      const listingResults = await wallet.publicClient.multicall({
+        allowFailure: true,
+        contracts: listingIds.map((listingId) => ({
+          address: marketplaceAddress,
+          abi: sneakerMarketplaceAbi,
+          functionName: "listings" as const,
+          args: [listingId] as const,
+        })),
+      });
+      const listings = listingResults.map((result) => (result.status === "success" ? result.result : null));
       const mine = await Promise.all(listings.map(async (raw, idx): Promise<MyListing | null> => {
         if (!raw) return null;
         const [seller, , tokenId, price, listedAt, active] = raw as readonly [Address, Address, bigint, bigint, bigint, boolean];

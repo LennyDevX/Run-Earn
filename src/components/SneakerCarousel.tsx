@@ -85,7 +85,16 @@ export default function SneakerCarousel({ className }: { className?: string }) {
               alt=""
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              loading={itemIndex === 0 ? "eager" : "lazy"}
+              // The visible slide is the hero, so it is the LCP candidate. Without
+              // `priority` it would be lazy-loaded like the two hidden slides.
+              //
+              // Note: `fetchPriority` was tried here and removed. `next/image`
+              // accepts the prop and `get-img-props` includes it in the emitted
+              // props, but it does not reach the HTML in this Next/React version —
+              // verified against a production build. `priority` is what actually
+              // does something: it drops the lazy attribute.
+              priority={itemIndex === index}
+              loading={itemIndex === index ? undefined : "lazy"}
               className="object-contain"
             />
           </div>

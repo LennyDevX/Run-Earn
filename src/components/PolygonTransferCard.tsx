@@ -1,17 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { isAddress, parseEther, type Address, type Hash } from "viem";
+import { formatEther, isAddress, parseEther, type Address, type Hash } from "viem";
 import { explorerTransactionUrl, NETWORK, usePolygonWallet } from "@/components/Providers";
+import { useWalletOverview } from "@/hooks/useWalletOverview";
+
+/// A native transfer's gas comes out of the same balance being sent, so "MAX"
+/// cannot mean the whole balance — the transaction would revert with
+/// insufficient funds for gas. The reserve is sized for a fee spike rather than
+/// today's price, and deliberately generous: leaving a fraction of a POL behind
+/// is a far better outcome than a failed send at the moment someone is moving
+/// their money.
+const GAS_RESERVE_WEI = parseEther("0.02");
 
 export default function PolygonTransferCard() {
   const wallet = usePolygonWallet();
+  const overview = useWalletOverview();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("0.001");
   const [hash, setHash] = useState<Hash | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function applyMax() {
+    if (overview.balance === null) return;
+    const usable = overview.balance - GAS_RESERVE_WEI;
+    if (usable <= 0n) {
+      setError("Not enough POL to cover the amount plus gas.");
+      return;
+    }
+    setError(null);
+    setAmount(formatEther(usable));
+  }
 
   async function sendPolygon() {
     if (!wallet.isConnected) {
@@ -63,7 +84,18 @@ export default function PolygonTransferCard() {
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold">
           Amount (POL)
-          <input value={amount} onChange={(event) => setAmount(event.target.value)} type="text" inputMode="decimal" placeholder="0.001" autoComplete="off" spellCheck={false} enterKeyHint="done" className="rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-sm font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
+          <div className="flex gap-2">
+            <input value={amount} onChange={(event) => setAmount(event.target.value)} type="text" inputMode="decimal" placeholder="0.001" autoComplete="off" spellCheck={false} enterKeyHint="done" className="min-w-0 flex-1 rounded-2xl border border-foreground/10 bg-background px-4 py-3 font-mono text-sm font-normal outline-none transition-colors placeholder:text-foreground/30 focus:border-sky" />
+            <button
+              type="button"
+              onClick={applyMax}
+              disabled={!wallet.isConnected || overview.balance === null}
+              aria-label="Use the maximum sendable amount"
+              className="shrink-0 cursor-pointer rounded-2xl border border-foreground/10 bg-background px-4 font-pixel text-[9px] text-foreground/60 transition-colors active:scale-95 hover:border-sky/50 hover:text-sky disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              MAX
+            </button>
+          </div>
         </label>
         <button type="button" onClick={() => void sendPolygon()} disabled={!wallet.isConnected || isSending} className="rounded-full bg-sky px-6 py-3.5 text-sm font-semibold text-white transition-[transform,box-shadow] hover:scale-105 hover:shadow-lg hover:shadow-sky/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-ink">
           {isSending ? "Signing..." : "Send POL"}

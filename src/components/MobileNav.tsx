@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { useGameLaunch } from "@/components/GameLaunch";
+import { haptic } from "@/lib/haptics";
 
 type NavItem = {
   href: string;
@@ -79,6 +80,7 @@ export default function MobileNav() {
   const pathname = usePathname();
   const { launch } = useGameLaunch();
   const [hidden, setHidden] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   // Hide while scrolling down, reveal on the way up: keeps the bar out of the
   // way when reading and one flick away when navigating.
@@ -101,6 +103,15 @@ export default function MobileNav() {
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
+  // Drop the optimistic highlight once the real pathname catches up. The App
+  // Router already runs navigation inside a transition, so wrapping `<Link>` in
+  // `useTransition` here would be a no-op — what is actually missing is the tap
+  // acknowledging itself before the new route paints.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setPendingHref(null));
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
   return (
     <nav
       aria-label="Primary"
@@ -110,15 +121,18 @@ export default function MobileNav() {
     >
       <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2">
         {MOBILE_NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
+          const active = isActive(pathname, item.href) || pendingHref === item.href;
           return (
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 onClick={(event) => {
-                  if (!item.launch) return;
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                  // Acknowledge the tap immediately; the route may take a moment.
+                  setPendingHref(item.href);
+                  haptic("tap");
+                  if (!item.launch) return;
                   event.preventDefault();
                   launch(item.href);
                 }}
