@@ -54,6 +54,12 @@ const RPC_ORIGINS = [
   "https://polygon-amoy.drpc.org",
   "https://polygon.api.onfinality.io",
   "https://polygon-amoy.api.onfinality.io",
+  // Additional fallbacks in `src/components/Providers.tsx`. They are useless
+  // without an entry here: the CSP blocks them in the browser while they answer
+  // perfectly from a script, which is a slow way to diagnose a wallet that will
+  // not load.
+  "https://polygon-bor-rpc.publicnode.com",
+  "https://rpc.ankr.com",
 ];
 
 function configuredRpcOrigins(): string[] {

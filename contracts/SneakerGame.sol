@@ -322,7 +322,12 @@ contract SneakerGame is Pausable, AccessControl, ReentrancyGuard {
         require(points > 0, "SneakerGame: zero points");
         require(veRuneBalance[msg.sender] >= points, "SneakerGame: insufficient veRUNE");
 
-        uint256 renAmount = points / redemptionRate;
+        // `redemptionRate` is "veRUNE per 1 REN", both in 18 decimals. Dividing
+        // the two directly returns a *wei* amount, not a REN amount: 100e18
+        // veRUNE came back as 1 wei instead of 1 REN, a 10^18 shortfall that
+        // made the whole play-to-earn loop worthless. Scaling by 1e18 first is
+        // what turns the ratio into a token amount.
+        uint256 renAmount = (points * 1e18) / redemptionRate;
         require(renAmount > 0, "SneakerGame: amount too small");
         require(renToken.balanceOf(address(this)) >= renAmount, "SneakerGame: REN reserve insufficient");
 

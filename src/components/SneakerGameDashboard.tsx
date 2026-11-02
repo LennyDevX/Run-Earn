@@ -54,7 +54,10 @@ export default function SneakerGameDashboard() {
 
   const isConfigured = game.configured;
   const redemptionRate = game.params.redemptionRate > 0n ? game.params.redemptionRate : 100n * 10n ** 18n;
-  const redeemableRen = game.veRune / redemptionRate;
+  // Same formula the contract uses. `redemptionRate` is veRUNE per 1 REN with both
+  // in 18 decimals, so dividing directly yields a wei amount — the UI used to show
+  // "0 REN" for a balance that was worth 8.
+  const redeemableRen = redemptionRate > 0n ? (game.veRune * 10n ** 18n) / redemptionRate : 0n;
 
   async function runAction(action: () => Promise<`0x${string}`>, label: string) {
     setActionError(null);

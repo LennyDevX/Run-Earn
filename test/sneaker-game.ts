@@ -234,7 +234,14 @@ describe("SneakerGame (TypeScript integration)", () => {
 
     await game.write.redeem([balance], { account: alice.account });
     const renBalance = await ren.read.balanceOf([alice.account.address]);
-    const expectedRen = balance / (100n * 10n ** 18n);
+    // `redemptionRate` is "veRUNE per 1 REN" with both sides in 18 decimals, so
+    // the contract scales by 1e18 before dividing. Without that factor 100
+    // veRUNE paid 1 wei of REN instead of 1 REN — a 10^18 shortfall this test
+    // used to assert rather than catch.
+    const rate = await game.read.redemptionRate();
+    const expectedRen = (balance * 10n ** 18n) / rate;
+    assert.equal(renBalance, expectedRen);
+    assert.ok(renBalance > 10n ** 17n, "a day of earning must be worth a real REN amount");
     assert.equal(renBalance, expectedRen);
     assert.equal(await game.read.veRuneBalance([alice.account.address]), 0n);
   });

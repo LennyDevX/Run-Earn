@@ -270,8 +270,11 @@ contract SneakerGameTest is Test {
         vm.prank(alice);
         game.redeem(balance);
 
-        // REN received = floor(points / redemptionRate) — integer division.
-        uint256 expectedRen = balance / redemptionRate;
+        // REN received = points * 1e18 / redemptionRate. The rate is "veRUNE per
+        // 1 REN" with both sides in 18 decimals, so the 1e18 scale factor is what
+        // converts the ratio into a token amount. Dividing directly returned wei —
+        // 100 veRUNE paid 1 wei of REN instead of 1 REN.
+        uint256 expectedRen = (balance * 1e18) / redemptionRate;
         assertGt(expectedRen, 0);
         assertEq(ren.balanceOf(alice), before + expectedRen);
         assertEq(game.veRuneBalance(alice), 0);

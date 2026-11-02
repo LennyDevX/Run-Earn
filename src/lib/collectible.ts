@@ -169,9 +169,13 @@ export function pickStyle(seed: number, isTaken: (key: string) => boolean) {
   const paletteCount = STYLE_PALETTES.length;
   const compositionCount = STYLE_COMPOSITIONS.length;
   const total = paletteCount * compositionCount;
+  // JavaScript's `%` keeps the sign, so a negative seed produced index -1 and
+  // `STYLE_PALETTES[-1]` — an undefined palette that would reach the renderer.
+  // Seeds are derived from hashes and are not guaranteed positive.
+  const normalise = (value: number) => ((value % total) + total) % total;
 
   for (let offset = 0; offset < total; offset += 1) {
-    const index = (seed + offset) % total;
+    const index = normalise(seed + offset);
     const palette = STYLE_PALETTES[index % paletteCount];
     const composition = STYLE_COMPOSITIONS[Math.floor(index / paletteCount) % compositionCount];
     const key = `${palette}::${composition}`;
@@ -179,7 +183,7 @@ export function pickStyle(seed: number, isTaken: (key: string) => boolean) {
   }
   // Every combination is spent — fall back to a seed-derived one so the mint
   // still succeeds rather than blocking the collector.
-  const index = seed % total;
+  const index = normalise(seed);
   const palette = STYLE_PALETTES[index % paletteCount];
   const composition = STYLE_COMPOSITIONS[Math.floor(index / paletteCount) % compositionCount];
   return { palette, composition, key: `${palette}::${composition}`, index };

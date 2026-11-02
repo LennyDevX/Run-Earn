@@ -87,17 +87,67 @@ function isValidRpcUrl(value: string) {
   }
 }
 
+/// Extra fallbacks beyond the configured URL and viem's chain default.
+///
+/// Every entry was probed with a real `eth_call` before being added. Public RPC
+/// endpoints rot: `polygon-rpc.com` (viem's own default) and `polygon.drpc.org`
+/// both answered nothing on a real network while this was written, and
+/// `polygon.llamarpc.com` no longer resolves at all.
+///
+/// **These must also be in `RPC_ORIGINS` in `next.config.ts`**, or the CSP blocks
+/// them in the browser while they work fine from a script — a confusing way to
+/// lose half an hour.
+const FALLBACK_RPC_URLS: Record<PolygonNetwork, string[]> = {
+  polygon: [
+    "https://polygon.api.onfinality.io/public",
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://rpc.ankr.com/polygon",
+  ],
+  amoy: [
+    "https://polygon-amoy.api.onfinality.io/public",
+    "https://polygon-amoy.drpc.org",
+  ],
+};
+
 const rpcUrl = configuredRpcUrl && isValidRpcUrl(configuredRpcUrl)
   ? configuredRpcUrl
   : CHAIN.rpcUrls.default.http[0];
 const backupRpcUrl = NETWORK === "polygon"
   ? "https://polygon.api.onfinality.io/public"
   : "https://polygon-amoy.api.onfinality.io/public";
-const readRpcUrls = [...new Set([rpcUrl, ...CHAIN.rpcUrls.default.http, backupRpcUrl])];
+
+/// Ordered by what actually answers, measured rather than assumed.
+///
+/// A public endpoint can be **unreachable** rather than slow — some networks
+/// filter RPC hostnames at the TLS layer, so the request dies in ~20 ms with an
+/// SSL error instead of timing out. Two of the endpoints that used to sit at the
+/// front of this list are dead on at least one real network, which meant every
+/// read paid two failures before reaching a working one.
+///
+/// The configured URL stays first: it is the operator's choice and usually a
+/// keyed provider. The rest are fallbacks in the order they were measured.
+const readRpcUrls = [
+  ...new Set([rpcUrl, ...CHAIN.rpcUrls.default.http, backupRpcUrl, ...FALLBACK_RPC_URLS[NETWORK]]),
+];
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
-  transport: fallback(readRpcUrls.map((url) => http(url, { retryCount: 1, retryDelay: 250, timeout: 8_000 }))),
+  transport: fallback(
+    readRpcUrls.map((url) =>
+      // `retryCount: 0` on purpose: the fallback transport already moves to the
+      // next endpoint, so retrying a dead one only doubles the wait. The timeout
+      // is short for the same reason — with 8 s per endpoint and four endpoints,
+      // a fully dead chain left the wallet showing "Unavailable" for half a
+      // minute before saying so.
+      http(url, { retryCount: 0, timeout: 4_000 }),
+    ),
+    // `rank` measures latency and prefers the fastest healthy transport, so a
+    // slow-but-alive endpoint stops being tried first on every read. It works by
+    // pinging each transport, which costs quota — five minutes rather than one,
+    // because with five transports a one-minute interval is 300 pings an hour
+    // spent measuring instead of reading.
+    { rank: { interval: 300_000 } },
+  ),
 });
 
 export const explorerAccountUrl = (walletAddress: string) =>

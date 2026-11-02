@@ -1,9 +1,17 @@
 # Airen documentation index
 
-Entry point for developers working on the Airen Polygon dApp. Start with
-[`app-routes.md`](app-routes.md) if you are touching the frontend, or
-[`contract-architecture-plan.md`](contract-architecture-plan.md) if you are touching
-Solidity.
+Entry point for developers working on the Airen Polygon dApp.
+
+> **Handing this project to an AI agent?** Start with
+> [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) — a single self-contained brief:
+> what Airen is, the 15 deployed contracts with addresses, the economy, the
+> revenue model, the stack, what is genuinely distinctive, what is blocked and
+> why, and the three traps most likely to trip up a new contributor. Everything in
+> it was read from the repository or verified against mainnet.
+
+Otherwise, start with [`app-routes.md`](app-routes.md) if you are touching the
+frontend, or [`contract-architecture-plan.md`](contract-architecture-plan.md) if
+you are touching Solidity.
 
 ## Frontend
 
