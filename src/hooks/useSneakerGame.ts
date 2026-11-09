@@ -60,6 +60,7 @@ export function useSneakerGame() {
   const [totalRedeemedPoints, setTotalRedeemedPoints] = useState(0n);
   const [params, setParams] = useState<GameParams>(EMPTY_PARAMS);
   const [isReading, setIsReading] = useState(false);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
 
   const configured = Boolean(
@@ -215,6 +216,7 @@ export function useSneakerGame() {
       setReadError(cause instanceof Error ? cause.message : "Could not read the game state.");
     } finally {
       setIsReading(false);
+        setLoadedFor(wallet.address ?? null);
     }
   }, [gameAddress, owned.playable, wallet.address, wallet.publicClient]);
 
@@ -250,6 +252,7 @@ export function useSneakerGame() {
     totalRedeemedPoints,
     params,
     isLoading: isReading || transaction.isPending,
+    isReady: !wallet.address || loadedFor === wallet.address,
     error: readError ?? transaction.error ?? owned.error,
     refresh: async () => {
       await Promise.all([refresh(), owned.refresh()]);

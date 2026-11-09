@@ -111,18 +111,18 @@ export default function ModItemCard({
         <div className="flex flex-1 flex-col gap-3">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="truncate text-sm font-bold tracking-tight">{item.name}</h3>
-            <span className="shrink-0 font-mono text-[10px] text-foreground/40">
+            <span className="shrink-0 font-mono text-[10px] text-foreground/55">
               R{item.rarity}
             </span>
           </div>
 
           <p className="text-xs leading-relaxed text-foreground/55">{modEffectLabel(traits)}</p>
-          <p className="line-clamp-2 text-[11px] leading-relaxed text-foreground/40">
+          <p className="line-clamp-2 text-[11px] leading-relaxed text-foreground/55">
             {item.description}
           </p>
 
           {maxSupply !== null && minted !== null ? (
-            <p className="font-mono text-[10px] text-foreground/40">
+            <p className="font-mono text-[10px] text-foreground/55">
               {minted} / {maxSupply} minted
             </p>
           ) : null}
@@ -131,12 +131,12 @@ export default function ModItemCard({
         {/* Action */}
         <div className="flex flex-col gap-2 border-t border-foreground/8 pt-3">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
+            <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">
               Price
             </span>
             <span className="text-right">
               <span className="block font-mono text-sm font-bold text-mint">{priceLabel} POL</span>
-              <span className="mt-0.5 block font-mono text-[10px] text-foreground/45">
+              <span className="mt-0.5 block font-mono text-[10px] text-foreground/55">
                 {formatUsd(pricePolNumber, polUsd)}
               </span>
             </span>
@@ -146,7 +146,7 @@ export default function ModItemCard({
             <button
               type="button"
               disabled
-              className="min-h-11 w-full cursor-not-allowed rounded-full border border-foreground/12 px-4 text-xs font-semibold text-foreground/40"
+              className="min-h-11 w-full cursor-not-allowed rounded-full border border-foreground/12 px-4 text-xs font-semibold text-foreground/55"
             >
               Not registered on-chain yet
             </button>

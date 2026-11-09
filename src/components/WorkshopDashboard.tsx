@@ -5,7 +5,7 @@ import { formatEther } from "viem";
 import { NETWORK_LABEL, usePolygonWallet } from "@/components/Providers";
 import { useWorkshop } from "@/hooks/useWorkshop";
 import { useSneakerGame } from "@/hooks/useSneakerGame";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { modEffectLabel, NO_AUX, SLOTS, type OwnedMod } from "@/lib/mods";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import { RARITIES } from "@/lib/sneaker-nft";
@@ -31,7 +31,7 @@ export default function WorkshopDashboard({
   const wallet = usePolygonWallet();
   const workshop = useWorkshop();
   const game = useSneakerGame();
-  const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { addLocalActivity } = useActivity(wallet.address);
 
   const [slotPicker, setSlotPicker] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -281,7 +281,7 @@ export default function WorkshopDashboard({
                               <button
                                 type="button"
                                 onClick={() => setSlotPicker(null)}
-                                className="text-left text-[11px] text-foreground/45 underline"
+                                className="text-left text-[11px] text-foreground/55 underline"
                               >
                                 Cancel
                               </button>
@@ -320,14 +320,14 @@ export default function WorkshopDashboard({
                   <p className="mt-1 text-sm font-bold">
                     {gameStats ? formatPoints(gameStats.power) : "—"}
                   </p>
-                  <p className="text-[10px] text-foreground/45">veRUNE/day</p>
+                  <p className="text-[10px] text-foreground/55">veRUNE/day</p>
                 </div>
                 <div className="rounded-2xl bg-background p-3">
                   <p className="font-pixel text-[8px] text-mint">HEALTH</p>
                   <p className="mt-1 text-sm font-bold">
                     {gameStats ? `${gameStats.health}` : "—"}
                   </p>
-                  <p className="text-[10px] text-foreground/45">
+                  <p className="text-[10px] text-foreground/55">
                     {gameStats && gameStats.health === 0 ? "worn out" : "days left"}
                   </p>
                 </div>
@@ -336,7 +336,7 @@ export default function WorkshopDashboard({
                   <p className="mt-1 text-sm font-bold">
                     {gameStats ? `${gameStats.energy}/${gameStats.maxEnergy}` : "—"}
                   </p>
-                  <p className="text-[10px] text-foreground/45">charges</p>
+                  <p className="text-[10px] text-foreground/55">charges</p>
                 </div>
               </div>
               {gameStats && gameStats.health === 0 ? (
@@ -345,7 +345,7 @@ export default function WorkshopDashboard({
                   veRUNE to bring it back.
                 </p>
               ) : (
-                <p className="mt-3 text-[11px] leading-relaxed text-foreground/45">
+                <p className="mt-3 text-[11px] leading-relaxed text-foreground/55">
                   Health decays 1/day. Energy refills on every manual activation and fuels consumable
                   abilities.
                 </p>
@@ -377,7 +377,7 @@ export default function WorkshopDashboard({
                 ))}
                 <div className="flex items-center justify-between">
                   <dt className="text-foreground/60">Auto-activation</dt>
-                  <dd className={`font-pixel text-[9px] ${bonuses?.autoActive ? "text-mint" : "text-foreground/40"}`}>
+                  <dd className={`font-pixel text-[9px] ${bonuses?.autoActive ? "text-mint" : "text-foreground/55"}`}>
                     {bonuses?.autoActive ? "ON" : "OFF"}
                   </dd>
                 </div>
@@ -410,7 +410,7 @@ export default function WorkshopDashboard({
               {/* Care: the pair wears on a 365-day season, items restore it. */}
               <div className="mt-6 rounded-2xl border border-foreground/10 bg-background p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-mono text-[10px] tracking-[0.16em] text-foreground/45 uppercase">
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-foreground/55 uppercase">
                     Condition
                   </span>
                   <span className={`font-mono text-sm font-bold ${conditionBand(bonuses?.conditionBps ?? 10_000).tone}`}>
@@ -479,7 +479,7 @@ export default function WorkshopDashboard({
                 </p>
               )}
               {consumables.length > 0 && gameStats && gameStats.energy === 0 ? (
-                <p className="mt-3 text-[11px] text-foreground/45">
+                <p className="mt-3 text-[11px] text-foreground/55">
                   No energy left — activate the sneaker from the Game page to refill charges.
                 </p>
               ) : null}

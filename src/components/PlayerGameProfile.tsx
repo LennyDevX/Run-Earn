@@ -177,13 +177,13 @@ export default function PlayerGameProfile() {
               {String(level).padStart(2, "0")}
             </span>
             <div className="min-w-0 flex-1">
-              <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">
+              <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">
                 RUNNER PROFILE
               </span>
               <p className="mt-1.5 truncate text-lg font-bold tracking-tight">
                 {progress.username || `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`}
               </p>
-              <p className="mt-1 font-mono text-[11px] text-foreground/45">
+              <p className="mt-1 font-mono text-[11px] text-foreground/55">
                 LEVEL {level} · {progress.configured ? "ON-CHAIN XP" : "LOCAL ESTIMATE"}
               </p>
             </div>
@@ -196,7 +196,7 @@ export default function PlayerGameProfile() {
           </div>
 
           <div className="relative mt-6">
-            <div className="flex items-center justify-between font-mono text-[10px] text-foreground/45">
+            <div className="flex items-center justify-between font-mono text-[10px] text-foreground/55">
               <span>LEVEL PROGRESS</span>
               <span>{snapshot ? `${snapshot.xp.toString()} XP` : "—"}</span>
             </div>
@@ -220,7 +220,7 @@ export default function PlayerGameProfile() {
               key={stat.label}
               className="flex flex-col justify-center gap-1 rounded-3xl border border-foreground/8 bg-surface p-5 transition-[transform,box-shadow] duration-500 hover:-translate-y-1 hover:shadow-lg hover:shadow-ink/5"
             >
-              <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
+              <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">
                 {stat.label}
               </span>
               <span className={`font-mono text-2xl font-bold ${stat.accent}`}>{stat.value}</span>
@@ -233,14 +233,14 @@ export default function PlayerGameProfile() {
       <section aria-labelledby="profile-collection">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">
+            <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">
               COLLECTION
             </span>
             <h2 id="profile-collection" className="mt-2 text-xl font-bold tracking-tight">
               Your veSneakers
             </h2>
           </div>
-          <p className="font-mono text-[11px] text-foreground/45">
+          <p className="font-mono text-[11px] text-foreground/55">
             power = worn rarity + {TAB_CHALLENGE.modPowerEach}/mod
           </p>
         </div>
@@ -296,7 +296,7 @@ export default function PlayerGameProfile() {
             <h2 id="profile-inventory" className="text-lg font-bold tracking-tight">
               Consumables
             </h2>
-            <span className="font-mono text-[11px] text-foreground/45">
+            <span className="font-mono text-[11px] text-foreground/55">
               {consumables.length} held
             </span>
           </div>
@@ -309,7 +309,7 @@ export default function PlayerGameProfile() {
               <SkeletonRows count={3} />
             </div>
           ) : consumables.length === 0 ? (
-            <p className="mt-5 rounded-2xl bg-background px-4 py-6 text-center text-xs text-foreground/45">
+            <p className="mt-5 rounded-2xl bg-background px-4 py-6 text-center text-xs text-foreground/55">
               No consumables yet. Buy them from the mod store or claim achievement badges.
             </p>
           ) : (
@@ -351,7 +351,7 @@ export default function PlayerGameProfile() {
         <div className="rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-7">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-lg font-bold tracking-tight">Equipped mods</h2>
-            <span className="font-mono text-[11px] text-foreground/45">
+            <span className="font-mono text-[11px] text-foreground/55">
               {equippables.length} owned
             </span>
           </div>
@@ -361,7 +361,7 @@ export default function PlayerGameProfile() {
           </p>
 
           {equippables.length === 0 ? (
-            <p className="mt-5 rounded-2xl bg-background px-4 py-6 text-center text-xs text-foreground/45">
+            <p className="mt-5 rounded-2xl bg-background px-4 py-6 text-center text-xs text-foreground/55">
               No equippable mods yet.
             </p>
           ) : (
@@ -378,7 +378,7 @@ export default function PlayerGameProfile() {
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-xs font-semibold">{slot.label}</span>
-                      <span className="mt-0.5 block font-mono text-[10px] text-foreground/45">
+                      <span className="mt-0.5 block font-mono text-[10px] text-foreground/55">
                         +{bpsToPercent(mod.traits.effectBps)}
                       </span>
                     </span>

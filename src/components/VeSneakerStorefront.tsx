@@ -6,7 +6,7 @@ import { formatEther, parseEther } from "viem";
 import { usePolygonWallet } from "@/components/Providers";
 import { useVeSneakerStore } from "@/hooks/useVeSneakerStore";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { usePolPrice } from "@/hooks/usePolPrice";
 import SneakerArtwork from "@/components/SneakerArtwork";
 import TrailsFundButton from "@/components/TrailsFundButton";
@@ -63,7 +63,7 @@ export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
   const store = useVeSneakerStore();
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
   const playerLevel = progress.snapshot?.level ?? 0;
-  const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { addLocalActivity } = useActivity(wallet.address);
   const polPrice = usePolPrice();
   const [filter, setFilter] = useState<Filter>("All");
   const [quantityByDesign, setQuantityByDesign] = useState<Record<number, number>>({});
@@ -175,7 +175,7 @@ export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
             type="button"
             onClick={() => void polPrice.refresh(true)}
             title={polPrice.error ?? "POL/USD via Uniswap Trading API"}
-            aria-label={`Refresh POL/USD price; current quote ${polPrice.price.usd.toFixed(4)} dollars`}
+
             className="flex min-h-10 min-w-0 cursor-pointer flex-col items-center justify-center rounded-md border border-brand/25 bg-brand/10 px-2 text-brand transition-colors active:scale-95 hover:bg-brand/15"
           >
             <span className="text-xs font-semibold leading-tight">
@@ -297,10 +297,10 @@ export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
 
               <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-base font-bold tracking-tight">{row.name}</h3>
+                  <h2 className="truncate text-base font-bold tracking-tight">{row.name}</h2>
                   <p className="mt-1 line-clamp-2 max-w-[22ch] text-xs leading-relaxed text-foreground/55">{row.tagline}</p>
-                  <p className="mt-2 line-clamp-3 max-w-[26ch] text-[11px] leading-relaxed text-foreground/45">{row.capability}</p>
-                  <span className="mt-2 block font-mono text-[11px] text-foreground/40">
+                  <p className="mt-2 line-clamp-3 max-w-[26ch] text-[11px] leading-relaxed text-foreground/55">{row.capability}</p>
+                  <span className="mt-2 block font-mono text-[11px] text-foreground/55">
                     veSneaker #{String(row.index + 1).padStart(4, "0")}
                   </span>
                 </div>
@@ -309,7 +309,7 @@ export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
                   {row.discountedPrice < row.price ? (
                     <div className="mt-1 text-[10px] font-semibold text-brand">VAULT DISCOUNT · {formatPol(row.price)} POL standard</div>
                   ) : null}
-                  <div className="mt-1 text-[10px] text-foreground/45">≈ ${(Number(formatEther(row.discountedPrice)) * polPrice.price.usd).toFixed(2)}</div>
+                  <div className="mt-1 text-[10px] text-foreground/55">≈ ${(Number(formatEther(row.discountedPrice)) * polPrice.price.usd).toFixed(2)}</div>
                   {row.usdTargetCents > 0n ? (
                     <div className="mt-1 text-[10px] font-semibold text-brand">
                       USD-ANCHORED · ${Number(row.usdTargetCents) / 100}
@@ -400,7 +400,7 @@ export default function VeSneakerStorefront({ trailsApiKey = "" }: Props) {
       {/* Next steps */}
       <div className="rounded-2xl border border-foreground/10 bg-surface p-6 sm:p-8">
         <span className="font-pixel text-[9px] text-mint">AFTER YOU BUY</span>
-        <h3 className="mt-2 text-xl font-bold tracking-tight">Put your veSneaker to work</h3>
+        <h2 className="mt-2 text-xl font-bold tracking-tight">Put your veSneaker to work</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <Link href="/staking" className="rounded-2xl bg-background p-5 transition-colors hover:bg-mint/5">
             <span className="font-pixel text-[9px] text-mint">01 · STAKING</span>

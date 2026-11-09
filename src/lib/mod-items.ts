@@ -376,14 +376,125 @@ export const CORE_ITEMS: readonly ModItem[] = [
   },
 ] as const;
 
-/// Full catalog. Slots 5–6 (Boost, Skill) are drawn next — append them here and
-/// the gallery renders them without code changes.
+/// Slot 5 — Boost. The only slot that touches staking APY: it adds
+/// `stakingBoostBps` to the wallet's effective rate, **before** the vault's
+/// `maxApyBps` clamp. Small numbers on purpose — the cap is 8.00% and the base is
+/// 2.80%, so a boost measured in whole percent would saturate the cap on its own.
+export const BOOST_ITEMS: readonly ModItem[] = [
+  {
+    id: "boost-common",
+    name: "Ion Thruster",
+    slot: 5,
+    tier: 0,
+    rarity: 30,
+    effectBps: 30,
+    pricePol: "161",
+    imageSrc: "/items/Item1_BoostSktakingBoostBps.png",
+    description:
+      "A single cyan exhaust cone with a steady burn. Adds a modest APY step while the pair is locked in the vault — the cheapest way to start closing the gap to the ceiling.",
+  },
+  {
+    id: "boost-rare",
+    name: "Vector Thruster",
+    slot: 5,
+    tier: 1,
+    rarity: 55,
+    effectBps: 60,
+    pricePol: "322",
+    imageSrc: "/items/Item2_BoostSktakingBoostBpsRare.png",
+    description:
+      "Twin nozzles with a cyan-to-mint plume and a machined alloy housing. The everyday pick for a wallet that keeps POL staked long enough for the boost to compound.",
+  },
+  {
+    id: "boost-epic",
+    name: "Flux Drive",
+    slot: 5,
+    tier: 2,
+    rarity: 75,
+    effectBps: 100,
+    pricePol: "482",
+    imageSrc: "/items/Item3_BoostSktakingBoostBpsEpic.png",
+    description:
+      "Three vectoring nozzles around a violet plasma core, with exhaust trails that bend. A full point of APY on top of the tier ladder.",
+  },
+  {
+    id: "boost-mythic",
+    name: "Apex Drive",
+    slot: 5,
+    tier: 3,
+    rarity: 92,
+    effectBps: 150,
+    pricePol: "724",
+    imageSrc: "/items/Item4_BoostSktakingBoostBpsMythic.png",
+    description:
+      "Gold-caged drive with a white-hot core and a shockwave ring. The largest single APY contribution in the line — pair it with a Mythic runner and the 8.00% ceiling is in reach.",
+  },
+] as const;
+
+/// Slot 6 — Skill. Holds the passive bonus from a level-unlocked skill NFT,
+/// folded into `earnBonusBps` by the workshop. Unlike every other slot this one
+/// is **earned, not bought**: the copy here is the display layer for a skill the
+/// player already claimed.
+export const SKILL_ITEMS: readonly ModItem[] = [
+  {
+    id: "skill-common",
+    name: "Chip: Baseline",
+    slot: 6,
+    tier: 0,
+    rarity: 30,
+    effectBps: 300,
+    pricePol: "177",
+    imageSrc: "/items/item1_SkillChipBps.png",
+    description:
+      "A single die on a dark substrate with three cyan traces. Carries the first passive earn bonus a player unlocks, adding to the veRUNE rate for as long as it stays equipped.",
+  },
+  {
+    id: "skill-rare",
+    name: "Chip: Vector",
+    slot: 6,
+    tier: 1,
+    rarity: 55,
+    effectBps: 600,
+    pricePol: "354",
+    imageSrc: "/items/item2_SkillChipBpsRare.png",
+    description:
+      "A larger die with mint routing and a cyan status rail. The mid-tier passive: meaningful on a runner you keep active, invisible on one you leave idle.",
+  },
+  {
+    id: "skill-epic",
+    name: "Chip: Flux",
+    slot: 6,
+    tier: 2,
+    rarity: 75,
+    effectBps: 1_000,
+    pricePol: "530",
+    imageSrc: "/items/item3_SkillChipBpsEpic.png",
+    description:
+      "Stacked dies with violet interconnects and a glowing bus. A full percent of earn rate, folded into the same multiplier the Upper slot feeds.",
+  },
+  {
+    id: "skill-mythic",
+    name: "Chip: Apex",
+    slot: 6,
+    tier: 3,
+    rarity: 92,
+    effectBps: 1_500,
+    pricePol: "796",
+    imageSrc: "/items/item4_SkillChipBpsMythic.png",
+    description:
+      "A gold-bordered package with a white-mint core and radiating traces. The strongest passive in the line — reserved for the level that unlocks it.",
+  },
+] as const;
+
+/// Full catalog, in slot order. The gallery renders whatever is here.
 export const MOD_ITEMS: readonly ModItem[] = [
   ...SOLE_ITEMS,
   ...UPPER_ITEMS,
   ...LINING_ITEMS,
   ...SKIN_ITEMS,
   ...CORE_ITEMS,
+  ...BOOST_ITEMS,
+  ...SKILL_ITEMS,
 ];
 
 export const MOD_ITEM_SLOTS: readonly number[] = Array.from(

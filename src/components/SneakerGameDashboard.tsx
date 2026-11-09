@@ -1,10 +1,11 @@
 "use client";
 
+import { ActivityRowsSkeleton, Skeleton } from "@/components/Skeleton";
 import { useEffect, useState } from "react";
 import { formatEther } from "viem";
 import { NETWORK_LABEL, explorerTransactionUrl, usePolygonWallet } from "@/components/Providers";
 import { useSneakerGame } from "@/hooks/useSneakerGame";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
 import SneakerArtwork from "@/components/SneakerArtwork";
 
@@ -30,7 +31,7 @@ function activityTime(timestamp?: number) {
 export default function SneakerGameDashboard() {
   const wallet = usePolygonWallet();
   const game = useSneakerGame();
-  const { activities, isLoading: loadingActivity, refresh: refreshActivity, addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { activities, isReady: activityReady, error: activityError, refresh: refreshActivity, addLocalActivity } = useActivity(wallet.address);
   const [nowSeconds, setNowSeconds] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -105,7 +106,7 @@ export default function SneakerGameDashboard() {
         <div className="rounded-3xl border border-foreground/10 bg-surface p-6 transition-[box-shadow,color,background-color,border-color,fill,stroke] duration-300 hover:border-mint/30 hover:shadow-xl hover:shadow-mint/5">
           <span className="font-pixel text-[9px] text-foreground/50">VE RUNE BALANCE</span>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold tracking-tight text-mint">{formatPoints(game.veRune)}</span>
+            <span className="text-4xl font-extrabold tracking-tight text-mint">{isConfigured && !game.isReady ? <Skeleton className="h-9 w-40" /> : formatPoints(game.veRune)}</span>
             <span className="text-sm font-bold text-foreground/50">veRUNE</span>
           </div>
           <p className="mt-2 text-xs text-foreground/50">Virtual points · redeemable for REN</p>
@@ -148,7 +149,7 @@ export default function SneakerGameDashboard() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <span className="font-pixel text-[9px] text-mint">VE RUNE REDEMPTION</span>
-            <h3 className="mt-2 text-xl font-bold tracking-tight">Exchange virtual points for real REN</h3>
+            <h2 className="mt-2 text-xl font-bold tracking-tight">Exchange virtual points for real REN</h2>
             <p className="mt-1 text-sm text-foreground/60">
               Rate: 100 veRUNE = 1 REN. Redemption opens once the protocol funds the reward pool.
             </p>
@@ -214,7 +215,7 @@ export default function SneakerGameDashboard() {
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${rarityObj?.accent ?? "bg-foreground/10"}`}>
                           {rarityObj?.label ?? "Sneaker"} · Tier {sneaker.tier.toString()}
                         </span>
-                        <span className={`font-pixel text-[9px] ${wornOut ? "text-magma" : canActivateNow ? "text-mint" : "text-foreground/40"}`}>
+                        <span className={`font-pixel text-[9px] ${wornOut ? "text-magma" : canActivateNow ? "text-mint" : "text-foreground/55"}`}>
                           {wornOut ? "✕ WORN OUT" : canActivateNow ? "● READY" : "○ COOLDOWN"}
                         </span>
                       </div>
@@ -336,8 +337,8 @@ export default function SneakerGameDashboard() {
           </button>
         </div>
         <div className="mt-4 flex flex-col divide-y divide-foreground/10">
-          {loadingActivity ? (
-            <p className="py-6 text-center text-sm text-foreground/50">Indexing latest events from The Graph...</p>
+          {!activityReady ? (
+            <ActivityRowsSkeleton />
           ) : activities.length > 0 ? (
             activities.map((act) => (
               <div key={`${act.id}-${act.timestamp ?? "now"}`} className="flex flex-wrap items-center justify-between gap-3 py-4">
@@ -364,7 +365,7 @@ export default function SneakerGameDashboard() {
             ))
           ) : (
             <p className="py-8 text-center text-xs text-foreground/50">
-              No recent activity recorded yet. Activate a sneaker to see live updates.
+              {activityError ? "The activity feed is unavailable right now. Your transactions are not affected." : "No recent activity recorded yet. Activate a sneaker to see live updates."}
             </p>
           )}
         </div>

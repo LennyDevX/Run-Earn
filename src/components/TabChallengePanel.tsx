@@ -58,14 +58,14 @@ export default function TabChallengePanel() {
     <section aria-labelledby="tab-panel-title" className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">
+          <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">
             DAILY SESSION
           </span>
           <h2 id="tab-panel-title" className="text-gradient mt-2 text-xl font-bold tracking-tight">
             Tab challenge
           </h2>
         </div>
-        <p className="font-mono text-[11px] text-foreground/45">
+        <p className="font-mono text-[11px] text-foreground/55">
           window {TAB_CHALLENGE.sessionSeconds / 3600}h · boost {TAB_CHALLENGE.boostSeconds / 3600}h ·
           cap {bpsToPercent(STAKING_BUDGET.maxApyBps)}
         </p>
@@ -98,7 +98,7 @@ export default function TabChallengePanel() {
             <span aria-hidden className="hud-corner hud-corner-br text-brand" />
 
             <div className="relative flex flex-col items-center gap-5">
-              <span className="font-pixel text-[9px] tracking-[0.24em] text-foreground/45">
+              <span className="font-pixel text-[9px] tracking-[0.24em] text-foreground/55">
                 {sessionStarted ? "SESSION ACTIVE · 24H WINDOW" : "READY TO START"}
               </span>
 
@@ -125,7 +125,7 @@ export default function TabChallengePanel() {
                   ) : null}
                   <span className="relative flex flex-col items-center">
                     <span className="font-mono text-4xl font-bold tabular-nums">{points}</span>
-                    <span className="mt-1 font-pixel text-[8px] tracking-[0.24em] text-foreground/45">
+                    <span className="mt-1 font-pixel text-[8px] tracking-[0.24em] text-foreground/55">
                       POINTS
                     </span>
                     <span className="mt-1 rounded-full border border-astra/35 bg-astra/10 px-2 py-0.5 font-mono text-[9px] font-bold text-astra">
@@ -142,7 +142,7 @@ export default function TabChallengePanel() {
                     style={{ transform: `scaleX(${Math.round((points / MAX_TAB_LEVEL.points) * 100) / 100})` }}
                   />
                 </div>
-                <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-foreground/45">
+                <div className="mt-2 flex items-center justify-between font-mono text-[10px] text-foreground/55">
                   <span>
                     {currentLevel ? `L${currentLevel.level} · ${currentLevel.label}` : "LEVEL 0"}
                   </span>
@@ -154,13 +154,13 @@ export default function TabChallengePanel() {
 
               <div className="grid w-full grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-foreground/8 bg-background px-4 py-3">
-                  <span className="block font-mono text-[10px] text-foreground/45">PAID BOOST</span>
+                  <span className="block font-mono text-[10px] text-foreground/55">PAID BOOST</span>
                   <span className="mt-1 block font-mono text-lg font-bold text-mint">
                     +{bpsToPercent(paidBoost)}
                   </span>
                 </div>
                 <div className="rounded-2xl border border-foreground/8 bg-background px-4 py-3">
-                  <span className="block font-mono text-[10px] text-foreground/45">PROJECTED APY</span>
+                  <span className="block font-mono text-[10px] text-foreground/55">PROJECTED APY</span>
                   <span className="mt-1 block font-mono text-lg font-bold text-brand">
                     {bpsToPercent(projectedApy)}
                   </span>
@@ -183,7 +183,7 @@ export default function TabChallengePanel() {
                 >
                   Reset demo session
                 </button>
-                <span className="font-mono text-[10px] text-foreground/40">
+                <span className="font-mono text-[10px] text-foreground/55">
                   contract pending
                 </span>
               </div>
@@ -195,7 +195,7 @@ export default function TabChallengePanel() {
             <div className="rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-7">
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="text-lg font-bold tracking-tight">Choose your runner</h3>
-                <span className="font-mono text-[11px] text-foreground/45">
+                <span className="font-mono text-[11px] text-foreground/55">
                   {roster.runners.length} available
                 </span>
               </div>
@@ -219,7 +219,7 @@ export default function TabChallengePanel() {
                       }`}
                     >
                       <span className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] text-foreground/45">
+                        <span className="font-mono text-[10px] text-foreground/55">
                           #{String(row.tokenId).padStart(4, "0")}
                         </span>
                         <span
@@ -229,7 +229,7 @@ export default function TabChallengePanel() {
                         </span>
                       </span>
                       <span className="mt-2 block truncate text-xs font-semibold">{row.label}</span>
-                      <span className="mt-1 block font-mono text-[10px] text-foreground/45">
+                      <span className="mt-1 block font-mono text-[10px] text-foreground/55">
                         power {row.power.score}/100 · LV {row.power.level}
                       </span>
                     </button>
@@ -286,7 +286,7 @@ export default function TabChallengePanel() {
                       );
                     })}
                   </ol>
-                  <p className="mt-4 text-[11px] leading-relaxed text-foreground/45">
+                  <p className="mt-4 text-[11px] leading-relaxed text-foreground/55">
                     Greyed rows pay your ceiling instead of the full level reward. Raise power with
                     its condition or equip more mods.
                   </p>

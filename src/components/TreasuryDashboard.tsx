@@ -1,8 +1,9 @@
 "use client";
 
+import { ActivityRowsSkeleton, Skeleton } from "@/components/Skeleton";
 import { formatEther } from "viem";
 import { explorerAccountUrl, usePolygonWallet } from "@/components/Providers";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { useTreasury } from "@/hooks/useTreasury";
 
 /// ───────────────────────── Public treasury dashboard ───────────────────────
@@ -23,19 +24,19 @@ import { useTreasury } from "@/hooks/useTreasury";
 
 const short = (value: string) => `${value.slice(0, 6)}…${value.slice(-4)}`;
 
-/// Subgraph timestamps arrive as Unix seconds from most schemas but milliseconds
+/// Log timestamps arrive as Unix seconds but some providers return milliseconds
 /// from some. Anything past the year 2286 in seconds is milliseconds.
 function formatActivityTime(timestamp: number) {
   const ms = timestamp > 1e12 ? timestamp : timestamp * 1000;
   return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
+function Stat({ label, value, hint, accent, loading }: { label: string; value: string; hint?: string; accent?: boolean; loading?: boolean }) {
   return (
     <div className="flex flex-col gap-1 rounded-2xl border border-foreground/8 bg-background px-5 py-4">
-      <span className="font-pixel text-[9px] text-foreground/40">{label}</span>
-      <span className={`font-mono text-xl font-bold ${accent ? "text-mint" : ""}`}>{value}</span>
-      {hint ? <span className="text-[11px] leading-snug text-foreground/45">{hint}</span> : null}
+      <span className="font-pixel text-[9px] text-foreground/55">{label}</span>
+      <span className={`font-mono text-xl font-bold ${accent ? "text-mint" : ""}`}>{loading ? <Skeleton className="h-6 w-24" /> : value}</span>
+      {hint ? <span className="text-[11px] leading-snug text-foreground/55">{hint}</span> : null}
     </div>
   );
 }
@@ -43,7 +44,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
 export default function TreasuryDashboard() {
   const { treasury, polBalance, stables, pendingAtMarketplace, pendingAtSplitter, recipients, wiring, isLoading, error, refresh } =
     useTreasury();
-  const activity = useSubgraphActivity(treasury);
+  const activity = useActivity(treasury);
   const { chainId } = usePolygonWallet();
 
   const pendingTotal = pendingAtMarketplace + pendingAtSplitter;
@@ -62,7 +63,7 @@ export default function TreasuryDashboard() {
     <div className="flex flex-col gap-6">
       {/* ── Address ─────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
-        <span className="font-pixel text-[9px] text-foreground/40">TREASURY ADDRESS</span>
+        <span className="font-pixel text-[9px] text-foreground/55">TREASURY ADDRESS</span>
         {treasury ? (
           <a
             href={explorerAccountUrl(treasury)}
@@ -83,18 +84,18 @@ export default function TreasuryDashboard() {
 
       {/* ── Balance ─────────────────────────────────────────────── */}
       <section className="flex flex-col gap-4">
-        <h2 className="font-pixel text-[10px] text-foreground/40">BALANCE</h2>
+        <h2 className="font-pixel text-[10px] text-foreground/55">BALANCE</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
             label="POL"
-            value={isLoading ? "…" : `${Number(formatEther(polBalance)).toLocaleString("en-US", { maximumFractionDigits: 4 })}`}
+            loading={isLoading} value={`${Number(formatEther(polBalance)).toLocaleString("en-US", { maximumFractionDigits: 4 })}`}
           />
           {stables.map((token) => (
-            <Stat key={token.label} label={token.label} value={isLoading ? "…" : Number(token.formatted).toFixed(4)} />
+            <Stat key={token.label} label={token.label} loading={isLoading} value={Number(token.formatted).toFixed(4)} />
           ))}
           <Stat
             label="PENDING"
-            value={isLoading ? "…" : Number(formatEther(pendingTotal)).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+            loading={isLoading} value={Number(formatEther(pendingTotal)).toLocaleString("en-US", { maximumFractionDigits: 4 })}
             hint={hasPending ? "Earned, not yet moved" : "Nothing waiting"}
             accent={hasPending}
           />
@@ -104,7 +105,7 @@ export default function TreasuryDashboard() {
       {/* ── Pending detail ──────────────────────────────────────── */}
       <section className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
         <div className="flex flex-col gap-1">
-          <h2 className="font-pixel text-[10px] text-foreground/40">EARNED BUT NOT RECEIVED</h2>
+          <h2 className="font-pixel text-[10px] text-foreground/55">EARNED BUT NOT RECEIVED</h2>
           <p className="max-w-2xl text-xs leading-relaxed text-foreground/55">
             Marketplace revenue takes two steps. The first is an admin transaction, so this money can sit here
             indefinitely while the balance above reads zero.
@@ -126,7 +127,7 @@ export default function TreasuryDashboard() {
 
       {/* ── Wiring ──────────────────────────────────────────────── */}
       <section className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
-        <h2 className="font-pixel text-[10px] text-foreground/40">WHERE THE MONEY GOES</h2>
+        <h2 className="font-pixel text-[10px] text-foreground/55">WHERE THE MONEY GOES</h2>
         {misrouted.length > 0 ? (
           <p className="rounded-xl bg-magma/10 px-4 py-3 text-xs leading-relaxed text-magma">
             {misrouted.length} contract{misrouted.length === 1 ? "" : "s"} pay somewhere other than the treasury address
@@ -144,7 +145,7 @@ export default function TreasuryDashboard() {
             </div>
           ))}
         </div>
-        <p className="text-[11px] leading-relaxed text-foreground/45">
+        <p className="text-[11px] leading-relaxed text-foreground/55">
           Marketplace fees land in the FeeSplitter first, which is why that row shows the splitter rather than the
           treasury.
         </p>
@@ -152,7 +153,7 @@ export default function TreasuryDashboard() {
 
       {/* ── Split ───────────────────────────────────────────────── */}
       <section className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
-        <h2 className="font-pixel text-[10px] text-foreground/40">FEE SPLIT</h2>
+        <h2 className="font-pixel text-[10px] text-foreground/55">FEE SPLIT</h2>
         {recipients.length === 0 ? (
           <p className="text-xs text-foreground/50">No recipients configured.</p>
         ) : (
@@ -182,7 +183,7 @@ export default function TreasuryDashboard() {
       {/* ── Movements ───────────────────────────────────────────── */}
       <section className="flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-pixel text-[10px] text-foreground/40">RECENT MOVEMENT</h2>
+          <h2 className="font-pixel text-[10px] text-foreground/55">RECENT MOVEMENT</h2>
           <button
             type="button"
             onClick={() => {
@@ -194,13 +195,11 @@ export default function TreasuryDashboard() {
             REFRESH
           </button>
         </div>
-        {activity.isLoading ? (
-          <p className="text-xs text-foreground/50">Loading…</p>
+        {!activity.isReady ? (
+          <ActivityRowsSkeleton rows={2} />
         ) : activity.activities.length === 0 ? (
           <p className="text-xs leading-relaxed text-foreground/50">
-            Nothing to show. The activity feed comes from the subgraph, and the deployed schema has no
-            address-indexed activity entities yet — so it returns empty for every address, not just this one. The
-            balance and pending figures above are read directly from the chain and are unaffected.
+            {activity.error ? "The activity feed is unavailable right now. The balances above are read separately and are not affected." : "No recent activity for this address. The feed reads events straight from the chain over a bounded block range, so a quiet wallet shows nothing until something happens on-chain. The balance and pending figures above are unaffected."}
           </p>
         ) : (
           <div className="flex flex-col divide-y divide-foreground/8">
@@ -208,7 +207,7 @@ export default function TreasuryDashboard() {
               <div key={item.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm font-medium">{item.label}</span>
-                  <span className="font-mono text-[10px] text-foreground/45">
+                  <span className="font-mono text-[10px] text-foreground/55">
                     {item.kind}
                     {item.timestamp ? ` · ${formatActivityTime(item.timestamp)}` : ""}
                   </span>
@@ -220,9 +219,8 @@ export default function TreasuryDashboard() {
             ))}
           </div>
         )}
-        <p className="text-[11px] leading-relaxed text-foreground/45">
-          Movement is read from the subgraph, which indexes contract events. x402 payments settle as plain USDC
-          transfers and do not emit one, so they appear in the balance rather than in this list.
+        <p className="text-[11px] leading-relaxed text-foreground/55">
+          Movement is read directly from contract events with eth_getLogs. x402 payments settle as plain USDC transfers and emit no event of ours, so they appear in the balance rather than in this list.
         </p>      </section>
 
       {chainId !== null && chainId !== 137 ? (

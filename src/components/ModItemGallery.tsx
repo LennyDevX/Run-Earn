@@ -12,7 +12,7 @@ import { modStoreAbi } from "@/lib/contracts";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import { MOD_ITEMS, MOD_ITEM_SLOTS, lowestPricePol, type ModItem } from "@/lib/mod-items";
 import { slotInfo } from "@/lib/mods";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 
 const modsAddressEnv = process.env.NEXT_PUBLIC_SNEAKER_MODS_ADDRESS;
 
@@ -34,7 +34,7 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
   const wallet = usePolygonWallet();
   const economy = useModEconomy();
   const polPrice = usePolPrice();
-  const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { addLocalActivity } = useActivity(wallet.address);
 
   const modsAddress = useMemo<Address | null>(
     () => (modsAddressEnv && isAddress(modsAddressEnv) ? getAddress(modsAddressEnv) : null),
@@ -173,17 +173,17 @@ export default function ModItemGallery({ onEquip }: { onEquip: (slot: number) =>
 
         <dl className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-foreground/8 bg-surface px-4 py-3 text-center">
-            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">Items</dt>
+            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">Items</dt>
             <dd className="mt-1 font-mono text-lg font-bold">{MOD_ITEMS.length}</dd>
           </div>
           <div className="rounded-2xl border border-foreground/8 bg-surface px-4 py-3 text-center">
-            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">Live</dt>
-            <dd className={`mt-1 font-mono text-lg font-bold ${registeredCount > 0 ? "text-mint" : "text-foreground/40"}`}>
+            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">Live</dt>
+            <dd className={`mt-1 font-mono text-lg font-bold ${registeredCount > 0 ? "text-mint" : "text-foreground/55"}`}>
               {registeredCount}
             </dd>
           </div>
           <div className="rounded-2xl border border-foreground/8 bg-surface px-4 py-3 text-center">
-            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">From</dt>
+            <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">From</dt>
             <dd className="mt-1 font-mono text-lg font-bold text-mint">{lowestPricePol()} POL</dd>
           </div>
         </dl>

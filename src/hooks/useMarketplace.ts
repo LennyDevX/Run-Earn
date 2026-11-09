@@ -51,6 +51,7 @@ export function useMarketplace() {
   const [saleKinds, setSaleKinds] = useState<Map<string, bigint>>(new Map());
   const [suggested, setSuggested] = useState<Map<string, bigint>>(new Map());
   const [isReading, setIsReading] = useState(false);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
 
   const configured = Boolean(
@@ -187,6 +188,7 @@ export function useMarketplace() {
       setReadError(cause instanceof Error ? cause.message : "Could not read the marketplace.");
     } finally {
       setIsReading(false);
+        setLoadedFor(wallet.address ?? null);
     }
   }, [marketplaceAddress, owned.sneakers, sneakerAddress, wallet.address, wallet.isMobile, wallet.publicClient]);
 
@@ -320,6 +322,7 @@ export function useMarketplace() {
     saleKinds,
     suggested,
     isLoading: isReading || transaction.isPending,
+    isReady: !wallet.address || loadedFor === wallet.address,
     error: readError ?? transaction.error ?? owned.error,
     refresh: async () => {
       await Promise.all([refresh(), owned.refresh()]);

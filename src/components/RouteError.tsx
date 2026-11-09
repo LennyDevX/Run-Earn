@@ -44,7 +44,7 @@ export default function RouteError({
       </p>
 
       {error.digest ? (
-        <p className="rounded-xl bg-foreground/5 px-3 py-2 font-mono text-[10px] text-foreground/40">
+        <p className="rounded-xl bg-foreground/5 px-3 py-2 font-mono text-[10px] text-foreground/55">
           ref {error.digest}
         </p>
       ) : null}
@@ -66,7 +66,7 @@ export default function RouteError({
       </div>
 
       {error.digest ? (
-        <p className="text-[11px] leading-relaxed text-foreground/40">
+        <p className="text-[11px] leading-relaxed text-foreground/55">
           If it keeps happening, the reference above is what to send us.
         </p>
       ) : null}

@@ -169,6 +169,20 @@ async function main() {
 
   const deployer = getAddress(wallet.account.address);
   const admin = addressEnv("DEPLOY_ADMIN_ADDRESS", deployer);
+
+  /// Refuse to make the deployer the admin of 15 contracts without an explicit
+  /// opt-in. This is how the first deployment ended up with a single EOA
+  /// controlling the treasury, the fees and the mint — silently, because the
+  /// variable was simply unset and the fallback was invisible.
+  ///
+  /// A multisig address in `DEPLOY_ADMIN_ADDRESS` is the intended path. Set
+  /// `ALLOW_EOA_ADMIN=true` only for a throwaway test deployment.
+  if (admin.toLowerCase() === deployer.toLowerCase() && optionalEnv("ALLOW_EOA_ADMIN", "") !== "true") {
+    throw new Error(
+      "DEPLOY_ADMIN_ADDRESS is unset, so the deployer would become admin of every contract.\n" +
+        "Set it to a multisig address, or set ALLOW_EOA_ADMIN=true for a throwaway deployment.",
+    );
+  }
   const minter = addressEnv("RUNE_MINTER_ADDRESS", admin);
   const target = targetFromEnvironment();
   const deployments: Deployment[] = [];

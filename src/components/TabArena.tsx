@@ -23,7 +23,7 @@ import {
 function StatRow({ label, value, tone = "text-foreground" }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex items-center justify-between border-b border-foreground/6 py-2 last:border-b-0">
-      <span className="font-mono text-[10px] tracking-[0.16em] text-foreground/45 uppercase">{label}</span>
+      <span className="font-mono text-[10px] tracking-[0.16em] text-foreground/55 uppercase">{label}</span>
       <span className={`font-mono text-sm font-bold ${tone}`}>{value}</span>
     </div>
   );
@@ -95,7 +95,7 @@ export default function TabArena() {
       <Panel label="TAB ARENA · OFFLINE">
         <div className="flex flex-col items-center gap-4 py-14 text-center">
           <p className="font-pixel text-xs tracking-[0.24em] text-foreground/60">INSERT WALLET</p>
-          <p className="max-w-xs font-mono text-[11px] leading-relaxed text-foreground/45">
+          <p className="max-w-xs font-mono text-[11px] leading-relaxed text-foreground/55">
             Connect a wallet to load your runner and open today&apos;s session.
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function TabArena() {
       <Panel label="TAB ARENA · LOCKED">
         <div className="flex flex-col items-center gap-5 py-12 text-center">
           <p className="font-pixel text-xs tracking-[0.24em] text-magma">GATE CLOSED</p>
-          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-foreground/45">
+          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-foreground/55">
             A session needs staked POL and a locked veSneaker — the boost only means something when
             there is yield to boost, and the pair has to be in the vault.
           </p>
@@ -171,7 +171,7 @@ export default function TabArena() {
       <Panel label="TAB ARENA · NO RUNNER">
         <div className="flex flex-col items-center gap-5 py-14 text-center">
           <p className="font-pixel text-xs tracking-[0.24em] text-magma">NO VE SNEAKER</p>
-          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-foreground/45">
+          <p className="max-w-sm font-mono text-[11px] leading-relaxed text-foreground/55">
             The arena needs a veSneaker. Its power score sets your boost ceiling.
           </p>
           <Link
@@ -260,7 +260,7 @@ export default function TabArena() {
                           : "border-foreground/10 bg-background hover:border-foreground/25"
                       }`}
                     >
-                      <span className="block font-mono text-[9px] text-foreground/45">
+                      <span className="block font-mono text-[9px] text-foreground/55">
                         #{String(option.tokenId).padStart(3, "0")}
                       </span>
                       <span
@@ -308,7 +308,7 @@ export default function TabArena() {
                   <span className="font-mono text-6xl font-bold tabular-nums leading-none text-foreground sm:text-7xl">
                     {points}
                   </span>
-                  <span className="mt-2 font-pixel text-[9px] tracking-[0.3em] text-foreground/45">POINTS</span>
+                  <span className="mt-2 font-pixel text-[9px] tracking-[0.3em] text-foreground/55">POINTS</span>
                   <span className="mt-1.5 rounded-full border border-astra/35 bg-astra/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-astra">
                     ×{multiplier} / TAP
                   </span>
@@ -318,7 +318,7 @@ export default function TabArena() {
 
             {/* Progress */}
             <div className="w-full max-w-lg">
-              <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.16em] text-foreground/45 uppercase">
+              <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.16em] text-foreground/55 uppercase">
                 <span>
                   {currentLevel ? `L${currentLevel.level} · ${currentLevel.label}` : "STANDBY"}
                 </span>
@@ -335,7 +335,7 @@ export default function TabArena() {
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-mint/20 bg-mint/8 px-4 py-3 text-center">
-                  <span className="block font-mono text-[9px] tracking-[0.18em] text-foreground/45 uppercase">
+                  <span className="block font-mono text-[9px] tracking-[0.18em] text-foreground/55 uppercase">
                     Boost
                   </span>
                   <span className="mt-1 block font-mono text-2xl font-bold tabular-nums text-mint">
@@ -343,7 +343,7 @@ export default function TabArena() {
                   </span>
                 </div>
                 <div className="rounded-xl border border-brand/20 bg-brand/8 px-4 py-3 text-center">
-                  <span className="block font-mono text-[9px] tracking-[0.18em] text-foreground/45 uppercase">
+                  <span className="block font-mono text-[9px] tracking-[0.18em] text-foreground/55 uppercase">
                     APY
                   </span>
                   <span className="mt-1 block font-mono text-2xl font-bold tabular-nums text-brand">
@@ -399,7 +399,7 @@ export default function TabArena() {
               >
                 <span
                   className={`block font-mono text-[9px] tracking-[0.16em] ${
-                    cleared ? "text-mint" : isCurrent ? "text-brand" : "text-foreground/45"
+                    cleared ? "text-mint" : isCurrent ? "text-brand" : "text-foreground/55"
                   }`}
                 >
                   L{level.level}
@@ -407,7 +407,7 @@ export default function TabArena() {
                 <span className="mt-1 block font-mono text-base font-bold tabular-nums text-foreground">
                   {level.points}
                 </span>
-                <span className="mt-0.5 block font-mono text-[9px] text-foreground/40">
+                <span className="mt-0.5 block font-mono text-[9px] text-foreground/55">
                   ≈{tapsNeeded} taps
                 </span>
                 <span

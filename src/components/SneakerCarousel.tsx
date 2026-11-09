@@ -131,7 +131,7 @@ export default function SneakerCarousel({ className }: { className?: string }) {
               aria-label={`Show ${item.name} collection`}
               aria-pressed={index === itemIndex}
               onClick={() => setIndex(itemIndex)}
-              className={`flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-0 font-pixel text-[7px] uppercase tracking-wider transition-colors active:scale-95 sm:px-3 sm:text-[8px] ${index === itemIndex ? "text-foreground" : "text-foreground/45 hover:text-foreground"}`}
+              className={`flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-0 font-pixel text-[7px] uppercase tracking-wider transition-colors active:scale-95 sm:px-3 sm:text-[8px] ${index === itemIndex ? "text-foreground" : "text-foreground/55 hover:text-foreground"}`}
             >
               <span className="flex items-center gap-1 sm:gap-2">
                 <span

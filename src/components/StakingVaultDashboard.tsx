@@ -1,11 +1,12 @@
 "use client";
 
+import { ActivityRowsSkeleton, Skeleton } from "@/components/Skeleton";
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { formatEther, parseEther } from "viem";
 import { NETWORK_LABEL, explorerTransactionUrl, usePolygonWallet } from "@/components/Providers";
 import { useStakingVault } from "@/hooks/useStakingVault";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { useMintedSneakers } from "@/hooks/useMintedSneakers";
 import { useWalletOverview } from "@/hooks/useWalletOverview";
 import { useNftAppraisal } from "@/hooks/useNftAppraisal";
@@ -62,7 +63,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
   const walletOverview = useWalletOverview();
   const localMinted = useMintedSneakers(wallet.address);
   const appraisal = useNftAppraisal();
-  const { activities, isLoading: loadingActivity, refresh: refreshActivity, addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { activities, isReady: activityReady, error: activityError, refresh: refreshActivity, addLocalActivity } = useActivity(wallet.address);
 
   const [activeTab, setActiveTab] = useState<Tab>("deposit");
   const [depositInput, setDepositInput] = useState("");
@@ -267,7 +268,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-sky">
-              {formatPol(staking.stats.pendingRewards)}
+              {isConfigured && !staking.isReady ? <Skeleton className="h-7 w-28" /> : formatPol(staking.stats.pendingRewards)}
             </span>
             <span className="text-sm font-bold text-foreground/50">POL</span>
           </div>
@@ -294,7 +295,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl font-extrabold tracking-tight text-foreground">
-              {formatPol(staking.stats.principal)}
+              {isConfigured && !staking.isReady ? <Skeleton className="h-7 w-28" /> : formatPol(staking.stats.principal)}
             </span>
             <span className="text-sm font-bold text-foreground/50">POL</span>
           </div>
@@ -421,7 +422,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
 
               {/* Quick Presets */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-foreground/45">Quick Presets:</span>
+                <span className="text-xs text-foreground/55">Quick Presets:</span>
                 {[25, 50, 75, 100].map((percent) => (
                   <button
                     key={percent}
@@ -516,9 +517,9 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
               <div className="rounded-3xl border border-mint/20 bg-mint/5 p-6">
                 <span className="text-xs text-foreground/50">Accumulated Rewards Ready to Claim</span>
                 <div className="mt-2 text-4xl font-extrabold text-mint">
-                  {formatPol(staking.stats.pendingRewards)} POL
+                  {isConfigured && !staking.isReady ? <Skeleton className="h-7 w-28" /> : formatPol(staking.stats.pendingRewards)} POL
                 </div>
-                <span className="mt-2 block text-xs text-foreground/45">
+                <span className="mt-2 block text-xs text-foreground/55">
                   Funded directly from protocol revenue & verifiable reward reserve.
                 </span>
               </div>
@@ -541,7 +542,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
               </div>
               <div className="flex items-center justify-between rounded-2xl bg-surface p-4">
                 <span className="text-xs text-foreground/60">Total Protocol Principal</span>
-                <strong className="font-mono text-sm text-foreground">{formatPol(staking.stats.principal)} POL</strong>
+                <strong className="font-mono text-sm text-foreground">{isConfigured && !staking.isReady ? <Skeleton className="h-7 w-28" /> : formatPol(staking.stats.principal)} POL</strong>
               </div>
               <p className="text-xs leading-relaxed text-foreground/50">
                 The smart contract segregates user principal from reward liquidity. Claims are executed on-chain and sent directly to your connected wallet address.
@@ -571,7 +572,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
                   </span>
                 </div>
                 <div className="mt-3 text-2xl font-bold">
-                  {formatPol(staking.stats.principal)} POL <span className="text-xs font-normal text-foreground/50">staked</span>
+                  {isConfigured && !staking.isReady ? <Skeleton className="h-7 w-28" /> : formatPol(staking.stats.principal)} POL <span className="text-xs font-normal text-foreground/50">staked</span>
                 </div>
                 {isLockActive ? (
                   <p className="mt-2 text-xs leading-relaxed text-magma/80">
@@ -710,7 +711,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${rarityObj?.accent ?? "bg-foreground/10"}`}>
                           {rarityObj?.label ?? "Sneaker"} · Tier {sneaker.tier.toString()}
                         </span>
-                        <span className={`font-pixel text-[9px] ${isLocked ? "text-mint" : "text-foreground/40"}`}>
+                        <span className={`font-pixel text-[9px] ${isLocked ? "text-mint" : "text-foreground/55"}`}>
                           {isLocked ? "● BOOSTING" : "IN WALLET"}
                         </span>
                       </div>
@@ -801,8 +802,8 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
         </div>
 
         <div className="mt-4 flex flex-col divide-y divide-foreground/10">
-          {loadingActivity ? (
-            <p className="py-6 text-center text-sm text-foreground/50">Indexing latest events from The Graph...</p>
+          {!activityReady ? (
+            <ActivityRowsSkeleton />
           ) : activities.length > 0 ? (
             activities.map((act) => (
               <div key={`${act.id}-${act.timestamp ?? "now"}`} className="flex flex-wrap items-center justify-between gap-3 py-4">
@@ -833,7 +834,7 @@ export default function StakingVaultDashboard({ trailsApiKey = "" }: Props) {
             ))
           ) : (
             <p className="py-8 text-center text-xs text-foreground/50">
-              No recent activity recorded yet. Make a deposit or lock an NFT to see live updates.
+              {activityError ? "The activity feed is unavailable right now. Your transactions are not affected." : "No recent activity recorded yet. Make a deposit or lock an NFT to see live updates."}
             </p>
           )}
         </div>

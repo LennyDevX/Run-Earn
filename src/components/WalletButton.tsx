@@ -170,7 +170,7 @@ export default function WalletButton() {
             className="flex min-h-[3.25rem] items-center justify-between rounded-2xl border border-foreground/10 bg-background px-4 py-3 text-left transition-colors active:scale-[0.99] hover:border-mint/50 disabled:cursor-wait disabled:opacity-50"
           >
             <span className="font-semibold">{option.label}</span>
-            <span className="text-[10px] text-foreground/45">
+            <span className="text-[10px] text-foreground/55">
               {option.kind === "embedded" ? "No install" : option.installed ? "Detected" : wallet.isMobile ? "Open app" : "SDK"}
             </span>
           </button>
@@ -283,7 +283,7 @@ export default function WalletButton() {
   const accountPanel: ReactNode = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="truncate font-mono text-[10px] text-foreground/40">{truncate(wallet.address ?? "")}</span>
+        <span className="truncate font-mono text-[10px] text-foreground/55">{truncate(wallet.address ?? "")}</span>
         <button
           type="button"
           onClick={() => void copyAddress()}
@@ -309,7 +309,7 @@ export default function WalletButton() {
           <div className="flex items-center gap-2">
             <span className="size-1.5 animate-pulse rounded-full bg-mint" />
             <div>
-              <span className="block text-[10px] text-foreground/45">Network status</span>
+              <span className="block text-[10px] text-foreground/55">Network status</span>
               <span className="block text-xs font-semibold text-mint">Connected</span>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function WalletButton() {
 
         <div className="flex items-center justify-between rounded-2xl bg-background px-4 py-3">
           <div>
-            <span className="block text-[10px] text-foreground/45">NFTs Airen</span>
+            <span className="block text-[10px] text-foreground/55">NFTs Airen</span>
             <span className="block text-xs font-semibold text-polygon-purple">
               {overview.isLoading
                 ? "…"
@@ -386,12 +386,12 @@ export default function WalletButton() {
             className="animate-modal-in absolute right-0 z-50 mt-3 w-[min(20rem,calc(100vw-2rem))] rounded-3xl border border-foreground/8 bg-surface p-5 shadow-2xl shadow-ink/15"
           >
             <div className="mb-4 flex items-start justify-between gap-4">
-              <span className="font-pixel text-[9px] text-foreground/40">CONNECT WALLET</span>
+              <span className="font-pixel text-[9px] text-foreground/55">CONNECT WALLET</span>
               <button
                 type="button"
                 onClick={() => setConnectOpen(false)}
                 aria-label="Close wallet picker"
-                className="text-foreground/40 hover:text-foreground"
+                className="text-foreground/55 hover:text-foreground"
               >
                 ×
               </button>
@@ -453,7 +453,7 @@ export default function WalletButton() {
           className="animate-modal-in absolute right-0 z-50 mt-3 w-[min(18rem,calc(100vw-2rem))] rounded-3xl border border-foreground/8 bg-surface p-5 shadow-2xl shadow-ink/15"
         >
           <div className="mb-1 flex items-center justify-between">
-            <span className="font-pixel text-[9px] text-foreground/40">MY ACCOUNT</span>
+            <span className="font-pixel text-[9px] text-foreground/55">MY ACCOUNT</span>
           </div>
           {accountPanel}
         </div>

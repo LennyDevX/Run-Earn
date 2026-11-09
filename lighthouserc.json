@@ -1,5 +1,5 @@
 {
-  "//": "Mobile performance budget for Airen. There is no CI runner in this repo yet, so this file is the budget rather than a pipeline: run it locally with `npx @lhci/cli autorun` against a production build. When CI exists, wire the same command into it unchanged.",
+  "//": "Mobile performance budget for Airen. There is no CI runner in this repo yet, so this file is the budget rather than a pipeline: run it locally with `npx -y @lhci/cli@0.15.1 autorun` against a production build. Reports stay on disk in `.lighthouseci/` (gitignored): the earlier `temporary-public-storage` target published every report to a public URL. When CI exists, wire the same command into it unchanged. Comment keys inside `assertions` are parsed by LHCI as audit names and fail as `auditRan`, so the reasoning lives up here. CLS is an error rather than a warning because a skeleton or a late font swap can silently ruin it, and it is the metric that makes a fast page feel broken.",
   "ci": {
     "collect": {
       "startServerCommand": "npm run start -- --port 3210",
@@ -31,18 +31,53 @@
     },
     "assert": {
       "assertions": {
-        "categories:performance": ["error", { "minScore": 0.85 }],
-        "categories:accessibility": ["error", { "minScore": 0.95 }],
-        "categories:best-practices": ["warn", { "minScore": 0.9 }],
-        "first-contentful-paint": ["warn", { "maxNumericValue": 2000 }],
-        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
-        "total-blocking-time": ["warn", { "maxNumericValue": 300 }],
-        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
-        "//": "CLS is an error rather than a warning because it is the one metric a skeleton or a late font swap can silently ruin, and it is what makes a mobile page feel broken even when it is fast."
+        "categories:performance": [
+          "error",
+          {
+            "minScore": 0.85
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 0.95
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "first-contentful-paint": [
+          "warn",
+          {
+            "maxNumericValue": 2000
+          }
+        ],
+        "largest-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 2500
+          }
+        ],
+        "total-blocking-time": [
+          "warn",
+          {
+            "maxNumericValue": 300
+          }
+        ],
+        "cumulative-layout-shift": [
+          "error",
+          {
+            "maxNumericValue": 0.1
+          }
+        ]
       }
     },
     "upload": {
-      "target": "temporary-public-storage"
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
     }
   }
 }

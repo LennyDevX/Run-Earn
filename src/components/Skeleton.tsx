@@ -77,3 +77,21 @@ export function SkeletonRows({ count = 5 }: { count?: number }) {
     </div>
   );
 }
+
+/// Activity rows while the first read is in flight — the shape of a real entry, so
+/// the list does not jump when it lands.
+export function ActivityRowsSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div aria-hidden className="flex flex-col divide-y divide-foreground/10">
+      {Array.from({ length: rows }, (_, index) => (
+        <div key={index} className="flex items-center justify-between gap-3 py-4">
+          <div className="flex items-center gap-3">
+            <SkeletonCircle size="2rem" />
+            <SkeletonText width={`${[64, 52, 71][index % 3]}%`} />
+          </div>
+          <SkeletonText width="12%" />
+        </div>
+      ))}
+    </div>
+  );
+}

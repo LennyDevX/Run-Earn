@@ -19,7 +19,6 @@ import {SneakerTabArena} from "../contracts/SneakerTabArena.sol";
 import {SneakerVault} from "../contracts/SneakerVault.sol";
 
 /// ─────────────────────────── End-to-end user journey ───────────────────────
-x1
 /// Every other suite in this repository tests **one contract's surface** with its
 /// own fixture. Nothing proved that the contracts work *together in the order a
 /// real visitor touches them* — which is a different class of bug: a gate that

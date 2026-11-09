@@ -3,20 +3,24 @@ import { withX402 } from "@x402/next";
 import { clientKey, consumeDailyBudget, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { X402_ROUTE_PATH, x402RouteConfig, x402Server } from "@/lib/x402";
 import { GoogleGenAI } from "@google/genai";
+import { TIER_TARGETS, gradeCollectible, qualityToTier } from "@/lib/collectible";
 import {
-  STYLE_COMPOSITIONS,
-  STYLE_PALETTES,
-  TIER_TARGETS,
-  gradeCollectible,
-  qualityToTier,
-  type CollectibleAnalysis,
-  type RaritySignals,
-} from "@/lib/collectible";
+  ANALYSIS_SCHEMA,
+  BASE_PROMPT,
+  MAX_FILE_BYTES,
+  NEGATIVE_PROMPT,
+  analysisPrompt,
+  buildProvenance,
+  expectedDistribution,
+  normalizeAnalysis,
+  normalizePhotoCheck,
+  photoVerdict,
+  sanitizeCollection,
+  styleForSeed,
+} from "@/lib/collectible-pipeline";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 /// Each call runs two paid Gemini passes, so the throttle is tight. Ten minutes
 /// is long enough for a genuine collector to retry a bad photo a few times.
@@ -26,139 +30,10 @@ const RATE_WINDOW_MS = 10 * 60 * 1000;
 /// across addresses; this can, because it does not care who is asking.
 const DAILY_GENERATION_BUDGET = Number(process.env.GENERATION_DAILY_BUDGET ?? 300);
 
-/// Vision pass — reads the source sneaker and grades it.
+/// Vision pass — reads the source sneaker, checks it is usable and grades it.
 const ANALYSIS_MODEL = process.env.GEMINI_ANALYSIS_MODEL ?? "gemini-3-flash-preview";
 /// Image pass — renders the collectible.
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL ?? "gemini-3.1-flash-image";
-
-// ─────────────────────────── Prompts ───────────────────────────────────────
-
-/// The collectible house style. This is the single source of truth for how an
-/// AI-minted Airen NFT looks: 32-bit pixel art, black backdrop, no shadow.
-/// It deliberately matches the workshop item line so both halves of the product
-/// read as one universe — the only difference is the background, because an item
-/// is an equippable icon while a collectible is the artwork itself.
-const BASE_PROMPT = [
-  "Recreate this exact sneaker as retro-futuristic pixel art collectible artwork.",
-  "Style: 32-bit SNES-era sprite aesthetic, crisp hard-edged pixels with zero anti-aliasing,",
-  "clean isometric three-quarter view, one single sneaker centered in frame, no shadow,",
-  "thick dark navy outline, tight palette of midnight navy #060d17, electric cyan #48d5ff,",
-  "neon mint #4ce5c0, astral violet #c17aff and solar gold #ffc84d, cyan rim light on the",
-  "top-left edges, faint horizontal scanline texture across the surface, subtle holographic",
-  "sheen, high contrast, solid black background, no text, no watermark, no extra objects.",
-  "Keep the sneaker's exact silhouette, colorway and recognizable details.",
-].join(" ");
-
-/// Gemini has no dedicated negative field, so the avoid-list rides in the prompt.
-const NEGATIVE_PROMPT = [
-  "Avoid: anti-aliasing, blurry, soft gradients, airbrush, photorealistic, 3D render,",
-  "octane render, glossy plastic, subsurface scattering, cel-shaded, vector art,",
-  "smooth shading, drop shadow, text, letters, numbers, watermark, signature, logo,",
-  "frame, border, multiple objects, clutter, busy background, scenery, environment,",
-  "character, hands, low contrast, muddy palette, oversaturated, jpeg artifacts.",
-].join(" ");
-
-/// Vision pass prompt. Returns strict JSON so the fields map straight onto the
-/// metadata and the on-chain traits.
-const ANALYSIS_PROMPT = [
-  "You are the Airen collectible grader. Look at this sneaker photo and return JSON only.",
-  "Describe what is actually there — do not invent details you cannot see.",
-  "raritySignals are 0-100 integers judged against a typical mass-market sneaker:",
-  "  detailDensity  — how much fine structure there is (stitching, panels, texture, hardware)",
-  "  colorComplexity — how varied the colorway is",
-  "  distinctiveness — how far the silhouette sits from a generic trainer",
-  "suggestedName is a 2-4 word collectible name in the Airen register (short, technical, no clichés).",
-  "description is 2-3 sentences of collector-facing copy: what the piece is, what stands out,",
-  "and why it belongs in the collection. No marketing fluff, no exclamation marks.",
-].join("\n");
-
-const ANALYSIS_SCHEMA = {
-  type: "object",
-  properties: {
-    suggestedName: { type: "string", description: "2-4 word collectible name." },
-    description: { type: "string", description: "2-3 sentences of collector-facing copy." },
-    silhouette: { type: "string", description: "high-top, low-top, mid-top, runner, chunky…" },
-    material: { type: "string", description: "leather, mesh, suede, knit, synthetic…" },
-    colorway: {
-      type: "array",
-      items: { type: "string" },
-      description: "Up to 3 dominant colors as hex strings.",
-    },
-    primaryColor: { type: "string", description: "Name of the dominant color." },
-    notableDetails: { type: "string", description: "One sentence on the standout detail." },
-    raritySignals: {
-      type: "object",
-      properties: {
-        detailDensity: { type: "integer" },
-        colorComplexity: { type: "integer" },
-        distinctiveness: { type: "integer" },
-      },
-      required: ["detailDensity", "colorComplexity", "distinctiveness"],
-    },
-  },
-  required: [
-    "suggestedName",
-    "description",
-    "silhouette",
-    "material",
-    "colorway",
-    "primaryColor",
-    "notableDetails",
-    "raritySignals",
-  ],
-};
-
-// ─────────────────────────── Helpers ───────────────────────────────────────
-
-function clampSignal(value: unknown): number {
-  const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) return 0;
-  return Math.min(100, Math.max(0, Math.round(numeric)));
-}
-
-function normalizeAnalysis(raw: unknown): CollectibleAnalysis {
-  const source = (raw ?? {}) as Record<string, unknown>;
-  const signals = (source.raritySignals ?? {}) as Record<string, unknown>;
-  const signalsOut: RaritySignals = {
-    detailDensity: clampSignal(signals.detailDensity),
-    colorComplexity: clampSignal(signals.colorComplexity),
-    distinctiveness: clampSignal(signals.distinctiveness),
-  };
-  const colorway = Array.isArray(source.colorway)
-    ? source.colorway.filter((item): item is string => typeof item === "string").slice(0, 3)
-    : [];
-  const text = (value: unknown, fallback: string) =>
-    typeof value === "string" && value.trim() ? value.trim() : fallback;
-
-  return {
-    suggestedName: text(source.suggestedName, "Airen Collectible"),
-    description: text(source.description, "An AI-reconstructed Airen collectible."),
-    silhouette: text(source.silhouette, "low-top"),
-    material: text(source.material, "mixed"),
-    colorway,
-    primaryColor: text(source.primaryColor, "midnight navy"),
-    notableDetails: text(source.notableDetails, "Clean pixel silhouette."),
-    raritySignals: signalsOut,
-  };
-}
-
-/// The style handed to this render, derived from a seed so two collectors never
-/// receive the same look. The on-chain `usedStyles` mapping is the real guard;
-/// this is what keeps the rotation varied before it gets there.
-function styleForSeed(seed: number) {
-  const total = STYLE_PALETTES.length * STYLE_COMPOSITIONS.length;
-  const index = ((seed % total) + total) % total;
-  return {
-    palette: STYLE_PALETTES[index % STYLE_PALETTES.length],
-    composition: STYLE_COMPOSITIONS[Math.floor(index / STYLE_PALETTES.length) % STYLE_COMPOSITIONS.length],
-  };
-}
-
-/// Fallback distribution when the chain cannot be read: the shape the target
-/// curve would have produced at this mint count.
-function expectedDistribution(total: number): number[] {
-  return TIER_TARGETS.map((target) => Math.round(total * target.share));
-}
 
 // ─────────────────────────── Route ─────────────────────────────────────────
 
@@ -212,16 +87,26 @@ export async function generateCollectible(request: NextRequest): Promise<NextRes
     : Math.floor(Date.now() / 1000);
   const style = styleForSeed(seed);
 
+  // Palettes the collector already owns. Parsed defensively: a malformed field
+  // is an empty collection, never a failed generation.
+  let collectionInput: unknown = [];
+  try {
+    collectionInput = JSON.parse(String(form.get("collection") ?? "[]"));
+  } catch {
+    collectionInput = [];
+  }
+  const collection = sanitizeCollection(collectionInput);
+
   const photoBase64 = Buffer.from(await file.arrayBuffer()).toString("base64");
   const imagePart = { type: "image" as const, mime_type: file.type, data: photoBase64 };
 
   try {
     const ai = new GoogleGenAI({});
 
-    // ── 1. Grade the source sneaker ──────────────────────────────────
+    // ── 1. Check the photo and grade the source sneaker ──────────────
     const analysis = await ai.interactions.create({
       model: ANALYSIS_MODEL,
-      input: [{ type: "text", text: ANALYSIS_PROMPT }, imagePart],
+      input: [{ type: "text", text: analysisPrompt(collection) }, imagePart],
       response_format: {
         type: "text",
         mime_type: "application/json",
@@ -229,15 +114,26 @@ export async function generateCollectible(request: NextRequest): Promise<NextRes
       },
     });
 
-    let parsed: CollectibleAnalysis;
+    let raw: Record<string, unknown>;
     try {
-      parsed = normalizeAnalysis(JSON.parse(analysis.output_text ?? "{}"));
+      raw = JSON.parse(analysis.output_text ?? "{}") ?? {};
     } catch {
       return NextResponse.json(
         { error: "The grader returned malformed data. Please try again." },
         { status: 502 },
       );
     }
+
+    // Before the paid render. A rejection is a 422, which the x402 wrapper treats
+    // as a failed response and does not settle — the collector is not charged.
+    const verdict = photoVerdict(normalizePhotoCheck(raw));
+    if (!verdict.ok) {
+      return NextResponse.json(
+        { error: verdict.message, reason: verdict.reason },
+        { status: 422, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    const parsed = normalizeAnalysis(raw);
 
     // ── 2. Assign the tier against the target curve ──────────────────
     // Per-tier counts would come from an indexer; until one is wired the curve
@@ -291,6 +187,11 @@ export async function generateCollectible(request: NextRequest): Promise<NextRes
       // The style handed to this render; the studio folds it into the styleKey.
       stylePalette: style.palette,
       styleComposition: style.composition,
+      // Stored on-chain inside the token URI: which prompt and models made it.
+      provenance: buildProvenance(
+        { analysisModel: ANALYSIS_MODEL, imageModel: IMAGE_MODEL },
+        { palette: style.palette, composition: style.composition },
+      ),
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Generation failed.";
@@ -310,4 +211,3 @@ const resourceServer = x402Server();
 export const POST = resourceServer
   ? withX402(generateCollectible, { [X402_ROUTE_PATH]: x402RouteConfig() }, resourceServer)
   : generateCollectible;
-

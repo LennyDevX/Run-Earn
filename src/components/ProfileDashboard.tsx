@@ -9,7 +9,7 @@ import { useMintedSneakers } from "@/hooks/useMintedSneakers";
 import { useSneakerOwnership } from "@/components/SneakerOwnershipProvider";
 import { useOwnedMods } from "@/hooks/useOwnedMods";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import {
   isValidUsername,
   LEVEL_NAMES,
@@ -38,7 +38,7 @@ export default function ProfileDashboard() {
     contractAddress: SNEAKER_MODS && isAddress(SNEAKER_MODS) ? (SNEAKER_MODS as Address) : null,
     publicClient: wallet.publicClient,
   });
-  const { activities } = useSubgraphActivity(owner);
+  const { activities } = useActivity(owner);
   const { configured: progressConfigured, snapshot: chainProgress } = usePlayerProgress({
     owner,
     publicClient: wallet.publicClient,
@@ -252,9 +252,9 @@ export default function ProfileDashboard() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             {stats.map((stat) => (
               <div key={stat.label} className="rounded-2xl bg-background p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/45">{stat.label}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/55">{stat.label}</p>
                 <p className="mt-1 text-xl font-extrabold tabular-nums">{stat.value}</p>
-                <p className="text-[10px] text-foreground/40">{stat.hint}</p>
+                <p className="text-[10px] text-foreground/55">{stat.hint}</p>
               </div>
             ))}
           </div>
@@ -378,12 +378,12 @@ export default function ProfileDashboard() {
               onClick={() => fileInputRef.current?.click()}
               className="flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-foreground/20 bg-background p-6 text-center transition-colors hover:border-mint hover:bg-mint/5"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8 text-foreground/40" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8 text-foreground/55" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 16V6m0 0-4 4m4-4 4 4" />
                 <path d="M4 16.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2.5" />
               </svg>
               <span className="text-sm font-semibold">Upload a photo</span>
-              <span className="text-xs text-foreground/45">Square-cropped to 256px · stays on this device</span>
+              <span className="text-xs text-foreground/55">Square-cropped to 256px · stays on this device</span>
             </button>
             <input
               ref={fileInputRef}

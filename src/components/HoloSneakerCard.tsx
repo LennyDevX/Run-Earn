@@ -104,7 +104,7 @@ export default function HoloSneakerCard({
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="truncate text-sm font-bold tracking-tight">{label}</h3>
             {tokenId !== undefined ? (
-              <span className="shrink-0 font-mono text-[10px] text-foreground/40">
+              <span className="shrink-0 font-mono text-[10px] text-foreground/55">
                 #{String(tokenId).padStart(4, "0")}
               </span>
             ) : null}
@@ -113,7 +113,7 @@ export default function HoloSneakerCard({
           {/* Condition bar — decays daily and shifts colour as it wears. */}
           <div>
             <div className="flex items-center justify-between font-mono text-[10px]">
-              <span className="tracking-[0.14em] text-foreground/45 uppercase">Condition</span>
+              <span className="tracking-[0.14em] text-foreground/55 uppercase">Condition</span>
               <span className={`font-bold ${band.tone}`}>
                 {band.label} · {wearPercent}%
               </span>
@@ -132,14 +132,14 @@ export default function HoloSneakerCard({
               />
             </div>
             {isWorn ? (
-              <p className="mt-1.5 font-mono text-[10px] text-foreground/40">
+              <p className="mt-1.5 font-mono text-[10px] text-foreground/55">
                 Servicing restores full rarity
               </p>
             ) : null}
           </div>
 
           <div>
-            <div className="flex items-center justify-between font-mono text-[10px] text-foreground/45">
+            <div className="flex items-center justify-between font-mono text-[10px] text-foreground/55">
               <span>POWER</span>
               <span className="text-foreground/70">{power.score}/100</span>
             </div>
@@ -151,7 +151,7 @@ export default function HoloSneakerCard({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/45">
+          <div className="flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/55">
             <span className="flex items-center gap-1.5">
               RARITY
               <span className="text-foreground/70">

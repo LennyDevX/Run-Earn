@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Address, Hash } from "viem";
-import type { SubgraphActivity } from "@/lib/subgraph";
+import type { ActivityItem } from "@/lib/activity";
 
-export function useSubgraphActivity(address: Address | null) {
-  const [activities, setActivities] = useState<SubgraphActivity[]>([]);
+export function useActivity(address: Address | null) {
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!address) {
@@ -18,15 +19,16 @@ export function useSubgraphActivity(address: Address | null) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/subgraph?address=${address}`, { cache: "no-store" });
-      const data = (await response.json()) as { activities?: SubgraphActivity[]; error?: string };
-      if (!response.ok && data.error) throw new Error(data.error);
+      const response = await fetch(`/api/activity?address=${address}`, { cache: "no-store" });
+      const data = (await response.json()) as { activities?: ActivityItem[]; error?: string };
+      if (data.error) throw new Error(data.error);
       setActivities(data.activities ?? []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load indexed activity.");
       setActivities([]);
     } finally {
       setIsLoading(false);
+      setLoadedFor(address);
     }
   }, [address]);
 
@@ -48,5 +50,7 @@ export function useSubgraphActivity(address: Address | null) {
     return () => window.cancelAnimationFrame(frame);
   }, [refresh]);
 
-  return { activities, isLoading, error, refresh, addLocalActivity };
+  const isReady = !address || loadedFor === address || activities.length > 0;
+
+  return { activities, isLoading, error, isReady, refresh, addLocalActivity };
 }

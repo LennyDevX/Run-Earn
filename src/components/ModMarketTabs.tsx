@@ -49,7 +49,7 @@ function ModCard({ tokenId, traits, children }: { tokenId: bigint; traits: impor
           {traits.consumable ? (
             <span className="rounded-full bg-magma/10 px-2.5 py-1 font-pixel text-[9px] text-magma">CONSUMABLE</span>
           ) : (
-            <span className="font-pixel text-[9px] text-foreground/40">{slot.icon} {slot.label.toUpperCase()}</span>
+            <span className="font-pixel text-[9px] text-foreground/55">{slot.icon} {slot.label.toUpperCase()}</span>
           )}
         </div>
         <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6 text-4xl">
@@ -300,7 +300,7 @@ export function TradesTab({ runAction }: { runAction: ActionRunner }) {
           <input type="text" inputMode="text" autoComplete="off" spellCheck={false} enterKeyHint="done" autoCapitalize="none"
             placeholder="0x… (empty = anyone)" value={takerInput} onChange={(e) => setTakerInput(e.target.value)} className={inputClass} />
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-foreground/45">Expires in:</span>
+            <span className="text-xs text-foreground/55">Expires in:</span>
             {SWAP_DURATIONS.map((d) => (
               <button key={d.seconds.toString()} type="button" onClick={() => setSwapDuration(d.seconds)}
                 className={`cursor-pointer rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${

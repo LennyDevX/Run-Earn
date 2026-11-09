@@ -49,3 +49,7 @@ cache/
 typechain-types/
 ignition/deployments/
 deployments/
+
+.vercel
+.env*.local
+.lighthouseci/

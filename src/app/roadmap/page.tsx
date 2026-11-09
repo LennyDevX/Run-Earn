@@ -43,7 +43,7 @@ export default function RoadmapPage() {
 
         <RoadmapTimeline />
 
-        <p className="mt-16 text-center font-pixel text-[10px] tracking-[0.2em] text-foreground/40">
+        <p className="mt-16 text-center font-pixel text-[10px] tracking-[0.2em] text-foreground/55">
           ROADMAP LIVES ON POLYGON
           <span className="animate-blink text-mint">_</span>
         </p>

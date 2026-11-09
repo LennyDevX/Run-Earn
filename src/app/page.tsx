@@ -135,7 +135,7 @@ export default function Home() {
               </Link>
             </div>
             <p
-              className="animate-fade-up font-pixel text-[10px] text-foreground/40"
+              className="animate-fade-up font-pixel text-[10px] text-foreground/55"
               style={{ animationDelay: "480ms" }}
             >
               PRESS START
@@ -195,7 +195,7 @@ export default function Home() {
               <span
                 className={`size-3 rounded-full ${feature.accent} transition-transform duration-500 group-hover:scale-150`}
               />
-              <span className="font-pixel text-[9px] text-foreground/40">
+              <span className="font-pixel text-[9px] text-foreground/55">
                 {feature.tag}
               </span>
               <h3 className="text-xl font-bold tracking-tight">

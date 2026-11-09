@@ -21,7 +21,7 @@ export default function WorkshopWorkbench() {
 
       <section aria-labelledby="loadout-title" className="flex flex-col gap-6">
         <div>
-          <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">LOADOUT</span>
+          <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">LOADOUT</span>
           <h2 id="loadout-title" className="text-gradient mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
             Equip, service, and repair
           </h2>

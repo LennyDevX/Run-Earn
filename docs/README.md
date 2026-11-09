@@ -23,7 +23,6 @@ you are touching Solidity.
 | [`thirdweb-gas-sponsorship.md`](thirdweb-gas-sponsorship.md) | In-app wallet gas sponsorship: the EIP-7702 setup, why an unconstrained paymaster is an unbounded spend, the `/api/verify-sponsorship` contract allowlist, dashboard steps, and how to verify |
 | [`mobile-experience.md`](mobile-experience.md) | Bottom navigation, safe areas, touch ergonomics, reduced motion, PWA shell, what Mobile v2.0 shipped, and the remaining mobile roadmap |
 | [`Plan_Mobile_v2.0.md`](Plan_Mobile_v2.0.md) | The mobile v2.0 plan: robustness gaps (no error/loading/404 boundaries), platform capabilities, retention, performance, inclusivity — with what was deliberately excluded and why |
-| [`subgraph-integration.md`](subgraph-integration.md) | The Graph Studio `nuxgraph` deployment, the `/api/subgraph` proxy, dynamic schema introspection |
 | [`uniswap-price-feed.md`](uniswap-price-feed.md) | Live POL/USD via the Uniswap Trading API, the `/api/pol-price` proxy, caching, and fallback behavior |
 
 ## Contracts
@@ -39,7 +38,17 @@ you are touching Solidity.
 | [`player-progression.md`](player-progression.md) | PlayerProgress XP/levels, skill NFTs (free claims + store copies + skill slot + consumable abilities), hybrid profile identity, seed-skills script |
 | [`polygon-test-runbook.md`](polygon-test-runbook.md) | Test matrix, Amoy deployment and verification runbook, funding steps |
 
+
+## Plans
+
+| Doc | What it covers |
+| --- | --- |
+| [`Plan_Update_v3.0.md`](Plan_Update_v3.0.md) | **Current plan.** Security exposures that exist today, correctness gaps the tests cannot see, performance baselines, deeper AI, blockchain depth, UI/UX — with the ordering and why |
+| [`Plan_Update_v2.0.md`](Plan_Update_v2.0.md) | Shipped: x402, Chainlink pricing, in-app wallet, treasury, agentic manifest. What blocked and why |
+| [`Plan_Mobile_v2.0.md`](Plan_Mobile_v2.0.md) | Mobile v2.0: robustness, platform capabilities, retention, performance, inclusivity |
+
 ## Skills
+
 
 Agent skills live in `.devin/skills/` and are loaded automatically when their topic
 matches a task.
@@ -50,10 +59,9 @@ matches a task.
 | `polygon-frontend-evm` | Wallet UX, RPC reads, route/hook work, viem integration |
 | `polygon-testing` | Solidity + TypeScript test matrices for all contracts |
 | `polygon-security` | Custody, arithmetic, escrow, and deployment risk review |
-| `airen-upgrade-economy` | The mod/badge economy: SneakerMods, Workshop slots, consumable abilities, swaps, rentals, ModStore, power/health/energy stats |
+| `airen-upgrade-economy` | The mod/badge economy: SneakerMods, Workshop slots, consumable abilities, swaps, ModStore, power/health/energy stats |
 | `airen-player-progression` | PlayerProgress XP/levels, the `/profile` hybrid identity, level-gated skill NFTs, and the seed-skills script |
 | `airen-mint-studio` | The AI photo → artwork → mint pipeline and local collection storage |
-| `airen-subgraph-activity` | Activity indexing, schema introspection, the subgraph proxy |
 | `swap-integration` (Uniswap) | Official Uniswap Trading API / Universal Router reference — quotes, swaps, Permit2, UniswapX, error codes |
 | `viem-integration` (Uniswap) | Official EVM/viem integration patterns |
 
@@ -67,7 +75,8 @@ npm run lint
 npm run typecheck
 npm run build
 npx hardhat compile
-npx hardhat test          # 379 tests (271 Solidity + 108 TypeScript)
+npx hardhat test solidity  # 397 tests
+  npx hardhat test mocha     # 159 tests
 ```
 
 ## Mobile

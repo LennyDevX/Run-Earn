@@ -46,7 +46,7 @@ export default function MintPage() {
                 { label: "Priced by", value: "Appraiser" },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl border border-foreground/10 bg-surface px-4 py-3">
-                  <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
+                  <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">
                     {stat.label}
                   </dt>
                   <dd className="mt-1 text-sm font-bold">{stat.value}</dd>
@@ -55,7 +55,7 @@ export default function MintPage() {
             </dl>
 
             <p
-              className="animate-fade-up max-w-xl text-[11px] leading-relaxed text-foreground/45"
+              className="animate-fade-up max-w-xl text-[11px] leading-relaxed text-foreground/55"
               style={{ animationDelay: "400ms" }}
             >
               Collectibles are digital art. They trade on the marketplace at a price the appraiser

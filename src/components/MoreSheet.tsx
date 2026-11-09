@@ -126,7 +126,7 @@ export default function MoreSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mt-1 flex size-11 shrink-0 items-center justify-center rounded-full text-xl text-foreground/40 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="-mt-1 flex size-11 shrink-0 items-center justify-center rounded-full text-xl text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             ×
           </button>

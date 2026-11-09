@@ -90,7 +90,7 @@ export default function GameLaunchOverlay({ onDone }: { onDone: () => void }) {
           <span className="animate-blink">_</span>
         </p>
 
-        <div className="mt-5 flex items-baseline justify-between font-mono text-[10px] tracking-[0.18em] text-foreground/45 uppercase">
+        <div className="mt-5 flex items-baseline justify-between font-mono text-[10px] tracking-[0.18em] text-foreground/55 uppercase">
           <span>Airen · Tab Arena</span>
           <span className="tabular-nums text-brand">{progress}%</span>
         </div>

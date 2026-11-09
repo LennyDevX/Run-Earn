@@ -1,5 +1,6 @@
 "use client";
 
+import type { Provenance } from "@/lib/collectible-pipeline";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { encodeFunctionData, isAddress, keccak256, toHex, type Address, type Hex } from "viem";
@@ -42,9 +43,11 @@ type MintGrade = {
   notableDetails: string;
   stylePalette: string;
   styleComposition: string;
+    provenance?: Provenance;
 };
 
 type GenerateSneakerResponse = {
+  provenance?: Provenance;
   imageBase64?: string;
   mimeType?: string;
   error?: string;
@@ -244,6 +247,7 @@ export default function SneakerMintStudio() {
       form.set("photo", photoFile);
       // Seed keeps the style rotation advancing while staying stable across a
       // retry of the same submission.
+      form.set("collection", JSON.stringify(getMintedSneakers(wallet.address ?? null).map((sneaker) => sneaker.palette)));
       form.set("seed", `${wallet.address ?? "guest"}:${photoFile.size}:${photoFile.name}`);
       const response = await fetch("/api/generate-sneaker", { method: "POST", body: form });
       const data = (await response.json()) as GenerateSneakerResponse;
@@ -267,6 +271,7 @@ export default function SneakerMintStudio() {
         notableDetails: data.notableDetails ?? "",
         stylePalette: data.stylePalette ?? "cyan-dominant",
         styleComposition: data.styleComposition ?? "three-quarter hero",
+          provenance: data.provenance,
       });
       setName(data.suggestedName ?? "");
       setDescription(data.description ?? "");
@@ -293,6 +298,7 @@ export default function SneakerMintStudio() {
         rarity: RARITY_IDS[grade.tier] ?? "comun",
         palette,
         imageDataUrl: generated.dataUrl,
+          provenance: grade.provenance,
       };
       const proofHash = await artworkProof(generated.dataUrl);
       // Perceptual fingerprint: catches the same physical sneaker re-rendered
@@ -390,7 +396,7 @@ export default function SneakerMintStudio() {
                 ? "bg-foreground text-background"
                 : index < step
                   ? "bg-mint/15 text-mint"
-                  : "border border-foreground/10 text-foreground/40"
+                  : "border border-foreground/10 text-foreground/55"
             }`}
           >
             <span>{index + 1}</span>
@@ -404,7 +410,7 @@ export default function SneakerMintStudio() {
           <label className="flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-foreground/20 bg-background p-6 text-center transition-colors hover:border-sky hover:bg-sky/5">
             <span className="font-pixel text-[10px] text-foreground/50">YOUR SNEAKER PHOTO</span>
             <span className="text-sm font-semibold">Take or select a photo</span>
-            <span className="text-xs text-foreground/45">JPG, PNG, or WEBP · processed on your device</span>
+            <span className="text-xs text-foreground/55">JPG, PNG, or WEBP · processed on your device</span>
             <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => selectPhoto(event.target.files?.[0])} />
           </label>
           <div className="flex flex-col gap-4 rounded-3xl bg-background p-6">
@@ -422,7 +428,7 @@ export default function SneakerMintStudio() {
       {step === 1 ? (
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="overflow-hidden rounded-3xl bg-background p-4">
-            <span className="mb-3 block font-pixel text-[9px] text-foreground/40">YOUR SNEAKER</span>
+            <span className="mb-3 block font-pixel text-[9px] text-foreground/55">YOUR SNEAKER</span>
             {photoPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoPreview} alt="Original sneaker photo" loading="lazy" decoding="async" className="w-full rounded-2xl" />
@@ -492,14 +498,14 @@ export default function SneakerMintStudio() {
                     ["Style", `${grade.stylePalette} · ${grade.styleComposition}`],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-2xl bg-background/60 px-4 py-3">
-                      <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">{label}</dt>
+                      <dt className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">{label}</dt>
                       <dd className="mt-1 truncate text-sm font-semibold">{value}</dd>
                     </div>
                   ))}
                 </dl>
                 {grade.colorway.length > 0 ? (
                   <div className="mt-3 flex items-center gap-2">
-                    <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/45 uppercase">
+                    <span className="font-mono text-[10px] tracking-[0.14em] text-foreground/55 uppercase">
                       Colorway
                     </span>
                     {grade.colorway.map((color) => (

@@ -1,10 +1,11 @@
 "use client";
 
+import { ActivityRowsSkeleton } from "@/components/Skeleton";
 import { useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { NETWORK_LABEL, explorerTransactionUrl, usePolygonWallet } from "@/components/Providers";
 import { useMarketplace } from "@/hooks/useMarketplace";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { RARITIES } from "@/lib/sneaker-nft";
 import { centerInScrollRow } from "@/lib/scroll-x";
 import SneakerArtwork from "@/components/SneakerArtwork";
@@ -46,7 +47,7 @@ function parseAmount(input: string): bigint {
 export default function MarketplaceDashboard() {
   const wallet = usePolygonWallet();
   const market = useMarketplace();
-  const { activities, isLoading: loadingActivity, refresh: refreshActivity, addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { activities, isReady: activityReady, error: activityError, refresh: refreshActivity, addLocalActivity } = useActivity(wallet.address);
 
   const [activeTab, setActiveTab] = useState<Tab>("list");
   const [priceInput, setPriceInput] = useState("");
@@ -200,7 +201,7 @@ export default function MarketplaceDashboard() {
           <div className="flex flex-col gap-6">
             <div>
               <span className="font-pixel text-[9px] text-mint">SELL YOUR SNEAKERS</span>
-              <h3 className="mt-2 text-2xl font-bold tracking-tight">List or auction your SneakerMint NFTs</h3>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight">List or auction your SneakerMint NFTs</h2>
               <p className="mt-1 text-sm text-foreground/60">
                 Fixed-price sales and English auctions paid in native POL. Staked sneakers must be unstaked before listing.
               </p>
@@ -246,7 +247,7 @@ export default function MarketplaceDashboard() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-foreground/45">Duration:</span>
+                  <span className="text-xs text-foreground/55">Duration:</span>
                   {AUCTION_DURATIONS.map((d) => (
                     <button
                       key={d.seconds.toString()}
@@ -284,14 +285,14 @@ export default function MarketplaceDashboard() {
                           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isCollectible ? "border border-astra/40 bg-astra/10 text-astra" : (rarityObj?.accent ?? "bg-foreground/10")}`}>
                             {isCollectible ? `Collectible · ${rarityObj?.label ?? "Common"}` : `${rarityObj?.label ?? "Sneaker"} · Tier ${sneaker.tier.toString()}`}
                           </span>
-                          <span className={`font-pixel text-[9px] ${saleKind > 0n ? "text-magma" : "text-foreground/40"}`}>
+                          <span className={`font-pixel text-[9px] ${saleKind > 0n ? "text-magma" : "text-foreground/55"}`}>
                             {saleLabel}
                           </span>
                         </div>
                         <div className="my-4 flex items-center justify-center rounded-2xl bg-surface/80 py-6">
                           <SneakerArtwork src={sneaker.artwork.src} alt={sneaker.artwork.alt} className="w-28" sizes="112px" />
                         </div>
-                        <h4 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h4>
+                        <h3 className="font-bold">{sneaker.artwork.name ?? "Airen Sneaker"} · #{sneaker.tokenId.toString()}</h3>
                         <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                           <span>{isCollectible ? "Appraised price:" : "Suggested price:"}</span>
                           <span className="font-mono font-bold text-sky">
@@ -331,7 +332,7 @@ export default function MarketplaceDashboard() {
                 <div className="flex size-14 items-center justify-center rounded-full bg-sky/10 font-pixel text-sky">
                   👟
                 </div>
-                <h4 className="text-lg font-bold">No sneakers to sell</h4>
+                <h3 className="text-lg font-bold">No sneakers to sell</h3>
                 <p className="max-w-md text-xs leading-relaxed text-foreground/60">
                   You don&apos;t own any SneakerMint NFTs yet. Mint one with the AI studio or buy a veSneaker to start selling.
                 </p>
@@ -345,7 +346,7 @@ export default function MarketplaceDashboard() {
           <div className="flex flex-col gap-6">
             <div>
               <span className="font-pixel text-[9px] text-sky">MY LISTINGS</span>
-              <h3 className="mt-2 text-2xl font-bold tracking-tight">Manage your active sales</h3>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight">Manage your active sales</h2>
               <p className="mt-1 text-sm text-foreground/60">
                 Cancel a fixed-price listing to recover your NFT. Auctions can be cancelled only before the first bid and after the end time.
               </p>
@@ -361,7 +362,7 @@ export default function MarketplaceDashboard() {
                         </span>
                         <span className="font-pixel text-[9px] text-mint">● ON SALE</span>
                       </div>
-                      <h4 className="mt-4 font-bold">Sneaker #{listing.tokenId.toString()}</h4>
+                      <h3 className="mt-4 font-bold">Sneaker #{listing.tokenId.toString()}</h3>
                       <div className="mt-2 flex items-center justify-between text-xs text-foreground/60">
                         <span>Price:</span>
                         <span className="font-mono font-bold text-mint">{formatPol(listing.price)} POL</span>
@@ -393,7 +394,7 @@ export default function MarketplaceDashboard() {
           <div className="grid gap-8 lg:grid-cols-2">
             <div className="flex flex-col gap-4 rounded-3xl border border-foreground/10 bg-background p-6">
               <span className="font-pixel text-[9px] text-sky">POL OFFER</span>
-              <h3 className="text-xl font-bold">Make an offer on any sneaker</h3>
+              <h2 className="text-xl font-bold">Make an offer on any sneaker</h2>
               <p className="text-xs leading-relaxed text-foreground/60">
                 Your POL is escrowed by the marketplace until the owner accepts, the offer expires, or you cancel it. The NFT stays with its owner until they accept.
               </p>
@@ -421,7 +422,7 @@ export default function MarketplaceDashboard() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-foreground/45">Expires in:</span>
+                <span className="text-xs text-foreground/55">Expires in:</span>
                 {OFFER_DURATIONS.map((d) => (
                   <button
                     key={d.seconds.toString()}
@@ -484,7 +485,7 @@ export default function MarketplaceDashboard() {
         <div className="flex items-center justify-between border-b border-foreground/10 pb-4">
           <div>
             <span className="font-pixel text-[9px] text-mint">LIVE SUBGRAPH FEED</span>
-            <h3 className="text-xl font-bold">Recent Marketplace Activity</h3>
+            <h2 className="text-xl font-bold">Recent Marketplace Activity</h2>
           </div>
           <button
             type="button"
@@ -495,8 +496,8 @@ export default function MarketplaceDashboard() {
           </button>
         </div>
         <div className="mt-4 flex flex-col divide-y divide-foreground/10">
-          {loadingActivity ? (
-            <p className="py-6 text-center text-sm text-foreground/50">Indexing latest events from The Graph...</p>
+          {!activityReady ? (
+            <ActivityRowsSkeleton />
           ) : activities.length > 0 ? (
             activities.map((act) => (
               <div key={`${act.id}-${act.timestamp ?? "now"}`} className="flex flex-wrap items-center justify-between gap-3 py-4">
@@ -528,7 +529,7 @@ export default function MarketplaceDashboard() {
             ))
           ) : (
             <p className="py-8 text-center text-xs text-foreground/50">
-              No recent activity recorded yet. List, buy, or bid to see live updates.
+              {activityError ? "The activity feed is unavailable right now. Your transactions are not affected." : "No recent activity recorded yet. List, buy, or bid to see live updates."}
             </p>
           )}
         </div>

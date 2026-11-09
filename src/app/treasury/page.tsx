@@ -15,7 +15,7 @@ export default function TreasuryPage() {
       <Navbar />
       <main className="mx-auto w-full max-w-5xl px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
         <header className="mb-10 flex flex-col gap-3">
-          <span className="font-pixel text-[10px] text-foreground/40">PUBLIC LEDGER</span>
+          <span className="font-pixel text-[10px] text-foreground/55">PUBLIC LEDGER</span>
           <h1 className="font-display text-4xl leading-tight sm:text-5xl">
             The treasury, <span className="text-mint">open</span>.
           </h1>
@@ -29,7 +29,7 @@ export default function TreasuryPage() {
         <TreasuryDashboard />
 
         <section className="mt-10 flex flex-col gap-4 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
-          <h2 className="font-pixel text-[10px] text-foreground/40">HOW TO READ THIS</h2>
+          <h2 className="font-pixel text-[10px] text-foreground/55">HOW TO READ THIS</h2>
           <div className="flex flex-col gap-3 text-xs leading-relaxed text-foreground/60">
             <p>
               <span className="font-semibold text-foreground/80">The balance is not the whole picture.</span> Two revenue

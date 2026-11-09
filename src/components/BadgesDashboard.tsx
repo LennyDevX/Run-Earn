@@ -1,12 +1,13 @@
 "use client";
 
+import { SkeletonText } from "@/components/Skeleton";
 import { useState } from "react";
 import Link from "next/link";
 import { formatEther } from "viem";
 import { NETWORK_LABEL, usePolygonWallet } from "@/components/Providers";
 import { useBadges, type BadgeAchievement } from "@/hooks/useBadges";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { modEffectLabel, REQ_KIND_LABELS, SLOTS } from "@/lib/mods";
 import { RARITIES } from "@/lib/sneaker-nft";
 
@@ -34,7 +35,7 @@ export default function BadgesDashboard() {
   const wallet = usePolygonWallet();
   const badges = useBadges();
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
-  const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { addLocalActivity } = useActivity(wallet.address);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
@@ -239,7 +240,7 @@ export default function BadgesDashboard() {
             <div className="rounded-3xl border border-dashed border-foreground/15 bg-surface p-10 text-center">
               <p className="text-sm text-foreground/60">
                 {badges.isLoading
-                  ? "Loading achievements…"
+                  ? <SkeletonText width="60%" className="mx-auto" />
                   : "No achievements published yet. Keep playing — streak, earn veRUNE, collect sneakers, and stake POL."}
               </p>
             </div>

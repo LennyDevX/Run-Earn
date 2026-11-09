@@ -83,7 +83,7 @@ export default function MyNftsGallery() {
                 </p>
               </div>
             </div>
-            <p className="rounded-2xl bg-background px-3 py-2 text-[11px] leading-relaxed text-foreground/45">
+            <p className="rounded-2xl bg-background px-3 py-2 text-[11px] leading-relaxed text-foreground/55">
               Digital art · trades on the marketplace at an appraiser-set price
             </p>
             <button
@@ -105,7 +105,7 @@ export default function MyNftsGallery() {
                 : "Set as avatar"}
             </button>
             <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-foreground/40">
+              <span className="font-mono text-foreground/55">
                 {new Date(sneaker.mintedAt).toLocaleDateString("en-US")}
               </span>
               {sneaker.transactionHash ? (
@@ -118,7 +118,7 @@ export default function MyNftsGallery() {
                   View tx ↗
                 </a>
               ) : (
-                <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] text-foreground/40">
+                <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] text-foreground/55">
                   Local demo
                 </span>
               )}

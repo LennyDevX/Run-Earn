@@ -193,7 +193,7 @@ function ProgressConsole() {
               <span className="font-mono text-5xl font-bold tabular-nums text-foreground sm:text-6xl">
                 {percent}
               </span>
-              <span className="font-mono text-lg text-foreground/45">%</span>
+              <span className="font-mono text-lg text-foreground/55">%</span>
             </p>
             <p className="mt-2 text-sm text-foreground/55">
               {shipped} of {total} milestones shipped
@@ -214,7 +214,7 @@ function ProgressConsole() {
                 key={stat.label}
                 className="rounded-2xl border border-foreground/8 bg-background px-4 py-3 text-center"
               >
-                <dt className="font-mono text-[10px] tracking-[0.16em] text-foreground/45 uppercase">
+                <dt className="font-mono text-[10px] tracking-[0.16em] text-foreground/55 uppercase">
                   {stat.label}
                 </dt>
                 <dd className="mt-1 font-mono text-xl font-bold text-foreground">{stat.value}</dd>
@@ -267,7 +267,7 @@ function PhaseRail({ onJump }: { onJump: (id: string) => void }) {
                 <span className="mt-3 block font-pixel text-[10px] tracking-[0.16em] text-foreground/75">
                   {phase.code}
                 </span>
-                <span className="mt-1 block font-mono text-[10px] text-foreground/40">
+                <span className="mt-1 block font-mono text-[10px] text-foreground/55">
                   {phase.label}
                 </span>
                 <span className="mt-3 block h-1 overflow-hidden rounded-full bg-foreground/8">
@@ -276,7 +276,7 @@ function PhaseRail({ onJump }: { onJump: (id: string) => void }) {
                     style={{ transform: `scaleX(${ratio / 100})` }}
                   />
                 </span>
-                <span className="mt-2 block font-mono text-[10px] text-foreground/40">
+                <span className="mt-2 block font-mono text-[10px] text-foreground/55">
                   {done}/{phase.milestones.length} shipped
                 </span>
               </button>
@@ -336,7 +336,7 @@ function MilestoneRow({
               {milestone.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-md bg-foreground/5 px-2 py-1 font-mono text-[10px] text-foreground/45"
+                  className="rounded-md bg-foreground/5 px-2 py-1 font-mono text-[10px] text-foreground/55"
                 >
                   {tag}
                 </span>
@@ -405,7 +405,7 @@ function PhaseBlock({
                   <h2 id={headerId} className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                     {phase.label}
                   </h2>
-                  <p className="mt-1 font-mono text-[11px] text-foreground/45">{phase.range}</p>
+                  <p className="mt-1 font-mono text-[11px] text-foreground/55">{phase.range}</p>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-4">
@@ -416,7 +416,7 @@ function PhaseBlock({
                       style={{ transform: `scaleX(${ratio / 100})` }}
                     />
                   </div>
-                  <p className="mt-2 font-mono text-[10px] text-foreground/40">
+                  <p className="mt-2 font-mono text-[10px] text-foreground/55">
                     {done}/{phase.milestones.length} shipped
                   </p>
                 </div>
@@ -518,7 +518,7 @@ export default function RoadmapTimeline() {
       <PhaseRail onJump={jumpTo} />
 
       <div className="flex items-center justify-between gap-3">
-        <p className="font-pixel text-[10px] tracking-[0.24em] text-foreground/45">PHASES</p>
+        <p className="font-pixel text-[10px] tracking-[0.24em] text-foreground/55">PHASES</p>
         <button
           type="button"
           onClick={toggleAll}

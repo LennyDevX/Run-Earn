@@ -6,7 +6,7 @@ import { usePolygonWallet } from "@/components/Providers";
 import { modStoreAbi, sneakerVaultAbi } from "@/lib/contracts";
 import { useModEconomy } from "@/hooks/useModEconomy";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
-import { useSubgraphActivity } from "@/hooks/useSubgraphActivity";
+import { useActivity } from "@/hooks/useActivity";
 import { modEffectLabel, slotInfo } from "@/lib/mods";
 import { RARITIES } from "@/lib/sneaker-nft";
 
@@ -41,7 +41,7 @@ export default function ModStorefront() {
   const { quoteMod } = economy;
   const progress = usePlayerProgress({ owner: wallet.address ?? null, publicClient: wallet.publicClient });
   const playerLevel = progress.snapshot?.level ?? 0;
-  const { addLocalActivity } = useSubgraphActivity(wallet.address);
+  const { addLocalActivity } = useActivity(wallet.address);
   const [designs, setDesigns] = useState<ModDesign[]>([]);
   const [isReading, setIsReading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -211,7 +211,7 @@ export default function ModStorefront() {
                   <h3 className="mt-4 font-bold tracking-tight">{design.name}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-foreground/50">{modEffectLabel(traits)}</p>
                   {design.maxSupply > 0 ? (
-                    <p className="mt-2 font-pixel text-[9px] text-foreground/40">
+                    <p className="mt-2 font-pixel text-[9px] text-foreground/55">
                       {design.minted} / {design.maxSupply} MINTED
                     </p>
                   ) : null}

@@ -63,7 +63,7 @@ export default function MyModsGallery() {
                   <p className="mt-1 text-xs leading-relaxed text-foreground/50">{modEffectLabel(mod.traits)}</p>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-pixel text-[9px] text-foreground/40">{slot.label.toUpperCase()} SLOT</span>
+                  <span className="font-pixel text-[9px] text-foreground/55">{slot.label.toUpperCase()} SLOT</span>
                   <Link href="/workshop" className="font-semibold text-sky hover:underline">
                     Equip →
                   </Link>

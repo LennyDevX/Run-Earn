@@ -17,7 +17,7 @@ const DESTINATIONS = [
 export default function NotFound() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col items-center justify-center gap-8 px-6 py-20 text-center">
-      <span className="font-pixel text-[10px] tracking-widest text-foreground/40">OFF THE GRID</span>
+      <span className="font-pixel text-[10px] tracking-widest text-foreground/55">OFF THE GRID</span>
 
       <div className="flex flex-col gap-3">
         <h1 className="font-display text-4xl leading-tight sm:text-5xl">
@@ -37,7 +37,7 @@ export default function NotFound() {
           >
             <span className="flex flex-col">
               <span className="text-sm font-semibold">{item.label}</span>
-              <span className="text-[11px] text-foreground/45">{item.hint}</span>
+              <span className="text-[11px] text-foreground/55">{item.hint}</span>
             </span>
             <span aria-hidden className="text-foreground/30">
               →

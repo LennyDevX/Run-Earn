@@ -236,7 +236,7 @@ export default function Navbar() {
                 >
                   {MENU_GROUPS.map((group) => (
                     <div key={group.label} className="py-1 first:pt-0 last:pb-0">
-                      <p className="px-3 pb-1 pt-2 font-pixel text-[9px] uppercase tracking-widest text-foreground/40">
+                      <p className="px-3 pb-1 pt-2 font-pixel text-[9px] uppercase tracking-widest text-foreground/55">
                         {group.label}
                       </p>
                       {group.links.map((link) => {

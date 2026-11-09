@@ -89,7 +89,7 @@ export default function TabChallengeSection() {
           <span aria-hidden className="hud-corner hud-corner-br text-brand" />
 
           <div className="relative flex flex-col items-center gap-6">
-            <span className="font-pixel text-[9px] tracking-[0.24em] text-foreground/45">
+            <span className="font-pixel text-[9px] tracking-[0.24em] text-foreground/55">
               SESSION · LIVE DEMO
             </span>
 
@@ -114,7 +114,7 @@ export default function TabChallengeSection() {
                     }`}
                   >
                     {tier.label}
-                    <span className={active ? "text-astra" : "text-foreground/40"}>×{tier.multiplier}</span>
+                    <span className={active ? "text-astra" : "text-foreground/55"}>×{tier.multiplier}</span>
                   </button>
                 );
               })}
@@ -132,7 +132,7 @@ export default function TabChallengeSection() {
               <button
                 type="button"
                 onClick={handleTap}
-                aria-label="Demo tap pad — press to register a tap"
+
                 className="relative flex size-40 cursor-pointer items-center justify-center rounded-full border-2 border-brand/40 bg-background transition-colors duration-300 hover:border-brand/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
               >
                 <span
@@ -151,7 +151,7 @@ export default function TabChallengeSection() {
                   <span className="font-mono text-4xl font-bold tabular-nums text-foreground">
                     {points}
                   </span>
-                  <span className="mt-1 font-pixel text-[8px] tracking-[0.24em] text-foreground/45">
+                  <span className="mt-1 font-pixel text-[8px] tracking-[0.24em] text-foreground/55">
                     POINTS
                   </span>
                   <span className="mt-1 rounded-full border border-astra/35 bg-astra/10 px-2 py-0.5 font-mono text-[9px] font-bold text-astra">
@@ -162,7 +162,7 @@ export default function TabChallengeSection() {
             </div>
 
             <div className="w-full">
-              <div className="flex items-center justify-between font-mono text-[10px] text-foreground/45">
+              <div className="flex items-center justify-between font-mono text-[10px] text-foreground/55">
                 <span>
                   {reached ? `LEVEL ${reached.level} · ${reached.label}` : "TAP TO START"}
                 </span>
@@ -188,7 +188,7 @@ export default function TabChallengeSection() {
                   <span className="font-mono text-sm font-bold text-brand">{taps}</span>
                 </div>
               </div>
-              <p className="mt-3 text-[11px] leading-relaxed text-foreground/45">
+              <p className="mt-3 text-[11px] leading-relaxed text-foreground/55">
                 A stronger runner earns more points per tap, so the same ladder clears in fewer
                 taps — the boost ceiling itself never changes. Demo only; nothing touches the chain.
               </p>
@@ -202,7 +202,7 @@ export default function TabChallengeSection() {
           <div className="relative flex flex-col gap-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-lg font-bold tracking-tight">Level ladder</h3>
-              <span className="font-mono text-[11px] text-foreground/45">
+              <span className="font-mono text-[11px] text-foreground/55">
                 {TAB_LEVELS.length} levels · resets every {TAB_CHALLENGE.sessionSeconds / 3600}h
               </span>
             </div>
@@ -228,14 +228,14 @@ export default function TabChallengeSection() {
                           ? "border-mint/30 text-mint"
                           : isNext
                             ? "border-brand/30 text-brand"
-                            : "border-foreground/12 text-foreground/45"
+                            : "border-foreground/12 text-foreground/55"
                       }`}
                     >
                       L{level.level}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-semibold">{level.label}</span>
-                      <span className="mt-0.5 block font-mono text-[10px] text-foreground/45">
+                      <span className="mt-0.5 block font-mono text-[10px] text-foreground/55">
                         {level.points} pts · ≈{tapsFor(level.points, multiplier)} taps
                       </span>
                     </span>
@@ -252,7 +252,7 @@ export default function TabChallengeSection() {
             </ol>
 
             <div className="rounded-2xl border border-foreground/8 bg-background p-4">
-              <p className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">
+              <p className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">
                 APY BUDGET
               </p>
               <p className="mt-2 text-xs leading-relaxed text-foreground/55">
@@ -275,7 +275,7 @@ export default function TabChallengeSection() {
       <div className="mt-6 rounded-3xl border border-foreground/8 bg-surface p-6 sm:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/45">
+            <span className="font-pixel text-[9px] tracking-[0.2em] text-foreground/55">
               POWER SCORE
             </span>
             <h3 className="mt-2 text-lg font-bold tracking-tight">

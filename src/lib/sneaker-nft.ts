@@ -1,3 +1,4 @@
+import type { Provenance } from "@/lib/collectible-pipeline";
 export type RarityLevel = "comun" | "raro" | "epico" | "mitico";
 
 export const RARITIES: readonly {
@@ -39,6 +40,7 @@ export type MintedSneaker = {
   mintedAt: number;
   transactionHash?: string;
   tokenId?: string;
+  provenance?: Provenance;
 };
 
 const STORAGE_PREFIX = "airen:my-nfts:";
@@ -76,6 +78,7 @@ export function buildTokenMetadata(sneaker: Omit<MintedSneaker, "id" | "owner" |
       { trait_type: "Origin", value: "User sneaker · AI generated" },
       { trait_type: "Network", value: "Polygon" },
     ],
+    ...(sneaker.provenance ? { provenance: sneaker.provenance } : {}),
   };
 }
 
